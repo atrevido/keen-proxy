@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to retry missing assets (empty runs Release Please)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  version:
+    needs: checks
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      tag: ${{ steps.release.outputs.tag_name || inputs.tag }}
+    steps:
+      - name: Propose or publish release
+        if: inputs.tag == ''
+        id: release
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  assets:
+    needs: version
+    if: needs.version.outputs.tag != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Validate tag and existing release
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          gh release view "$RELEASE_TAG" --repo "$GH_REPO"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build router binaries from tagged source
+        run: |
+          test "$(cat version.txt)" = "${RELEASE_TAG#v}"
+          make build-router build-router-lite
+      - name: Package source, notices, and build identity
+        run: |
+          git archive --format=tar.gz --prefix="keenproxy-${RELEASE_TAG#v}/" \
+            -o dist/keenproxy-source.tar.gz HEAD
+          cp tools/install.sh dist/install.sh
+          cp LICENSE THIRD_PARTY_NOTICES.md dist/
+          cp -R LICENSES dist/
+          {
+            printf 'Version: %s\nCommit: %s\n' "$RELEASE_TAG" "$(git rev-parse HEAD)"
+            go version
+            node --version
+            npm --version
+            make -s --eval='print-tags:;@echo Full tags: $(TAGS),ui; echo Lite tags: $(LITE_TAGS)' print-tags
+          } > dist/BUILD_INFO.txt
+          tar --sort=name --mtime="$(git show -s --format=%cI HEAD)" \
+            --owner=0 --group=0 --numeric-owner -cf - \
+            -C dist LICENSE THIRD_PARTY_NOTICES.md LICENSES \
+            | gzip -n > dist/keenproxy-notices.tar.gz
+          cd dist
+          sha256sum keenproxy-linux-* keenproxy-lite-linux-* keenproxy-source.tar.gz \
+            keenproxy-notices.tar.gz install.sh BUILD_INFO.txt > SHA256SUMS
+      - name: Attach missing assets without overwriting published files
+        run: |
+          assets=(dist/keenproxy-linux-* dist/keenproxy-lite-linux-* \
+            dist/keenproxy-source.tar.gz dist/keenproxy-notices.tar.gz \
+            dist/install.sh dist/BUILD_INFO.txt dist/SHA256SUMS)
+          existing=$(mktemp -d)
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' > "$existing/names"
+          for asset in "${assets[@]}"; do
+            name=$(basename "$asset")
+            if grep -Fxq "$name" "$existing/names"; then
+              gh release download "$RELEASE_TAG" --pattern "$name" --dir "$existing"
+              cmp "$asset" "$existing/$name"
+            fi
+          done
+          for asset in "${assets[@]}"; do
+            if ! grep -Fxq "$(basename "$asset")" "$existing/names"; then
+              gh release upload "$RELEASE_TAG" "$asset" --repo "$GH_REPO"
+            fi
+          done

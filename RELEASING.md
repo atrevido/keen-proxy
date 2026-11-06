@@ -2,6 +2,30 @@
 
 This guide is for maintainers preparing an initial public repository or a later source/binary release. It does not imply that a release has been published or that every router is supported.
 
+## Version and release pull request
+
+Follow the versioning and Conventional Commit rules in [CONTRIBUTING.md](CONTRIBUTING.md#versioning-and-pull-request-titles). The selected workflow uses [Release Please](https://github.com/googleapis/release-please) to propose releases, with a maintainer reviewing each release PR.
+
+The repository defines [CI](.github/workflows/ci.yml) and [release](.github/workflows/release.yml) workflows. CI runs on pull requests and can be started manually. Pushes to `main` run the same checks before Release Please. They become active after the workflow files are pushed to GitHub and Actions is enabled.
+
+1. Merge reviewed changes into `main` after the relevant checks pass. With squash merges, preserve the Conventional Commit PR title and any breaking-change details in the resulting commit.
+2. Release Please accumulates releasable changes since the previous release and creates or updates a release PR containing the proposed version and changelog. Its pre-1.0 settings match the project's policy.
+3. A maintainer checks the bump against the actual compatibility impact, edits release notes as needed, and verifies migration instructions, validation results, and the publication checks below. The automation's proposal does not replace this review.
+4. Merge the release PR when the release is ready. After checks pass on `main`, Release Please creates the corresponding Git tag, such as `v1.5.0`, and GitHub Release. A dependent job in the same workflow builds from that exact tag and attaches full/lite ARM64/MIPSLE binaries, the installer, source archive, license notices, build identity, and `SHA256SUMS`. The release can briefly exist before its assets are attached; check that the asset job succeeds before announcing it.
+5. The default automation produces stable releases. Release candidates require a separately reviewed prerelease configuration and must be marked as prereleases with their known limits. A candidate such as `v1.5.0-rc.1` must pass the relevant release checks before promotion to `v1.5.0`.
+
+Use the Git tag as the release identity and derive build versions from it; any tracked version metadata must be updated consistently by the release PR. Keep published versions immutable: do not move a published tag or replace its binaries with a different build. Publish a new version to correct a released defect.
+
+### GitHub setup and recovery
+
+- Enable Actions and allow GitHub Actions to create pull requests in repository Settings → Actions → General. Release jobs explicitly request `contents`, `pull-requests`, and `issues` write permissions; CI has read-only access. Organization policies may restrict these settings.
+- The workflow uses the built-in `GITHUB_TOKEN`; no personal access token is required. GitHub may require approval before CI runs on a bot-created release PR. Approve the run and require passing checks before merging.
+- Build jobs depend directly on Release Please outputs. Do not split them into a workflow triggered only by release/tag events: events created by `GITHUB_TOKEN` generally do not start another workflow. See [GitHub's trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+- `version.txt` and `.release-please-manifest.json` start at the development baseline `0.1.0`; this does not assert that `v0.1.0` has been published. The initial commit is the bootstrap boundary. The first releasable changes determine the next version; if the first public release must be `0.1.0`, use a reviewed commit with a `Release-As: 0.1.0` footer before merging its release PR.
+- Release PRs update `version.txt`, the manifest, `CHANGELOG.md`, and the private frontend package/lockfile version fields together. `BUILD_INFO.txt` records the tag, source commit, toolchains, and protocol build tags; the application does not currently expose a runtime version command.
+- If asset publication fails after release creation, manually run the Release workflow from `main` with its existing tag in the `tag` input. Existing assets must be byte-identical before missing ones are uploaded. A different rebuild fails rather than replacing files; investigate toolchain/dependency differences and publish a new version when needed. Running without a tag retries Release Please.
+- Configure branch protection or a ruleset separately to require review and passing CI. Workflow files alone do not enforce merge requirements.
+
 ## Review the material being published
 
 1. Choose a specific, reviewed commit. Inspect the full tracked tree and every intended release artifact.

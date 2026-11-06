@@ -55,6 +55,31 @@ For a comment-only change, executable-token comparison plus normal build/test ch
 
 Explain the concrete problem and resulting behavior. Include relevant validation, compatibility considerations, and any untested router-specific assumptions. Keep unrelated formatting or refactors out of the diff.
 
+## Versioning and pull request titles
+
+KeenProxy uses [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`. Choose the bump by the effect on users, including configuration files, API, CLI, installation, and upgrades.
+
+| Change | Bump after 1.0.0 | Example |
+| --- | --- | --- |
+| Backward-compatible bug fix | Patch | `1.4.2` to `1.4.3` |
+| Backward-compatible feature | Minor | `1.4.2` to `1.5.0` |
+| Incompatible change requiring users or clients to adapt | Major | `1.4.2` to `2.0.0` |
+
+Increasing a component resets the components to its right to zero. A release uses the highest bump required by its accumulated changes; commits do not each require a public release. Internal refactoring alone does not require a major bump. Document incompatible changes and migration steps even when they fix a bug or a security issue.
+
+Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for PR titles and the resulting squash commit:
+
+- `fix: preserve settings after restart` requests a patch release.
+- `feat: add a proxy protocol` requests a minor release.
+- `feat!: replace the configuration format` marks a breaking change. Explain the migration in the PR description and preserve a `BREAKING CHANGE:` footer in the squash commit when used.
+- `docs:`, `test:`, `ci:`, `chore:`, and internal `refactor:` changes do not request a release by themselves unless marked as breaking. Classify user-visible fixes and features by their actual effect.
+
+Before `1.0.0`, the project uses patch bumps for compatible fixes and minor bumps for features or incompatible changes. Keep breaking-change markers and migration notes during this phase. This is a project convention: SemVer itself does not promise a stable public API for `0.x`. Release automation must be configured to match this policy.
+
+Version `1.0.0` marks a defined, stable user-facing contract and a commitment to preserving compatibility; it does not mean the software has no bugs. Release candidates use versions such as `1.5.0-rc.1`, followed by `1.5.0-rc.2` or the final `1.5.0`.
+
+Maintainers review the proposed version and changelog in a release PR before publishing. See [RELEASING.md](RELEASING.md) for the release process and automation status.
+
 Public project guides live in the repository. Local plans, investigations, generated QA reports, and deployment notes belong in ignored `docs-reports/`; local agent memory belongs in ignored `.serena/`. Do not force-add those directories or production artifacts.
 
 By contributing, you agree that your original contributions are provided under the project's GPL-3.0-only license. Retain existing copyright/license notices and clearly identify any third-party code or data. Do not contribute material you are not authorized to redistribute.
