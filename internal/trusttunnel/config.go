@@ -1,0 +1,88 @@
+package trusttunnel
+
+import (
+	"fmt"
+	"strings"
+	"unicode/utf8"
+)
+
+// ClientConfig renders trusttunnel_client.toml with a SOCKS5 listener at
+// socksAddr and vpn_mode general. The client kill switch stays disabled
+// because sing-box owns routing decisions.
+func ClientConfig(e Endpoint, socksAddr string) string {
+	var b strings.Builder
+	w := func(format string, a ...any) { fmt.Fprintf(&b, format+"\n", a...) }
+	w("# Создано keenProxy, правки будут перезаписаны.")
+	w(`loglevel = "info"`)
+	w(`vpn_mode = "general"`)
+	w("killswitch_enabled = false")
+	w("exclusions = []")
+	w("")
+	w("[endpoint]")
+	w("hostname = %s", quote(e.Hostname))
+	if e.CustomSNI != "" {
+		w("custom_sni = %s", quote(e.CustomSNI))
+	}
+	w("addresses = %s", quoteList(e.Addresses))
+	w("has_ipv6 = %t", e.HasIPv6)
+	w("username = %s", quote(e.Username))
+	w("password = %s", quote(e.Password))
+	if e.ClientRandom != "" {
+		w("client_random = %s", quote(e.ClientRandom))
+	}
+	w("skip_verification = %t", e.SkipVerification)
+	if e.CertificatePEM != "" {
+		w("certificate = %s", quote(e.CertificatePEM))
+	}
+	proto := "http2"
+	if e.HTTP3 {
+		proto = "http3"
+	}
+	w("upstream_protocol = %s", quote(proto))
+	w("anti_dpi = %t", e.AntiDPI)
+	if len(e.DNSUpstreams) > 0 {
+		w("dns_upstreams = %s", quoteList(e.DNSUpstreams))
+	}
+	w("")
+	w("[listener.socks]")
+	w("address = %s", quote(socksAddr))
+	return b.String()
+}
+
+// quote encodes a TOML basic string.
+func quote(s string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case '"':
+			b.WriteString(`\"`)
+		case '\\':
+			b.WriteString(`\\`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		case utf8.RuneError:
+			b.WriteString(`�`)
+		default:
+			if r < 0x20 || r == 0x7f {
+				fmt.Fprintf(&b, `\u%04X`, r)
+			} else {
+				b.WriteRune(r)
+			}
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
+}
+
+func quoteList(list []string) string {
+	parts := make([]string, len(list))
+	for i, s := range list {
+		parts[i] = quote(s)
+	}
+	return "[" + strings.Join(parts, ", ") + "]"
+}

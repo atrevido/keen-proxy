@@ -1,0 +1,32 @@
+# Router trial template: replace the private addresses and device identity.
+# Enabling the daemon intercepts DNS on br0 even with no selected clients.
+# Add your own connection profiles and retain a recovery path before starting.
+schema_version: 1
+api:
+  listen: 192.168.50.1:8087
+  token_file: /opt/etc/keenproxy/token
+lan:
+  interface: br0
+dns:
+  listen: 0.0.0.0:5354
+  upstreams: [https://1.1.1.1/dns-query]
+  route: direct
+  block_encrypted: false
+  firefox_canary: false
+intercept:
+  mode: redirect
+  tcp_port: 7901
+  udp_port: 7902
+  fwmark: 8192
+  route_table: 120
+connections: []
+groups: []
+networks: []
+clients:
+  - name: Test device
+    mac: '02:00:00:00:00:10'
+    ip: 192.168.50.10
+    mode: 'off'
+filters:
+  sources: []
+  exceptions: []

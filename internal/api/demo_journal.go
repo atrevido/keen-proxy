@@ -1,0 +1,147 @@
+package api
+
+import (
+	"fmt"
+	"math/rand/v2"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/atrevido/keenetic-proxy/internal/journal"
+	"github.com/atrevido/keenetic-proxy/internal/model"
+)
+
+// startJournals seeds synthetic history and adds one route per second
+// so the journal UI remains active without a router.
+func (d *Demo) startJournals() {
+	d.journals = journal.NewSet("")
+	now := time.Now().Add(-4 * time.Hour)
+	audit := d.journals[journal.Audit]
+	for _, e := range []journal.Entry{
+		{Actor: "system", Action: "Запуск keenProxy", Target: "core", Result: "ok", Details: "перехват tproxy, источников 3, DNS 0.0.0.0:5354"},
+		{Actor: "system", Action: "База стран обновлена", Target: "geoip", Result: "ok", Details: now.Format("2006-01") + "-01"},
+		{Actor: "watchdog", Action: "Адреса устройств обновлены", Target: "clients", Result: "info", Details: "появились: 192.168.7.35 (f0:18:98:44:55:66); в сети: 6"},
+		{Actor: "watchdog", Action: "Правила перехвата восстановлены", Target: "firewall", Result: "warn", Details: "правил в firewall не было — вероятно, NDM перестроил его; восстановлений с запуска: 1"},
+		{Actor: "user", Action: "Вход в панель", Target: "auth", Result: "ok", Details: "вход по токену, 192.168.7.50"},
+		{Actor: "user", Action: "Конфиг не принят", Target: "config", Result: "error", Details: "конфиг некорректен: groups[5] \"Steam\": неизвестная цель \"nl2\" (с 192.168.7.50)"},
+		{Actor: "user", Action: "Применение конфига", Target: "config", Result: "ok", Details: "группы: 5 → 6; ядро без перезапуска (с 192.168.7.50)"},
+	} {
+		// Emit history chronologically, from startup a few hours ago to recent events.
+		now = now.Add(time.Duration(rand.IntN(25)+5) * time.Minute)
+		e.Time = now
+		audit.Add(e)
+	}
+	audit.Add(journal.Entry{Time: time.Now().Add(-3 * time.Minute), Actor: "watchdog", Action: "Переключение на резервное", Target: "fi", Result: "warn",
+		Details: "«Финляндия WG» не отвечает 1 мин 4 с (dial tcp 203.0.113.10:51820: i/o timeout) — трафик через «Нидерланды Reality»"})
+	sys := d.journals[journal.System]
+	for i, e := range []journal.Entry{
+		{Level: "INFO", Source: "keenproxy", Message: "keenProxy запущен mode=tproxy sources=3 dns=0.0.0.0:5354"},
+		{Level: "INFO", Source: "keenproxy", Message: "база стран загружена built=" + time.Now().Format("2006-01") + "-01 type=DBIP-Country-Lite"},
+		{Level: "WARN", Source: "sing-box", Message: "outbound/wireguard[fi]: peer 203.0.113.10:51820: handshake did not complete after 5 seconds, retrying"},
+		{Level: "INFO", Source: "keenproxy", Message: "конфиг применён и сохранён"},
+		{Level: "ERROR", Source: "sing-box", Message: "inbound/redirect[redirect-in]: process connection from 192.168.7.35:51244: dial tcp 142.250.74.46:443: i/o timeout"},
+		{Level: "WARN", Source: "keenproxy", Message: "правила перехвата пропали (вероятно, NDM перестроил firewall) — восстановлены"},
+	} {
+		e.Time = time.Now().Add(-time.Duration(60-i*9) * time.Minute)
+		sys.Add(e)
+	}
+	for i := 0; i < 300; i++ {
+		d.addDemoRoute(time.Now().Add(-time.Duration(300-i) * 3 * time.Second))
+	}
+	go func() {
+		for range time.Tick(time.Second) {
+			for n := rand.IntN(3); n >= 0; n-- {
+				d.addDemoRoute(time.Now())
+			}
+		}
+	}()
+}
+
+var demoClients = []string{"192.168.7.21", "192.168.7.35", "192.168.7.50", "192.168.7.52", "192.168.7.104"}
+
+// addDemoRoute generates a synthetic connection with sing-box-style rule metadata.
+func (d *Demo) addDemoRoute(t time.Time) {
+	d.mu.Lock()
+	cfg := d.cfg
+	d.mu.Unlock()
+	e := journal.Entry{DestinationPort: 443, Time: t, Client: demoClients[rand.IntN(len(demoClients))] + ":" + strconv.Itoa(40000+rand.IntN(25000)), Network: "tcp"}
+	if rand.IntN(6) == 0 {
+		e.Network = "udp"
+	}
+	var groups []int
+	for i, g := range cfg.Groups {
+		if g.Target != model.TargetBlock && len(g.Entries) > 0 {
+			groups = append(groups, i)
+		}
+	}
+	source := "source_ip_cidr=192.168.7.0/24"
+	if len(cfg.Networks) > 0 {
+		source = "source_ip_cidr=" + cfg.Networks[0].CIDR
+	}
+	switch r := rand.IntN(10); {
+	case r < 6 && len(groups) > 0:
+		gi := groups[rand.IntN(len(groups))]
+		g := cfg.Groups[gi]
+		e.Host = g.Entries[rand.IntN(len(g.Entries))]
+		if rand.IntN(2) == 0 {
+			e.Host = "www." + e.Host
+		}
+		e.Outbound = outboundOf(g.Target)
+		e.RuleRaw = source + " rule_set=group-" + strconv.Itoa(gi)
+	case r < 8:
+		e.Host = []string{"ya.ru", "mail.ru", "vk.com", "gosuslugi.ru", "ozon.ru", "dzen.ru"}[rand.IntN(6)]
+		e.Outbound = "direct"
+		e.RuleRaw = source
+		for _, g := range cfg.Groups {
+			if g.IsCountry() && g.Except {
+				e.RuleRaw = "" // A Russian address misses the inverted country rule and uses final.
+			}
+		}
+	default:
+		e.Host = []string{"api.github.com", "cdn.jsdelivr.net", "fonts.gstatic.com", "discord.com", "www.figma.com"}[rand.IntN(5)]
+		e.Outbound, e.RuleRaw = "direct", source
+		for _, g := range cfg.Groups {
+			if g.IsCountry() && g.Except {
+				e.Outbound = outboundOf(g.Target)
+				e.RuleRaw = source + " && !(rule_set=" + tagsOf(g.Countries) + ")"
+				break
+			}
+		}
+	}
+	e.IP = fmt.Sprintf("%d.%d.%d.%d", 5+rand.IntN(200), rand.IntN(255), rand.IntN(255), 1+rand.IntN(254))
+	e.Rule = journal.DescribeRule(cfg, e.RuleRaw)
+	d.journals[journal.Routes].Add(e)
+	if t.Unix()%3 == 0 {
+		// A browser often opens several connections to the same destination.
+		e.Client = strings.Split(e.Client, ":")[0] + ":" + strconv.Itoa(65000+rand.IntN(500))
+		e.Time = t.Add(time.Millisecond)
+		d.journals[journal.Routes].Add(e)
+	}
+}
+
+func outboundOf(target string) string {
+	if target == "" || target == model.TargetDirect {
+		return "direct"
+	}
+	return target
+}
+
+func tagsOf(codes []string) string {
+	if len(codes) == 1 {
+		return "geoip-" + strings.ToLower(codes[0])
+	}
+	s := "["
+	for i, c := range codes {
+		if i > 0 {
+			s += " "
+		}
+		s += "geoip-" + strings.ToLower(c)
+	}
+	return s + "]"
+}
+
+// Journal returns the selected in-memory demo journal.
+func (d *Demo) Journal(k journal.Kind) *journal.Journal { return d.journals[k] }
+
+// Mask creates a log redactor from the current demo configuration.
+func (d *Demo) Mask() func(string) string { return journal.Masker(d.Config()) }

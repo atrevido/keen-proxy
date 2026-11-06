@@ -1,0 +1,50 @@
+# Connection templates for the connections section of config.yaml.
+# Groups, networks and clients reference their IDs; replace all placeholder secrets.
+connections:
+  # 1. WireGuard fields correspond to the .conf format.
+  - id: fi
+    name: Finland
+    type: wireguard
+    wireguard:
+      private_key: <PrivateKey from [Interface]>
+      address: ["10.13.13.2/32"]
+      mtu: 1408
+      peer:
+        endpoint: 203.0.113.10:51820
+        public_key: <PublicKey from [Peer]>
+        keepalive: 25
+
+  # 2. Connection links: vless:// (including REALITY, ws, grpc, http,
+  #    httpupgrade), vmess://, trojan://, ss://, hysteria2:// and hy2:// (port
+  #    hopping 20000-30000), tuic://, anytls://, socks5://.
+  - id: nl
+    name: Netherlands Reality
+    type: link
+    link: "vless://UUID@203.0.113.20:443?security=reality&sni=www.microsoft.com&fp=chrome&pbk=KEY&sid=ab12&flow=xtls-rprx-vision#NL"
+
+  - id: hy
+    type: link
+    link: "hysteria2://PASSWORD@hy.example.com:443?sni=hy.example.com&obfs=salamander&obfs-password=OBFS"
+
+  # 3. Raw sing-box outbound/endpoint objects for protocols enabled in the build.
+  #    Omit tag: the compiler derives it from id. Check the upstream schema
+  #    and the selected full/lite registry before adding a raw protocol.
+  - id: shadowtls
+    type: singbox
+    outbound:
+      type: shadowtls
+      server: 203.0.113.30
+      server_port: 443
+      version: 3
+      password: PASSWORD
+      tls: {enabled: true, server_name: www.apple.com, utls: {enabled: true, fingerprint: chrome}}
+
+  # 4. TrustTunnel uses an external supervised client with a loopback SOCKS5
+  #    listener; the embedded engine routes selected traffic to that listener.
+  - id: tt
+    name: TrustTunnel
+    type: trusttunnel
+    trusttunnel:
+      link: "tt://?AQ…"                       # placeholder for a server-exported connection link
+      binary: /opt/bin/trusttunnel_client      # default
+      # socks_port: 17100                      # default 17100, 17101, …

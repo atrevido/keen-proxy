@@ -1,0 +1,27 @@
+{
+  "name": "keenproxy-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@lucide/vue": "^1.69.0",
+    "naive-ui": "^2.45.3",
+    "vue": "^3.5.45",
+    "vue-i18n": "^11.4.16",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.6",
+    "vue-tsc": "^3.3.14"
+  },
+  "license": "GPL-3.0-only"
+}

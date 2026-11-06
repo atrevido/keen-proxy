@@ -1,0 +1,23 @@
+# Separate upstream checkout used for local reference
+/kvas/
+
+# Build artifacts
+/dist/
+/bin/
+tools/*/dist/
+.DS_Store
+*.test
+coverage.out
+/web/dist/
+/web/node_modules/
+/.idea/
+
+# Local quality reports and mutation workspaces
+/.metrics/
+/target/
+/web/target/
+/web/.metrics/
+
+# Local agent memory and reports
+/.serena/
+/docs-reports/

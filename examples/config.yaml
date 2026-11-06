@@ -1,0 +1,24 @@
+lan: {interface: br0, wan: eth3}
+dns: {upstreams: ["https://1.1.1.1/dns-query"]}
+intercept: {mode: tproxy}
+connections:
+  - id: fi
+    type: wireguard
+    wireguard:
+      private_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      address: ["10.13.13.2/32"]
+      mtu: 1408
+      peer:
+        endpoint: 203.0.113.10:42820
+        public_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+        keepalive: 25
+groups:
+  - {name: International, target: fi, entries: ["youtube.com", "149.154.160.0/20"]}
+  - {name: Advertising, target: block, entries: ["ads.example.com"]}
+  - {name: Bank, target: direct, entries: ["bank.ru"]}
+networks:
+  - {name: Home, cidr: 192.168.7.0/24, mode: split, target: fi}
+clients:
+  - {name: Phone, mac: "02:00:00:00:00:10", mode: full, target: fi}
+  - {name: Mac, mac: "aa:bb:cc:dd:ee:01", ip: 192.168.7.88, mode: "off"}
+  - {name: Offline device, mac: "aa:bb:cc:dd:ee:02", mode: full, target: fi}

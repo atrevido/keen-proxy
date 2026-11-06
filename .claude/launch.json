@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd web && PATH=$(ls -d $HOME/.nvm/versions/node/v22.*/bin | tail -1):$PATH npx vite --port 5173 --strictPort"],
+      "port": 5173
+    }
+  ]
+}
