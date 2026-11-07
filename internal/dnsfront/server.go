@@ -211,7 +211,7 @@ func (s *Server) ResolveRaw(ctx context.Context, req *dns.Msg) *dns.Msg {
 			return reply(req, dns.RcodeServerFailure)
 		}
 		u.markDown(now)
-		s.cfg.Log.Warn("upstream DNS не ответил, временно отключён", "upstream", u.Addr(), "kind", u.Kind, "err", err)
+		s.cfg.Log.Warn("upstream DNS did not respond, temporarily disabled", "upstream", u.Addr(), "kind", u.Kind, "err", err)
 	}
 	if s.cfg.DirectFallback {
 		for _, u := range s.ups {
@@ -232,7 +232,7 @@ func (s *Server) ResolveRaw(ctx context.Context, req *dns.Msg) *dns.Msg {
 			}
 			return resp
 		}
-		s.cfg.Log.Warn("системный резолвер не ответил", "addr", s.cfg.Fallback, "err", err)
+		s.cfg.Log.Warn("system resolver did not respond", "addr", s.cfg.Fallback, "err", err)
 	}
 	// All upstreams are in cooldown; let the next request retry them.
 	for _, u := range s.ups {

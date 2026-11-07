@@ -36,7 +36,7 @@ func (r TProxyRoute) rule() *netlink.Rule {
 func (r TProxyRoute) route() (*netlink.Route, error) {
 	lo, err := netlink.LinkByName("lo")
 	if err != nil {
-		return nil, fmt.Errorf("интерфейс lo: %w", err)
+		return nil, fmt.Errorf("lo interface: %w", err)
 	}
 	_, def, _ := net.ParseCIDR("0.0.0.0/0")
 	return &netlink.Route{
@@ -52,7 +52,7 @@ func (r TProxyRoute) Apply() error {
 		return err
 	}
 	if err := netlink.RouteReplace(rt); err != nil {
-		return fmt.Errorf("маршрут local default в таблице %d: %w", r.Table, err)
+		return fmt.Errorf("local default route in table %d: %w", r.Table, err)
 	}
 	if err := netlink.RuleAdd(r.rule()); err != nil && !errors.Is(err, unix.EEXIST) {
 		return fmt.Errorf("ip rule fwmark 0x%x: %w", r.Mark, err)

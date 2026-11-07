@@ -33,9 +33,10 @@ export const api = {
   saveConfig: async (config: Config) => demo.save(config),
   validateConfig: async (config: Config) => { demo.validate(config); return { ok: true } },
   devices: async () => [
-    { mac: '02:00:00:00:00:10', ip: '192.168.7.10', client: 'Phone', mode: 'full' as const },
+    { mac: '02:00:00:00:00:10', ip: '192.168.7.10', client: 'Phone', mode: 'full' as const, hostname: 'phone.local', hostname_source: 'dhcp' as const },
     { mac: 'aa:bb:cc:dd:ee:01', ip: '192.168.7.20', client: 'TV', mode: 'split' as const },
     { mac: 'aa:bb:cc:dd:ee:02', ip: '192.168.7.30', client: 'Work laptop', mode: 'off' as const },
+    { mac: '02:00:00:00:00:40', ip: '192.168.7.40', hostname: 'nas.local', hostname_source: 'dns' as const },
   ],
   parseLink: async (link: string) => parseLink(link),
   stats: async (_series = false) => demo.stats(),

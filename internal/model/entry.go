@@ -43,10 +43,10 @@ func ParseEntry(s string) (Entry, error) {
 		s = strings.TrimSpace(s[:i])
 	}
 	if s == "" {
-		return Entry{}, fmt.Errorf("пустая запись")
+		return Entry{}, fmt.Errorf("empty entry")
 	}
 	if l := strings.ToLower(s); strings.HasPrefix(l, "geoip:") || strings.HasPrefix(l, "!geoip:") || strings.HasPrefix(l, "country:") {
-		return Entry{}, fmt.Errorf("%q: страны задаются отдельной группой (countries), а не записью", s)
+		return Entry{}, fmt.Errorf("%q: countries must be set in a separate group (countries), not as an entry", s)
 	}
 	if p, err := netip.ParsePrefix(s); err == nil {
 		return Entry{Kind: EntryPrefix, Prefix: p.Masked()}, nil
@@ -59,7 +59,7 @@ func ParseEntry(s string) (Entry, error) {
 	d = strings.TrimSuffix(d, ".")
 	ascii, err := idna.Lookup.ToASCII(d)
 	if err != nil || !strings.Contains(ascii, ".") {
-		return Entry{}, fmt.Errorf("не домен, не IP и не подсеть: %q", s)
+		return Entry{}, fmt.Errorf("not a domain, IP, or subnet: %q", s)
 	}
 	return Entry{Kind: EntryDomain, Domain: strings.ToLower(ascii)}, nil
 }
@@ -104,15 +104,15 @@ func ParseUpstream(s string) (Upstream, error) {
 			up.Path = "/dns-query"
 		}
 	default:
-		return Upstream{}, fmt.Errorf("неизвестная схема %q (нужно https, tls или udp)", u.Scheme)
+		return Upstream{}, fmt.Errorf("unknown scheme %q (expected https, tls, or udp)", u.Scheme)
 	}
 	if up.Host == "" {
-		return Upstream{}, fmt.Errorf("нет адреса сервера в %q", s)
+		return Upstream{}, fmt.Errorf("missing server address in %q", s)
 	}
 	if p := u.Port(); p != "" {
 		n, err := strconv.ParseUint(p, 10, 16)
 		if err != nil {
-			return Upstream{}, fmt.Errorf("порт %q: %w", p, err)
+			return Upstream{}, fmt.Errorf("port %q: %w", p, err)
 		}
 		up.Port = uint16(n)
 	}

@@ -30,11 +30,11 @@ func (r *fakeRunner) Run(_ context.Context, stdin, name string, args ...string) 
 		switch args[3] {
 		case "-C":
 			if r.missing[key] {
-				return errors.New("нет правила")
+				return errors.New("rule missing")
 			}
 		case "-D":
 			if r.deleted[key] >= 2 { // the chain contained two duplicate jumps
-				return errors.New("нет правила")
+				return errors.New("rule missing")
 			}
 			r.deleted[key]++
 		}
@@ -49,7 +49,7 @@ func TestApplyInsertsOnlyMissingJumps(t *testing.T) {
 		t.Fatal(err)
 	}
 	if r.calls[0] != "iptables-restore -w --noflush <stdin>" {
-		t.Errorf("первым должен быть restore, получили %q", r.calls[0])
+		t.Errorf("restore must run first, got %q", r.calls[0])
 	}
 	var inserts []string
 	for _, c := range r.calls {
@@ -58,7 +58,7 @@ func TestApplyInsertsOnlyMissingJumps(t *testing.T) {
 		}
 	}
 	if len(inserts) != 1 || inserts[0] != "iptables -w -t nat -I PREROUTING 1 -j KEENPROXY_DNS" {
-		t.Errorf("ожидалась вставка только DNS-перехода, получили %v", inserts)
+		t.Errorf("expected insertion of only the DNS jump, got %v", inserts)
 	}
 }
 
@@ -79,9 +79,9 @@ func TestRemoveDeletesJumpsBeforeChains(t *testing.T) {
 		}
 	}
 	if lastDelete < 0 || firstFlush < lastDelete {
-		t.Errorf("переходы должны сниматься до очистки цепочек: %v", r.calls)
+		t.Errorf("jumps must be removed before flushing chains: %v", r.calls)
 	}
 	if r.deleted["nat/PREROUTING/KEENPROXY_DNS"] != 2 {
-		t.Errorf("дубли перехода должны сниматься все: %v", r.deleted)
+		t.Errorf("all duplicate jumps must be removed: %v", r.deleted)
 	}
 }

@@ -64,24 +64,24 @@ func TestParseLink(t *testing.T) {
 	e.field(0x06, []byte(`s3cret"Pass`))
 	e.field(0x08, append(append([]byte{}, cert...), cert...)) // Two-certificate chain.
 	e.field(0x09, []byte{2})
-	e.field(0x0C, []byte("Финляндия"))
+	e.field(0x0C, []byte("\u0424\u0438\u043d\u043b\u044f\u043d\u0434\u0438\u044f"))
 	e.field(0x0D, dns.b)
-	e.field(0x3F, []byte("неизвестное поле пропускается"))
+	e.field(0x3F, []byte("unknown field is skipped"))
 
 	ep, err := ParseLink(e.link())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if ep.Hostname != "vpn.example.com" || len(ep.Addresses) != 2 || ep.HasIPv6 || !ep.HTTP3 ||
-		ep.Username != "premium" || ep.Password != `s3cret"Pass` || ep.Name != "Финляндия" || len(ep.DNSUpstreams) != 2 {
-		t.Fatalf("разобрали не то: %+v", ep)
+		ep.Username != "premium" || ep.Password != `s3cret"Pass` || ep.Name != "\u0424\u0438\u043d\u043b\u044f\u043d\u0434\u0438\u044f" || len(ep.DNSUpstreams) != 2 {
+		t.Fatalf("unexpected parsed endpoint: %+v", ep)
 	}
 	if n := strings.Count(ep.CertificatePEM, "BEGIN CERTIFICATE"); n != 2 {
-		t.Errorf("ждали 2 сертификата в PEM, получили %d", n)
+		t.Errorf("expected 2 PEM certificates, got %d", n)
 	}
 	block, _ := pem.Decode([]byte(ep.CertificatePEM))
 	if _, err := x509.ParseCertificate(block.Bytes); err != nil {
-		t.Errorf("PEM не разбирается: %v", err)
+		t.Errorf("cannot parse PEM: %v", err)
 	}
 
 	toml := ClientConfig(ep, "127.0.0.1:17100")
@@ -95,7 +95,7 @@ func TestParseLink(t *testing.T) {
 		`certificate = "-----BEGIN CERTIFICATE-----\n`,
 	} {
 		if !strings.Contains(toml, want) {
-			t.Errorf("в конфиге нет %q:\n%s", want, toml)
+			t.Errorf("configuration is missing %q:\n%s", want, toml)
 		}
 	}
 }
@@ -110,12 +110,12 @@ func TestParseLinkErrors(t *testing.T) {
 	for link, want := range map[string]string{
 		"vless://x":   "tt://?",
 		"tt://?***":   "base64",
-		noPass.link(): "пароля",
-		future.link(): "новее",
-		"tt://?AQ":    "обрыв",
+		noPass.link(): "password",
+		future.link(): "newer",
+		"tt://?AQ":    "truncated",
 	} {
 		if _, err := ParseLink(link); err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("%s: %v, ждали %q", link, err, want)
+			t.Errorf("%s: %v, expected %q", link, err, want)
 		}
 	}
 }

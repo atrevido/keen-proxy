@@ -7,13 +7,13 @@ import (
 )
 
 func TestRestartsCrashingProcess(t *testing.T) {
-	p := &Process{Name: "crash", Path: "/bin/sh", Args: []string{"-c", "echo падаю; exit 1"},
+	p := &Process{Name: "crash", Path: "/bin/sh", Args: []string{"-c", "echo crashing; exit 1"},
 		MinDelay: 10 * time.Millisecond, MaxDelay: 20 * time.Millisecond}
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 	p.Run(ctx)
 	if p.Starts() < 3 {
-		t.Errorf("процесс должен перезапускаться, запусков: %d", p.Starts())
+		t.Errorf("process must restart, starts: %d", p.Starts())
 	}
 }
 
@@ -27,9 +27,9 @@ func TestStopsOnCancel(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(3 * time.Second):
-		t.Fatal("Run не завершился после отмены")
+		t.Fatal("Run did not exit after cancellation")
 	}
 	if p.Starts() != 1 {
-		t.Errorf("запусков: %d, ждали 1", p.Starts())
+		t.Errorf("starts: %d, want 1", p.Starts())
 	}
 }

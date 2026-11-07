@@ -53,7 +53,7 @@ func New(dir string, client *http.Client) *Manager {
 	if client == nil {
 		client = &http.Client{Timeout: 30 * time.Second, Transport: &http.Transport{ForceAttemptHTTP2: true, MaxIdleConns: 2, IdleConnTimeout: 30 * time.Second}, CheckRedirect: func(r *http.Request, via []*http.Request) error {
 			if r.URL.Scheme != "https" || len(via) > 5 {
-				return fmt.Errorf("недопустимый redirect")
+				return fmt.Errorf("invalid redirect")
 			}
 			return nil
 		}}
@@ -100,7 +100,7 @@ func (m *Manager) Configure(cfg model.Filters) {
 		}
 		n := len(p.Parsed.Domains) + len(p.Parsed.Allow)
 		if total+n > MaxTotalRules {
-			keep[source.ID] = snapshot{URL: source.URL, State: State{ID: source.ID, Error: fmt.Sprintf("общий лимит %d правил", MaxTotalRules)}}
+			keep[source.ID] = snapshot{URL: source.URL, State: State{ID: source.ID, Error: fmt.Sprintf("total limit of %d rules", MaxTotalRules)}}
 			continue
 		}
 		total += n
@@ -183,7 +183,7 @@ func (m *Manager) Status() []State {
 // Automatic refreshes honor per-source opt-in and a one-day minimum interval.
 func (m *Manager) Refresh(ctx context.Context, automatic bool) error {
 	if !m.update.TryLock() {
-		return fmt.Errorf("обновление уже идёт")
+		return fmt.Errorf("update already in progress")
 	}
 	defer m.update.Unlock()
 	m.mu.RLock()
@@ -215,7 +215,7 @@ func (m *Manager) Refresh(ctx context.Context, automatic bool) error {
 			}
 		}
 		if err == nil && total > MaxTotalRules {
-			err = fmt.Errorf("общий лимит %d правил", MaxTotalRules)
+			err = fmt.Errorf("total limit of %d rules", MaxTotalRules)
 		}
 		if !current {
 			m.mu.Unlock()

@@ -11,7 +11,7 @@ type TProxyRoute struct {
 	Table int
 }
 
-var errNotLinux = errors.New("ip rule/route доступны только на Linux")
+var errNotLinux = errors.New("ip rule/route are only available on Linux")
 
 // Apply rejects policy-route installation outside Linux.
 func (TProxyRoute) Apply() error { return errNotLinux }

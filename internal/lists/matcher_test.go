@@ -24,7 +24,7 @@ func TestMatcher(t *testing.T) {
 	}
 	for d, want := range domains {
 		if got := m.Domain(d); got != want {
-			t.Errorf("Domain(%q) = %d, ждали %d", d, got, want)
+			t.Errorf("Domain(%q) = %d, want %d", d, got, want)
 		}
 	}
 
@@ -35,7 +35,7 @@ func TestMatcher(t *testing.T) {
 	}
 	for a, want := range addrs {
 		if got := m.Addr(netip.MustParseAddr(a)); got != want {
-			t.Errorf("Addr(%s) = %d, ждали %d", a, got, want)
+			t.Errorf("Addr(%s) = %d, want %d", a, got, want)
 		}
 	}
 }

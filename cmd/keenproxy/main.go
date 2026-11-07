@@ -63,12 +63,12 @@ func main() {
 
 	cfg, err := model.Load(*configPath)
 	if err != nil {
-		log.Error("конфиг", "err", err)
+		log.Error("configuration", "err", err)
 		os.Exit(1)
 	}
 	if *uiDemo {
 		if err := serveAPI(ctx, cfg, api.NewDemo(cfg), log); err != nil {
-			log.Error("веб-интерфейс", "err", err)
+			log.Error("web interface", "err", err)
 			os.Exit(1)
 		}
 		return
@@ -83,11 +83,11 @@ func main() {
 	// A management API failure must not stop the independent routing daemon.
 	go func() {
 		if err := serveAPI(ctx, cfg, d, log); err != nil {
-			log.Error("веб-интерфейс не запустился", "err", err)
+			log.Error("web interface failed to start", "err", err)
 		}
 	}()
 	if err := d.Run(ctx); err != nil {
-		log.Error("keenProxy остановлен с ошибкой", "err", err)
+		log.Error("keenProxy stopped with an error", "err", err)
 		os.Exit(1)
 	}
 }
@@ -97,7 +97,7 @@ func main() {
 func singBoxLog(j *journal.Journal, log *slog.Logger) string {
 	r, w, err := os.Pipe()
 	if err != nil {
-		log.Warn("журнал sing-box не будет собираться", "err", err)
+		log.Warn("sing-box logs will not be collected", "err", err)
 		return ""
 	}
 	go journal.ReadSingBox(r, j, os.Stderr)
@@ -113,10 +113,10 @@ var singBoxPipe *os.File
 func serveAPI(ctx context.Context, cfg *model.Config, d api.Daemon, log *slog.Logger) error {
 	token, created, err := api.LoadToken(cfg.API.TokenFile)
 	if err != nil {
-		return fmt.Errorf("токен: %w", err)
+		return fmt.Errorf("token: %w", err)
 	}
 	if created {
-		log.Info("создан токен входа в веб-интерфейс", "file", cfg.API.TokenFile, "token", token)
+		log.Info("web interface login token created", "file", cfg.API.TokenFile, "token", token)
 	}
 	srv := &http.Server{
 		Addr:              cfg.API.Listen,
@@ -129,7 +129,7 @@ func serveAPI(ctx context.Context, cfg *model.Config, d api.Daemon, log *slog.Lo
 		defer cancel()
 		srv.Shutdown(shutdownCtx)
 	}()
-	log.Info("веб-интерфейс", "addr", "http://"+cfg.API.Listen)
+	log.Info("web interface", "addr", "http://"+cfg.API.Listen)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		return err
 	}
@@ -159,7 +159,7 @@ func printDryRun(configPath, arpPath, ruleSetDir string) error {
 	}
 	fmt.Println("\n# iptables-restore --noflush")
 	fmt.Print(out.Plan.Render())
-	fmt.Println("\n# переходы")
+	fmt.Println("\n# jumps")
 	for _, j := range out.Plan.Jumps() {
 		fmt.Printf("iptables -t %s -I %s 1 -j %s\n", j.Table, j.From, j.To)
 	}

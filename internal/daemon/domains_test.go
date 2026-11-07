@@ -77,7 +77,7 @@ func TestSameDomainDifferentGroupsIsConflict(t *testing.T) {
 		t.Fatal("same name hides group ambiguity")
 	}
 	note := dnsRouteNote(cfg, records, compile.DomainTag(cfg.Groups[0]), "203.0.113.1")
-	if !strings.Contains(note, "example.com") || !strings.Contains(note, "неоднознач") {
+	if !strings.Contains(note, "example.com") || !strings.Contains(note, "ambiguous") {
 		t.Fatal(note)
 	}
 }

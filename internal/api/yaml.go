@@ -68,7 +68,7 @@ func (s *Server) yamlExport(w http.ResponseWriter, r *http.Request) {
 func (s *Server) previousConfig(w http.ResponseWriter, r *http.Request) {
 	d, ok := s.D.(interface{ PreviousConfig() (*model.Config, error) })
 	if !ok {
-		writeError(w, 404, "Предыдущий файл отсутствует в демо")
+		writeError(w, 404, "Previous file is unavailable in demo")
 		return
 	}
 	c, err := d.PreviousConfig()

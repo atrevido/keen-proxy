@@ -7,12 +7,16 @@ LDFLAGS := -s -w -buildid=
 NODE_BIN ?= $(shell ls -d $(HOME)/.nvm/versions/node/v22.*/bin 2>/dev/null | tail -1)
 NPM := PATH="$(NODE_BIN):$$PATH" npm
 
-.PHONY: test vet web build ui-demo build-router build-router-lite clean integration test-install
+.PHONY: test vet web build ui-demo build-router build-router-lite clean integration test-install check-language
+
+check-language:
+	python3 -B -m unittest discover -s test/language -v
+	python3 tools/check-language.py
 
 test-install:
 	python3 -B -m unittest discover -s test/install -v
 
-test: test-install
+test: check-language test-install
 	go test -tags $(TAGS) ./internal/... ./cmd/...
 
 vet:

@@ -125,6 +125,8 @@ export interface Device {
   ip: string
   client?: string
   mode?: Mode
+  hostname?: string
+  hostname_source?: 'dhcp' | 'dns'
 }
 
 // Display metadata returned by the server-side connection-link parser.

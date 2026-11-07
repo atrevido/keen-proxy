@@ -31,6 +31,7 @@ The main code boundaries are:
 
 - Follow Go formatting and the existing TypeScript/Vue style.
 - Write short English comments explaining contracts, ownership, units, and non-obvious ordering. Keep comments close to the code they describe.
+- Keep runtime diagnostics and generated comments in English. Put Russian text in `docs/ru/` or Russian localization resources; preserve essential Unicode test values using escapes. `make check-language` enforces this boundary and runs as part of `make test`.
 - Preserve configuration compatibility, the shared draft/Apply workflow, and rollback behavior.
 - Update the Go model, compiler, API, frontend types, examples, and tests together when changing the schema.
 - Add a failing behavioral test before fixing a bug when practical. Use controlled clocks and injected network boundaries instead of real services.

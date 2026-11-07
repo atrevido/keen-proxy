@@ -1,3 +1,4 @@
+INHERIT: locales/mkdocs.ru.yml
 site_name: KeenProxy
 site_description: Selective routing for your network
 site_url: !ENV [DOCS_SITE_URL, 'https://atrevido.github.io/keen-proxy/']
@@ -28,25 +29,6 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Light theme
-plugins:
-  - search
-  - i18n:
-      docs_structure: folder
-      fallback_to_default: true
-      languages:
-        - locale: en
-          default: true
-          name: English
-        - locale: ru
-          name: Русский
-          nav_translations:
-            Overview: Обзор
-            Getting started: Начало работы
-            User guide: Руководство пользователя
-            Routing and DNS: Маршрутизация и DNS
-            Troubleshooting: Диагностика и вопросы
-            Browser demo: Демо в браузере
-            Documentation development: Разработка документации
 nav:
   - Overview: index.md
   - Getting started: getting-started.md

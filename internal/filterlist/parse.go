@@ -87,21 +87,21 @@ func Parse(r io.Reader) (Parsed, error) {
 			}
 		}
 		if len(p.Domains)+len(p.Allow) > MaxRules {
-			return Parsed{}, fmt.Errorf("не более %d правил", MaxRules)
+			return Parsed{}, fmt.Errorf("at most %d rules", MaxRules)
 		}
 	}
 	if err := sc.Err(); err != nil {
 		return Parsed{}, err
 	}
 	if lr.N <= 0 {
-		return Parsed{}, fmt.Errorf("список больше 8 MiB")
+		return Parsed{}, fmt.Errorf("list exceeds 8 MiB")
 	}
 	slices.Sort(p.Domains)
 	p.Domains = slices.Compact(p.Domains)
 	slices.Sort(p.Allow)
 	p.Allow = slices.Compact(p.Allow)
 	if len(p.Domains) == 0 {
-		return Parsed{}, fmt.Errorf("пустой или неподдерживаемый список (%d пропущено)", p.Skipped)
+		return Parsed{}, fmt.Errorf("empty or unsupported list (%d skipped)", p.Skipped)
 	}
 	return p, nil
 }

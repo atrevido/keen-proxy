@@ -501,7 +501,7 @@ func outboundTag(target string, tags map[string]string) string {
 func mustPort(addr string) uint16 {
 	ap, err := netip.ParseAddrPort(addr)
 	if err != nil {
-		panic(fmt.Sprintf("адрес %q не проверен Validate: %v", addr, err))
+		panic(fmt.Sprintf("address %q was not checked by Validate: %v", addr, err))
 	}
 	return ap.Port()
 }

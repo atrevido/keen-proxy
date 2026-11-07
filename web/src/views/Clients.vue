@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { Users, Plus, Trash2, RefreshCw, ChevronDown, ChevronRight, Network as NetIcon, Search, UserPlus } from '@lucide/vue'
 import { modeOptions, store, targets, targetLabel } from '../store'
 import type { Client, Device, Network } from '../types'
+import { deviceDisplayName, deviceMatches } from '../deviceNames'
 
 const dialog = useDialog()
 const { t } = useI18n()
@@ -53,7 +54,7 @@ const rows = computed<Row[]>(() => {
   }
   const needle = q.value.trim().toLowerCase()
   return needle
-    ? out.filter((r) => r.ip.includes(needle) || r.mac.includes(needle) || (r.client?.name ?? '').toLowerCase().includes(needle))
+    ? out.filter((r) => deviceMatches(needle, r.client, r.device, r.ip, r.mac))
     : out
 })
 
@@ -186,8 +187,11 @@ function modeText(m: string) {
           <div v-for="r in sec.rows" :key="r.key" class="trow">
             <span class="name">
               <i :class="['dot', r.device ? 'on' : 'off']" :title="r.device ? t('clients.online') : t('clients.offline')" />
-              <NInput v-if="r.client" v-model:value="r.client.name" size="tiny" />
-              <span v-else class="muted">{{ t('clients.noName') }}</span>
+              <span class="device-identity">
+                <NInput v-if="r.client" v-model:value="r.client.name" size="tiny" :placeholder="deviceDisplayName(undefined, r.device, r.ip, r.mac)" />
+                <span v-else>{{ deviceDisplayName(undefined, r.device, r.ip, r.mac) }}</span>
+                <small v-if="r.device?.hostname" class="muted">{{ t('clients.discoveredName', { name: r.device.hostname, source: r.device.hostname_source === 'dhcp' ? 'DHCP' : 'DNS' }) }}</small>
+              </span>
             </span>
             <span><span class="chip mono">{{ r.ip || '—' }}</span></span>
             <span>
@@ -232,6 +236,8 @@ function modeText(m: string) {
 </template>
 
 <style scoped>
+.device-identity { display:flex; flex-direction:column; min-width:0; gap:3px; }
+.device-identity small { overflow-wrap:anywhere; }
 .title-icon {
   color: #60a5fa;
 }

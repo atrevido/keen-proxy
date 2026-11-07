@@ -28,13 +28,13 @@ connections:
   - {id: de, type: link, link: "socks5://203.0.113.3:1080", fallback: direct}
   - {id: us, type: link, link: "socks5://203.0.113.4:1080"}
 groups:
-  - {name: Видео, target: fi, entries: ["youtube.com"]}
-  - {name: Чат, target: us, entries: ["chat.example"]}
+  - {name: Video, target: fi, entries: ["youtube.com"]}
+  - {name: Chat, target: us, entries: ["chat.example"]}
 networks:
-  - {name: Дом, cidr: 192.168.7.0/24, mode: split}
-  - {name: Офис, cidr: 10.0.0.0/24, mode: full, target: nl}
+  - {name: Home, cidr: 192.168.7.0/24, mode: split}
+  - {name: Office, cidr: 10.0.0.0/24, mode: full, target: nl}
 clients:
-  - {name: ТВ, mac: "aa:bb:cc:dd:ee:01", ip: 192.168.7.20, mode: full, target: fi}
+  - {name: TV, mac: "aa:bb:cc:dd:ee:01", ip: 192.168.7.20, mode: full, target: fi}
 `))
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ clients:
 		t.Fatal(err)
 	}
 	if len(out.Failover) != 3 || out.Failover[0].Tag != "failover-fi" || strings.Join(out.Failover[0].Chain, ",") != "fi,nl,de,direct" {
-		t.Fatalf("цепочки: %+v", out.Failover)
+		t.Fatalf("chains: %+v", out.Failover)
 	}
 	var parsed struct {
 		Outbounds []map[string]any `json:"outbounds"`
@@ -73,11 +73,11 @@ clients:
 		`{"outbound":"failover-fi","rule_set":["clients-full-fi"]}`,
 	} {
 		if !strings.Contains(all, want) {
-			t.Errorf("нет %s в\n%s", want, all)
+			t.Errorf("missing %s in\n%s", want, all)
 		}
 	}
 	if strings.Contains(all, `"failover-us"`) {
-		t.Error("у соединения без резервного не должно быть селектора")
+		t.Error("connection without fallback must not have a selector")
 	}
 
 	for name, raw := range out.RuleSets {
@@ -90,7 +90,7 @@ clients:
 	}
 	instance, err := box.New(box.Options{Context: ctx, Options: opts})
 	if err != nil {
-		t.Fatalf("sing-box отверг конфиг: %v", err)
+		t.Fatalf("sing-box rejected configuration: %v", err)
 	}
 	instance.Close()
 }

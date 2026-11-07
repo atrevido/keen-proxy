@@ -43,7 +43,7 @@ COMMIT
 COMMIT
 `
 	if got := testPlan(model.InterceptTProxy).Render(); got != want {
-		t.Errorf("Render() =\n%s\nждали\n%s", got, want)
+		t.Errorf("Render() =\n%s\nwant\n%s", got, want)
 	}
 }
 
@@ -52,12 +52,12 @@ func TestRenderRedirectHasNoMangle(t *testing.T) {
 	got := p.Render()
 	for _, bad := range []string{"*mangle", "TPROXY"} {
 		if strings.Contains(got, bad) {
-			t.Errorf("в режиме redirect не должно быть %q:\n%s", bad, got)
+			t.Errorf("redirect mode must not contain %q:\n%s", bad, got)
 		}
 	}
 	for _, j := range p.Jumps() {
 		if j.Table == "mangle" {
-			t.Errorf("лишний переход %+v", j)
+			t.Errorf("unexpected jump %+v", j)
 		}
 	}
 }
@@ -67,9 +67,9 @@ func TestRenderNoSourcesKeepsDNSOnly(t *testing.T) {
 	p.Sources = nil
 	got := p.Render()
 	if strings.Contains(got, "REDIRECT --to-ports 7901") || strings.Contains(got, "TPROXY") || strings.Contains(got, "REJECT") {
-		t.Errorf("без участников не должно быть перехвата трафика:\n%s", got)
+		t.Errorf("traffic must not be intercepted without participants:\n%s", got)
 	}
 	if !strings.Contains(got, "--dport 53 -j REDIRECT --to-ports 5354") {
-		t.Errorf("DNS должен перехватываться всегда:\n%s", got)
+		t.Errorf("DNS must always be intercepted:\n%s", got)
 	}
 }

@@ -70,7 +70,7 @@ function status(saved: Config, started: string): Status {
   return {
     started, mode: saved.intercept.mode, sources: 2, connections: saved.connections?.length ?? 0,
     groups: saved.groups?.length ?? 0, entries: (saved.groups ?? []).reduce((n, g) => n + g.entries.length, 0),
-    clients: saved.clients?.length ?? 0, online_devices: 3, dns: '127.0.0.1:5353', firewall: true, restored: 0,
+    clients: saved.clients?.length ?? 0, online_devices: 4, dns: '127.0.0.1:5353', firewall: true, restored: 0,
     trusttunnel: [], geoip: { loaded: true, type: 'Synthetic demo', built: started }, conn_countries: { fi: 'FI', nl: 'NL', de: 'DE' },
     failover: { fi: { active: 'fi', chain: ['fi', 'nl', 'de'] } },
     health: Object.fromEntries((saved.connections ?? []).map(c => [c.id, { ok: true, checked: new Date().toISOString(), since: started, latency_ms: 42 }])),

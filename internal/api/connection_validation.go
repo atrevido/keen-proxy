@@ -23,7 +23,7 @@ func validateEngineProfiles(ctx context.Context, cfg *model.Config) error {
 	}
 	// Parser/constructor errors may contain passwords, UUIDs or keys.
 	if err != nil {
-		return errors.New("параметры соединения не приняты ядром: проверьте тип, обязательные поля и ключи")
+		return errors.New("core rejected connection parameters: check type, required fields, and keys")
 	}
 	return nil
 }
@@ -34,7 +34,7 @@ var serverProfileTypes = map[string]bool{"vless": true, "trojan": true, "shadows
 var passwordProfileTypes = map[string]bool{"trojan": true, "hysteria2": true, "shadowsocks": true}
 
 func invalidProfileField(field string) error {
-	return fmt.Errorf("неверный формат поля соединения: %s", field)
+	return fmt.Errorf("invalid connection field format: %s", field)
 }
 
 // validWGKey requires a base64-encoded 32-byte WireGuard key.

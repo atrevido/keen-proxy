@@ -3,6 +3,7 @@
 ## Language and documentation
 
 - Write developer documentation, code comments, and local memories in concise English.
+- Keep runtime errors, logs, generated comments, and code text in English. Literal Cyrillic belongs only in `docs/ru/` and Russian localization resources. Use Unicode escapes for essential Cyrillic test fixtures without changing their runtime values. Run `make check-language` to verify this boundary.
 - Explain the purpose, contract, ownership, or important constraint of significant types and functions. Avoid comments that merely repeat their names.
 - Preserve translated UI messages, test inputs, protocol examples, and original third-party data when their language is part of behavior or provenance.
 - Keep public project documentation in the repository: README.md, AGENTS.md, CONTRIBUTING.md, SECURITY.md, and LICENSE.

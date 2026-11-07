@@ -31,9 +31,9 @@ func TestLogOutputPipe(t *testing.T) {
 	select {
 	case l := <-lines:
 		if !strings.Contains(l, "INFO") {
-			t.Errorf("строка журнала: %q", l)
+			t.Errorf("log line: %q", l)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("sing-box ничего не записал в канал")
+		t.Fatal("sing-box wrote nothing to the channel")
 	}
 }

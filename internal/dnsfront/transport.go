@@ -29,7 +29,7 @@ func (s *Server) exchangeTransport(ctx context.Context, u model.Upstream, req *d
 		address = net.JoinHostPort(ip, strconv.Itoa(int(u.Port)))
 	} else if s.cfg.RequireBootstrap {
 		if _, err := netip.ParseAddr(u.Host); err != nil {
-			return nil, fmt.Errorf("нет bootstrap IP для %s", u.Host)
+			return nil, fmt.Errorf("no bootstrap IP for %s", u.Host)
 		}
 	}
 	dial := s.cfg.DialContext

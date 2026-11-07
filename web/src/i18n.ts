@@ -6,8 +6,8 @@ import ru from './locales/ru'
 import en from './locales/en'
 
 export const LOCALES = [
-  { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
+  { value: 'ru', label: ru.languageName },
+  { value: 'en', label: en.languageName },
 ] as const
 export type Locale = (typeof LOCALES)[number]['value']
 

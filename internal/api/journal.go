@@ -23,19 +23,19 @@ func clientIP(r *http.Request) string {
 
 func (s *Server) auditLogin(r *http.Request, result, details string) {
 	if j := s.D.Journal(journal.Audit); j != nil {
-		j.Add(journal.Entry{Actor: "user", Action: "Вход в панель", Target: "auth", Result: result, Details: details + ", " + clientIP(r)})
+		j.Add(journal.Entry{Actor: "user", Action: "Panel login", Target: "auth", Result: result, Details: details + ", " + clientIP(r)})
 	}
 }
 
 func (s *Server) journalOf(w http.ResponseWriter, r *http.Request) (journal.Kind, *journal.Journal, bool) {
 	k := journal.Kind(r.PathValue("kind"))
 	if !slices.Contains(journal.Kinds, k) {
-		writeError(w, http.StatusNotFound, "нет такого журнала")
+		writeError(w, http.StatusNotFound, "unknown journal")
 		return "", nil, false
 	}
 	j := s.D.Journal(k)
 	if j == nil {
-		writeError(w, http.StatusServiceUnavailable, "журнал недоступен")
+		writeError(w, http.StatusServiceUnavailable, "journal unavailable")
 		return "", nil, false
 	}
 	return k, j, true
@@ -68,7 +68,7 @@ func (s *Server) journalStream(w http.ResponseWriter, r *http.Request) {
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		writeError(w, http.StatusInternalServerError, "поток не поддерживается")
+		writeError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -123,6 +123,6 @@ func (s *Server) journalExport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
 	if err := j.Export(w, k, time.Now().Add(-since), full); err != nil {
-		s.Log.Warn("выгрузка журнала", "err", err)
+		s.Log.Warn("journal export", "err", err)
 	}
 }

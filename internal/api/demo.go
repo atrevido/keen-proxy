@@ -47,14 +47,14 @@ func (d *Demo) Config() *model.Config {
 func (d *Demo) Apply(_ context.Context, cfg *model.Config) error {
 	cfg.Defaults()
 	if err := cfg.Validate(); err != nil {
-		d.journals[journal.Audit].Add(journal.Entry{Actor: "user", Action: "Конфиг не принят", Target: "config", Result: "error", Details: err.Error()})
+		d.journals[journal.Audit].Add(journal.Entry{Actor: "user", Action: "Configuration rejected", Target: "config", Result: "error", Details: err.Error()})
 		return err
 	}
 	d.mu.Lock()
 	d.cfg = cfg
 	demoResolve(d.domainCache, compile.DomainNames(cfg))
 	d.mu.Unlock()
-	d.journals[journal.Audit].Add(journal.Entry{Actor: "user", Action: "Применение конфига", Target: "config", Result: "ok", Details: "демо: конфиг сохранён в памяти"})
+	d.journals[journal.Audit].Add(journal.Entry{Actor: "user", Action: "Apply configuration", Target: "config", Result: "ok", Details: "demo: configuration saved in memory"})
 	return nil
 }
 
@@ -121,8 +121,8 @@ func (d *Demo) Devices() []daemon.Device {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	out := []daemon.Device{
-		{MAC: "a4:83:e7:10:20:30", IP: "192.168.7.21"},
-		{MAC: "f0:18:98:44:55:66", IP: "192.168.7.35"},
+		{MAC: "a4:83:e7:10:20:30", IP: "192.168.7.21", Hostname: "demo-printer", HostnameSource: "dhcp"},
+		{MAC: "f0:18:98:44:55:66", IP: "192.168.7.35", Hostname: "demo-nas.local", HostnameSource: "dns"},
 		{MAC: "3c:22:fb:77:88:99", IP: "192.168.7.52"},
 	}
 	for i, c := range d.cfg.Clients {

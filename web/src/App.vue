@@ -3,14 +3,14 @@ import { NConfigProvider, NMessageProvider, NDialogProvider, NGlobalStyle } from
 import { naiveTheme, overrides } from './theme'
 import { naiveDateLocale, naiveLocale } from './i18n'
 import Shell from './components/Shell.vue'
-import { locale } from './i18n'
+import { locale, t } from './i18n'
 const browserDemo = import.meta.env.MODE === 'demo'
 </script>
 
 <template>
   <aside v-if="browserDemo" class="browser-demo" aria-label="Browser demo">
-    {{ locale === 'ru' ? 'Демо · синтетические данные · изменения сбрасываются при перезагрузке · сетевые проверки не выполняются.' : 'Demo · synthetic data · changes reset on reload · no network checks.' }}
-    <a :href="locale === 'ru' ? '../ru/' : '../'">{{ locale === 'ru' ? 'Документация' : 'Documentation' }}</a>
+    {{ t('browserDemo.notice') }}
+    <a :href="locale === 'ru' ? '../ru/' : '../'">{{ t('browserDemo.documentation') }}</a>
   </aside>
   <NConfigProvider :theme="naiveTheme" :theme-overrides="overrides" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />

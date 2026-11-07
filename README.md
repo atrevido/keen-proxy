@@ -4,6 +4,11 @@ Selective traffic routing for Keenetic and Netcraze routers running Entware, wit
 
 KeenProxy lets you choose which devices, domains, IP ranges, and countries use a tunnel, connect directly, or are blocked. It is an experimental project under active development. Router compatibility and protocol support depend on the firmware, kernel modules, and build tags.
 
+## Documentation and live demo
+
+- [English documentation](https://atrevido.github.io/keen-proxy/) · [Russian documentation](https://atrevido.github.io/keen-proxy/ru/)
+- [Interactive browser demo](https://atrevido.github.io/keen-proxy/demo/) — the same interface with synthetic data and an in-memory API; no router required. Changes reset on reload.
+
 ## What works today
 
 - Device and network policies: split routing, full tunneling, direct access, and per-device overrides identified by MAC address.

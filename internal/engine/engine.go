@@ -39,7 +39,7 @@ func (e *Engine) Apply(config []byte) (bool, error) {
 	opts, err := sjson.UnmarshalExtendedContext[option.Options](ctx, config)
 	if err != nil {
 		cancel()
-		return false, fmt.Errorf("конфиг sing-box: %w", err)
+		return false, fmt.Errorf("sing-box configuration: %w", err)
 	}
 	if e.LogOutput != "" {
 		if opts.Log == nil {
@@ -50,7 +50,7 @@ func (e *Engine) Apply(config []byte) (bool, error) {
 	instance, err := box.New(box.Options{Context: ctx, Options: opts})
 	if err != nil {
 		cancel()
-		return false, fmt.Errorf("создание sing-box: %w", err)
+		return false, fmt.Errorf("create sing-box: %w", err)
 	}
 	if e.Tracker != nil {
 		instance.Router().AppendTracker(e.Tracker)
@@ -60,7 +60,7 @@ func (e *Engine) Apply(config []byte) (bool, error) {
 	if err := instance.Start(); err != nil {
 		instance.Close()
 		cancel()
-		return false, fmt.Errorf("запуск sing-box: %w", err)
+		return false, fmt.Errorf("start sing-box: %w", err)
 	}
 	e.ctx, e.cancel, e.box, e.current = ctx, cancel, instance, config
 	return true, nil

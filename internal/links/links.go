@@ -20,7 +20,7 @@ func Parse(link string) (Outbound, error) {
 	link = strings.TrimSpace(link)
 	scheme, _, ok := strings.Cut(link, "://")
 	if !ok {
-		return nil, fmt.Errorf("не ссылка: нет схемы")
+		return nil, fmt.Errorf("invalid link: missing scheme")
 	}
 	switch strings.ToLower(scheme) {
 	case "vless":
@@ -40,7 +40,7 @@ func Parse(link string) (Outbound, error) {
 	case "socks", "socks5":
 		return parseSocks(link)
 	default:
-		return nil, fmt.Errorf("схема %q не поддерживается ссылками; используйте type: singbox с готовым outbound", scheme)
+		return nil, fmt.Errorf("scheme %q is not supported in links; use type: singbox with a complete outbound", scheme)
 	}
 }
 
@@ -57,11 +57,11 @@ func Name(link string) string {
 func server(u *url.URL) (string, int, error) {
 	host := u.Hostname()
 	if host == "" {
-		return "", 0, fmt.Errorf("нет адреса сервера")
+		return "", 0, fmt.Errorf("missing server address")
 	}
 	port, err := strconv.Atoi(u.Port())
 	if err != nil || port <= 0 || port > 65535 {
-		return "", 0, fmt.Errorf("неверный порт %q", u.Port())
+		return "", 0, fmt.Errorf("invalid port %q", u.Port())
 	}
 	return host, port, nil
 }
@@ -96,7 +96,7 @@ func tlsOptions(q url.Values, defaultSNI string, forceTLS bool) (map[string]any,
 		return nil, nil
 	case "tls", "reality", "xtls":
 	default:
-		return nil, fmt.Errorf("security=%q не поддерживается", security)
+		return nil, fmt.Errorf("security=%q is not supported", security)
 	}
 	t := map[string]any{"enabled": true}
 	sni := q.Get("sni")
@@ -119,7 +119,7 @@ func tlsOptions(q url.Values, defaultSNI string, forceTLS bool) (map[string]any,
 	if security == "reality" {
 		pbk := q.Get("pbk")
 		if pbk == "" {
-			return nil, fmt.Errorf("reality: нет pbk (публичного ключа)")
+			return nil, fmt.Errorf("reality: missing pbk (public key)")
 		}
 		t["reality"] = map[string]any{"enabled": true, "public_key": pbk, "short_id": q.Get("sid")}
 		if fp == "" {
@@ -194,9 +194,9 @@ func transport(q url.Values) (map[string]any, error) {
 		}
 		return t, nil
 	case "xhttp", "splithttp":
-		return nil, fmt.Errorf("транспорт %s есть только в Xray, sing-box его не поддерживает", kind)
+		return nil, fmt.Errorf("transport %s is only available in Xray; sing-box does not support it", kind)
 	default:
-		return nil, fmt.Errorf("транспорт type=%q не поддерживается", kind)
+		return nil, fmt.Errorf("transport type=%q is not supported", kind)
 	}
 }
 
@@ -232,7 +232,7 @@ func parseVLESS(link string) (Outbound, error) {
 	}
 	id := u.User.Username()
 	if id == "" {
-		return nil, fmt.Errorf("vless: нет UUID")
+		return nil, fmt.Errorf("vless: missing UUID")
 	}
 	q := u.Query()
 	o := Outbound{"type": "vless", "server": host, "server_port": port, "uuid": id, "packet_encoding": "xudp"}
@@ -254,7 +254,7 @@ func parseTrojan(link string) (Outbound, error) {
 	}
 	password := u.User.Username()
 	if password == "" {
-		return nil, fmt.Errorf("trojan: нет пароля")
+		return nil, fmt.Errorf("trojan: missing password")
 	}
 	o := Outbound{"type": "trojan", "server": host, "server_port": port, "password": password}
 	// Trojan enables TLS by default.
@@ -269,11 +269,11 @@ func parseVMess(link string) (Outbound, error) {
 	}
 	raw, err := decodeBase64(body)
 	if err != nil {
-		return nil, fmt.Errorf("vmess: не base64: %w", err)
+		return nil, fmt.Errorf("vmess: invalid base64: %w", err)
 	}
 	var v map[string]any
 	if err := json.Unmarshal(raw, &v); err != nil {
-		return nil, fmt.Errorf("vmess: не JSON: %w", err)
+		return nil, fmt.Errorf("vmess: invalid JSON: %w", err)
 	}
 	str := func(k string) string {
 		switch x := v[k].(type) {
@@ -287,10 +287,10 @@ func parseVMess(link string) (Outbound, error) {
 	host := str("add")
 	port, err := strconv.Atoi(str("port"))
 	if host == "" || err != nil {
-		return nil, fmt.Errorf("vmess: нет add/port")
+		return nil, fmt.Errorf("vmess: missing add/port")
 	}
 	if str("id") == "" {
-		return nil, fmt.Errorf("vmess: нет id")
+		return nil, fmt.Errorf("vmess: missing id")
 	}
 	security := str("scy")
 	if security == "" {
@@ -330,7 +330,7 @@ func parseShadowsocks(link string) (Outbound, error) {
 		body, query = body[:i], body[i+1:]
 	}
 	if q, _ := url.ParseQuery(query); q.Get("plugin") != "" {
-		return nil, fmt.Errorf("ss: плагины (%s) не поддерживаются ссылкой, используйте type: singbox", q.Get("plugin"))
+		return nil, fmt.Errorf("ss: plugins (%s) are not supported in links; use type: singbox", q.Get("plugin"))
 	}
 	var userinfo, hostport string
 	if at := strings.LastIndexByte(body, '@'); at >= 0 {
@@ -343,25 +343,25 @@ func parseShadowsocks(link string) (Outbound, error) {
 	} else {
 		dec, err := decodeBase64(body)
 		if err != nil {
-			return nil, fmt.Errorf("ss: не base64: %w", err)
+			return nil, fmt.Errorf("ss: invalid base64: %w", err)
 		}
 		at := strings.LastIndexByte(string(dec), '@')
 		if at < 0 {
-			return nil, fmt.Errorf("ss: нет адреса сервера")
+			return nil, fmt.Errorf("ss: missing server address")
 		}
 		userinfo, hostport = string(dec[:at]), string(dec[at+1:])
 	}
 	method, password, ok := strings.Cut(userinfo, ":")
 	if !ok || method == "" || password == "" {
-		return nil, fmt.Errorf("ss: нужно method:password")
+		return nil, fmt.Errorf("ss: expected method:password")
 	}
 	host, portStr, err := net.SplitHostPort(hostport)
 	if err != nil {
-		return nil, fmt.Errorf("ss: адрес: %w", err)
+		return nil, fmt.Errorf("ss: address: %w", err)
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return nil, fmt.Errorf("ss: порт %q", portStr)
+		return nil, fmt.Errorf("ss: port %q", portStr)
 	}
 	return Outbound{"type": "shadowsocks", "server": host, "server_port": port, "method": method, "password": password}, nil
 }
@@ -399,7 +399,7 @@ func parseHysteria2(link string) (Outbound, error) {
 	}
 	host := u.Hostname()
 	if host == "" {
-		return nil, fmt.Errorf("hysteria2: нет адреса сервера")
+		return nil, fmt.Errorf("hysteria2: missing server address")
 	}
 	q := u.Query()
 	o := Outbound{"type": "hysteria2", "server": host}
@@ -456,7 +456,7 @@ func parseTUIC(link string) (Outbound, error) {
 	id := u.User.Username()
 	pw, _ := u.User.Password()
 	if id == "" {
-		return nil, fmt.Errorf("tuic: нет UUID")
+		return nil, fmt.Errorf("tuic: missing UUID")
 	}
 	o := Outbound{"type": "tuic", "server": host, "server_port": port, "uuid": id, "password": pw}
 	if cc := q.Get("congestion_control"); cc != "" {
@@ -522,5 +522,5 @@ func decodeBase64(s string) ([]byte, error) {
 			return b, nil
 		}
 	}
-	return nil, fmt.Errorf("неверный base64")
+	return nil, fmt.Errorf("invalid base64")
 }

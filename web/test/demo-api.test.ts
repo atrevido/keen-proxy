@@ -16,7 +16,7 @@ test('demo API drives the UI without HTTP or EventSource operations', async () =
     const config = await api.config()
     assert.equal((await api.checkDNS(config)).demo, true)
     assert.equal((await api.validateConfig(config)).ok, true)
-    assert.equal((await api.devices()).length, 3)
+    assert.equal((await api.devices()).length, 4)
     assert.equal((await api.status()).connections, 3)
     assert.ok((await api.stats()).outbounds!.length)
     assert.equal((await api.hosts('fi', 'nonexistent')).total, 0)

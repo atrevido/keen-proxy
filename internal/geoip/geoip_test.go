@@ -41,7 +41,7 @@ func TestLookupAndPrefixes(t *testing.T) {
 	defer db.Close()
 	for ip, want := range map[string]string{"77.88.8.8": "RU", "8.8.8.8": "US", "1.1.1.1": "", "::ffff:5.255.255.242": "RU", "2a02:6b8::1": "RU"} {
 		if got := db.Country(netip.MustParseAddr(ip)); got != want {
-			t.Errorf("Country(%s) = %q, ждали %q", ip, got, want)
+			t.Errorf("Country(%s) = %q, want %q", ip, got, want)
 		}
 	}
 	p, err := db.Prefixes([]string{"ru", "NL"})
@@ -83,14 +83,14 @@ func TestDownloadFallsBackToPreviousMonth(t *testing.T) {
 }
 
 func TestDownloadRejectsGarbage(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) { rw.Write([]byte("<html>ошибка</html>")) }))
+	srv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) { rw.Write([]byte("<html>error</html>")) }))
 	defer srv.Close()
 	dst := filepath.Join(t.TempDir(), "country.mmdb")
 	if err := Download(context.Background(), srv.Client(), srv.URL+"/x-{month}.mmdb", dst); err == nil {
-		t.Fatal("мусор не должен приниматься за базу")
+		t.Fatal("invalid data must not be accepted as a database")
 	}
 	if _, err := os.Stat(dst); err == nil {
-		t.Error("файл базы не должен появиться")
+		t.Error("database file must not be created")
 	}
 }
 

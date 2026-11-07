@@ -92,11 +92,11 @@ func TestFailoverUDPAndTCP(t *testing.T) {
 	s := startServer(t, Config{Upstreams: []model.Upstream{deadUpstream(t), fakeUpstream(t, "1.2.3.4")}})
 	for _, network := range []string{"udp", "tcp"} {
 		if got := firstA(query(t, s.Addr(), network, "example.com", dns.TypeA)); got != "1.2.3.4" {
-			t.Errorf("%s: ответ %q, ждали 1.2.3.4 от второго upstream", network, got)
+			t.Errorf("%s: response %q, want 1.2.3.4 from the second upstream", network, got)
 		}
 	}
 	if s.ups[0].available(time.Now()) {
-		t.Error("упавший upstream должен быть на карантине")
+		t.Error("failed upstream must be quarantined")
 	}
 }
 
@@ -104,17 +104,17 @@ func TestFallbackWhenAllUpstreamsDown(t *testing.T) {
 	fb := fakeUpstream(t, "5.6.7.8")
 	s := startServer(t, Config{Upstreams: []model.Upstream{deadUpstream(t)}, Fallback: fb.Addr()})
 	if got := firstA(query(t, s.Addr(), "udp", "example.com", dns.TypeA)); got != "5.6.7.8" {
-		t.Errorf("ответ %q, ждали системный резолвер 5.6.7.8", got)
+		t.Errorf("response %q, want system resolver 5.6.7.8", got)
 	}
 }
 
 func TestServfailWhenNothingAnswers(t *testing.T) {
 	s := startServer(t, Config{Upstreams: []model.Upstream{deadUpstream(t)}})
 	if rc := query(t, s.Addr(), "udp", "example.com", dns.TypeA).Rcode; rc != dns.RcodeServerFailure {
-		t.Errorf("rcode = %s, ждали SERVFAIL", dns.RcodeToString[rc])
+		t.Errorf("rcode = %s, want SERVFAIL", dns.RcodeToString[rc])
 	}
 	if !s.ups[0].available(time.Now()) {
-		t.Error("после полного отказа карантин сбрасывается, чтобы попробовать снова")
+		t.Error("quarantine resets after total failure to allow retries")
 	}
 }
 
@@ -125,10 +125,10 @@ func TestBlockedAndAAAA(t *testing.T) {
 		DropAAAA:  true,
 	})
 	if got := firstA(query(t, s.Addr(), "udp", "x.ads.example.com", dns.TypeA)); got != "0.0.0.0" {
-		t.Errorf("заблокированный домен: %q, ждали 0.0.0.0", got)
+		t.Errorf("blocked domain: %q, want 0.0.0.0", got)
 	}
 	if m := query(t, s.Addr(), "udp", "example.com", dns.TypeAAAA); m.Rcode != dns.RcodeSuccess || len(m.Answer) != 0 {
-		t.Errorf("AAAA должен быть пустым NOERROR, получили %v", m)
+		t.Errorf("AAAA must be an empty NOERROR, got %v", m)
 	}
 }
 
@@ -160,6 +160,6 @@ func TestDoH(t *testing.T) {
 	req := new(dns.Msg)
 	req.SetQuestion("example.com.", dns.TypeA)
 	if got := firstA(s.Resolve(context.Background(), req)); got != "9.9.9.9" {
-		t.Errorf("DoH: %q, ждали 9.9.9.9", got)
+		t.Errorf("DoH: %q, want 9.9.9.9", got)
 	}
 }

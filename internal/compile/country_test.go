@@ -23,11 +23,11 @@ dns: {upstreams: ["https://1.1.1.1/dns-query"]}
 connections:
   - {id: fi, type: link, link: "socks5://203.0.113.9:1080"}
 groups:
-  - {name: Банки напрямую, target: direct, entries: ["sberbank.ru"]}
-  - {name: Всё кроме России и Беларуси, target: fi, countries: [ru, BY], except: true}
-  - {name: Блок страны, target: block, countries: [KP]}
+  - {name: Direct banks, target: direct, entries: ["sberbank.ru"]}
+  - {name: Except Russia and Belarus, target: fi, countries: [ru, BY], except: true}
+  - {name: Country block, target: block, countries: [KP]}
 networks:
-  - {name: Дом, cidr: 192.168.7.0/24, mode: split}
+  - {name: Home, cidr: 192.168.7.0/24, mode: split}
 `
 
 func TestExceptCountry(t *testing.T) {
@@ -58,17 +58,17 @@ func TestExceptCountry(t *testing.T) {
 	all := strings.Join(got, "\n")
 	// Country blocking applies to all sources.
 	if !strings.Contains(all, `{"action":"reject","rule_set":["geoip-kp"]}`) {
-		t.Errorf("нет блокировки страны:\n%s", all)
+		t.Errorf("missing country block:\n%s", all)
 	}
 	// The explicit direct domain precedes the country-except rule.
 	direct := strings.Index(all, `"rule_set":["group-0"]`)
 	except := strings.Index(all, `{"invert":true,"rule_set":["geoip-ru","geoip-by"]}`)
 	if direct < 0 || except < 0 || direct > except {
-		t.Errorf("белый список должен быть раньше страны (%d, %d):\n%s", direct, except, all)
+		t.Errorf("allowlist must precede country rule (%d, %d):\n%s", direct, except, all)
 	}
 	// Country-except uses logical AND so invert cannot negate the source condition.
 	if !strings.Contains(all, `{"mode":"and","outbound":"fi","rules":[{"source_ip_cidr":["192.168.7.0/24"]},{"invert":true,"rule_set":["geoip-ru","geoip-by"]}],"type":"logical"}`) {
-		t.Errorf("нет логического правила для сети:\n%s", all)
+		t.Errorf("missing logical rule for network:\n%s", all)
 	}
 
 	// sing-box must accept configuration referencing country sets.
@@ -85,7 +85,7 @@ func TestExceptCountry(t *testing.T) {
 	}
 	instance, err := box.New(box.Options{Context: ctx, Options: opts})
 	if err != nil {
-		t.Fatalf("sing-box отверг конфиг: %v", err)
+		t.Fatalf("sing-box rejected configuration: %v", err)
 	}
 	instance.Close()
 }
@@ -100,12 +100,12 @@ dns: {upstreams: ["https://1.1.1.1/dns-query"]}
 connections:
   - {id: fi, type: link, link: "socks5://203.0.113.9:1080"}
 groups:
-  - {name: Не Россия, target: fi, countries: [RU], except: true}
+  - {name: Except Russia, target: fi, countries: [RU], except: true}
   - {name: Steam, target: direct, entries: [steampowered.com, steamcommunity.com, steamcontent.com]}
 networks:
-  - {name: Дом, cidr: 192.168.7.0/24, mode: split}
+  - {name: Home, cidr: 192.168.7.0/24, mode: split}
 clients:
-  - {name: ПК, mac: "aa:bb:cc:dd:ee:01", mode: split}
+  - {name: PC, mac: "aa:bb:cc:dd:ee:01", mode: split}
 `))
 	if err != nil {
 		t.Fatal(err)
@@ -131,17 +131,17 @@ clients:
 		switch {
 		case strings.Contains(s, `"group-1"`):
 			if !strings.Contains(s, `"outbound":"direct"`) {
-				t.Errorf("Steam не напрямую: %s", s)
+				t.Errorf("Steam is not routed directly: %s", s)
 			}
 			steam++
 		case strings.Contains(s, `"geoip-ru"`):
 			if steam <= country {
-				t.Errorf("правило по стране раньше Steam: %s", s)
+				t.Errorf("country rule precedes Steam: %s", s)
 			}
 			country++
 		}
 	}
 	if steam == 0 || steam != country {
-		t.Errorf("правил Steam %d, по стране %d", steam, country)
+		t.Errorf("Steam rules %d, country rules %d", steam, country)
 	}
 }

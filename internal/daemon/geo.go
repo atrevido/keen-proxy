@@ -43,14 +43,14 @@ func (d *Daemon) geoPath(cfg *model.Config) string {
 func (d *Daemon) openGeoLocked(cfg *model.Config) {
 	db, err := geoip.Open(d.geoPath(cfg))
 	if err != nil {
-		d.geo.err = "база стран не загружена: " + err.Error()
+		d.geo.err = "country database not loaded: " + err.Error()
 		return
 	}
 	if d.geo.db != nil {
 		d.geo.db.Close()
 	}
 	d.geo.db, d.geo.err, d.geo.sets = db, "", nil
-	d.log.Info("база стран загружена", "built", db.Built.Format("2006-01-02"), "type", db.Type)
+	d.log.Info("country database loaded", "built", db.Built.Format("2006-01-02"), "type", db.Type)
 }
 
 // writeCountrySetsLocked writes configured geoip-<code>.json files under d.mu.
@@ -103,25 +103,25 @@ func (d *Daemon) runGeoUpdates(ctx context.Context) {
 			d.refreshConnCountries(ctx)
 			return
 		}
-		d.log.Info("обновляю базу стран", "path", path)
+		d.log.Info("updating country database", "path", path)
 		if err := geoip.Download(ctx, client, url, path); err != nil {
 			d.mu.Lock()
 			if d.geo.db == nil {
-				d.geo.err = "не удалось скачать базу стран: " + err.Error()
+				d.geo.err = "failed to download country database: " + err.Error()
 			}
 			d.mu.Unlock()
-			d.log.Warn("база стран не скачалась", "err", err)
-			d.audit("system", "База стран не обновилась", "geoip", "warn", err.Error())
+			d.log.Warn("country database download failed", "err", err)
+			d.audit("system", "Country database update failed", "geoip", "warn", err.Error())
 			return
 		}
 		d.mu.Lock()
 		d.openGeoLocked(d.cfg)
 		if out, err := d.compileLocked(); err != nil {
-			d.log.Error("наборы стран после обновления базы", "err", err)
+			d.log.Error("country rule sets after database update", "err", err)
 		} else {
-			d.log.Info("наборы стран обновлены", "countries", out.Countries)
+			d.log.Info("country rule sets updated", "countries", out.Countries)
 		}
-		d.audit("system", "База стран обновлена", "geoip", "ok", d.geoInfoLocked().Built)
+		d.audit("system", "Country database updated", "geoip", "ok", d.geoInfoLocked().Built)
 		d.mu.Unlock()
 		d.refreshConnCountries(ctx)
 	}
