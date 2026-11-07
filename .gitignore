@@ -21,8 +21,11 @@ coverage.out
 /web/target/
 /web/.metrics/
 
-# Local agent memory and reports
-/.serena/
+# Share only the reviewed Serena project memories
+/.serena/*
+!/.serena/memories/
+
+# Local investigation and verification reports
 /docs-reports/
 
 # Local JavaScript coverage reports

@@ -81,6 +81,6 @@ Version `1.0.0` marks a defined, stable user-facing contract and a commitment to
 
 Maintainers review the proposed version and changelog in a release PR before publishing. See [RELEASING.md](RELEASING.md) for the release process and automation status.
 
-Public project guides live in the repository. Local plans, investigations, generated QA reports, and deployment notes belong in ignored `docs-reports/`; local agent memory belongs in ignored `.serena/`. Do not force-add those directories or production artifacts.
+AI-assisted contributions follow the required skills and quality checks in [AGENTS.md](AGENTS.md). The shared [Serena memories](.serena/memories/core.md) hold public project context in English. Keep local plans, investigations, generated QA reports, and deployment notes in ignored `docs-reports/`. Keep local Serena configuration, caches, and production artifacts out of Git.
 
 By contributing, you agree that your original contributions are provided under the project's GPL-3.0-only license. Retain existing copyright/license notices and clearly identify any third-party code or data. Do not contribute material you are not authorized to redistribute.

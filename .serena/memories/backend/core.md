@@ -1,0 +1,22 @@
+# Backend
+- Startup: TrustTunnel supervisor → embedded engine → DNS (both UDP/TCP sockets open) → netlink route for UDP TPROXY → firewall. Shutdown removes interception first. API starts independently; API failure must not break routing.
+- daemon.Apply validates and compiles first, applies with attempted rollback, and saves YAML atomically mode 0600. Save failure can mean applied but unsaved, rather than a full rollback.
+- MAC client identity: ARP on LAN interface, optional static IP. Clients override networks; off clients are excluded before interception. split: group rules then direct; full: target connection; inherit: network policy.
+- Client IPs live in local class rule-set JSON. ARP changes rewrite files/firewall; sing-box reloads files without restart. Empty sets use noSource because an empty condition otherwise matches everything.
+- Groups contain domain suffixes, IP/CIDR, or ISO countries with Except. block and rule order have specific semantics: inspect singBox(), groupRuleSets(), RuleOrder/CountryGroupsLast tests before editing. Country inversion belongs inside logical AND to avoid inverting source conditions.
+- geoip: DB-IP Lite MMDB (CC BY 4.0 attribution), local file or download/update; daemon/geo.go creates geoip rule-sets and connection flags.
+- DNS is separate from sing-box: legacy sequential UDP/DoT/DoH upstreams then system fallback; block matcher; DropAAAA for unsupported IPv6. This is not a complete IPv6 firewall guard; explicit DNS routing policies are documented in `mem:features/presets_dns_filters`.
+- netfilter: separate KEENPROXY_* chains via iptables-restore --noflush, idempotent jumps, Healthy also checks jumps. TCP always REDIRECT; mode=tproxy adds UDP TPROXY; participant UDP/443 REJECT encourages TCP; LAN-interface DNS UDP+TCP redirect covers more than participants.
+- watch updates ARP and repairs firewall after NDM rebuilds; these are not finished ndm hooks.
+- Connections: userspace sing-box WireGuard, link parser, raw singbox outbound/endpoint, external TrustTunnel process → loopback SOCKS5. Xray xhttp unsupported.
+- Acyclic fallback chains compile to selectors; daemon HTTP probes use down/up hysteresis and reselect after restart. If all fail, retain current outbound; explicit direct fallback allowed.
+- stats uses its own ConnectionTracker, not Clash API; journal routes/audit/system, disk rotation, filters, SSE, masked export. Authenticated config GET still returns secrets.
+
+- Domain routing uses sniffed SNI/HTTP Host, with DNS IPv4 fallback only when no name exists; override_destination is unset. Current DNS fallback mechanics follow.
+- model.ParseEntry explicitly rejects legacy entries geoip: ru / !geoip: ru / country: ru. Use Group.Countries and Except; negate the country union, not an OR of individual negations. country_test.go and netns verify Steam direct overriding country-except.
+- Failover defaults interval/down/up = 15/60/120 s; selector interrupt_exist_connections=true. direct is always healthy. HTTP probes measure reachability, not quality or throughput.
+
+- DNS IP fallback: internal/domaincache stores A/CNAME with TTL, 4096 names/32 IPs. dnsfront.Observe consumes device answers; ResolveRaw performs service resolution without local block stubs. daemon/domains.go refreshes content-hashed dns-* rule-set files without restart. Preview has a separate cache and never changes routes.
+- Fallback order: private → existing global block → no-domain DNS block → client/network; split explicit domains/IPs → no-domain DNS fallback → countries → direct. Guard is inverted domain_regex .+ in logical AND, rather than failure to match a domain rule. Readable outer ECH SNI prevents fallback.
+- sing-box fswatch reloads files: API application=files_written_reload_pending does not confirm core application. Netns checks actual convergence. Flush/reload delay means strictly immediate packet-level TTL expiry is not guaranteed.
+- Active resolution has 4 slots; subdomain polling lasts 10 minutes after the last device observation (ObservedAt, not service refresh); exact configured names refresh continuously. Retry minimum 30 s can leave fallback gaps for short TTLs. Normalize IDNA/comments like model.ParseEntry.

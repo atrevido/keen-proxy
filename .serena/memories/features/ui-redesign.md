@@ -1,0 +1,7 @@
+# Panel implementation contracts
+- Shell.vue owns horizontal navigation and the mobile menu. Shared light/dark theme tokens live in theme.ts and style.css. Keep responsive actions reachable when tabs overflow.
+- Groups.vue and groups.ts use stable session identities and preview bulk target changes for domain/country groups. Filtering preserves selected items. All group changes go through the shared draft.
+- Journal.vue and journal.ts group matching events within a fixed window. Preserve client, domain, protocol, destination port, outbound, rule, and source distinctions. Keep ambiguous legacy rows separate.
+- ConnectionWizard.vue supports WireGuard, VLESS, Shadowsocks, Trojan, Hysteria2, and SOCKS forms plus link/file/raw JSON import. Reject unsupported WireGuard options and multiple peers. A full sing-box JSON import selects one profile. Validate before saving to the draft.
+- ConnectionDialog.vue conceals private parameters until reveal. Preserve fallback and DNS references when renaming a profile. FallbackPanel.vue edits only the immediate link and previews the inherited chain.
+- Diagnostics.vue checks an unchanged applied profile and discards stale results. The backend bounds endpoints, time, response size, and concurrency. Test the actual profile independently of its fallback selector. Separate HTTP, certificate-verified HTTPS, and transfer results. Diagnostic exports use an allowlist and omit raw errors and secrets.
