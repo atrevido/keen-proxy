@@ -18,7 +18,7 @@ import { api, setUnauthorizedHandler } from '../api'
 import { authed, session, store } from '../store'
 import { LOCALES, locale, setLocale, type Locale } from '../i18n'
 import { themeName, themePreference, type ThemePreference } from '../theme'
-import { formatBuild } from '../format'
+import { formatBuild } from '../buildIdentity'
 import mark from '../assets/keenproxy-mark.png'
 const route = useRoute(),
   router = useRouter(),

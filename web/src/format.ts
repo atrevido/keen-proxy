@@ -1,12 +1,5 @@
 // Localized display formatting for tables and charts.
 import { t } from './i18n'
-import type { BuildIdentity } from './types'
-
-// Keep the build label consistent in the footer, Settings, and Diagnostics.
-export function formatBuild(build: BuildIdentity): string {
-  const revision = build.revision && (build.dirty ? `${build.revision}+dirty` : build.revision)
-  return [build.variant, build.arch.toUpperCase(), revision].filter(Boolean).join(' · ')
-}
 
 // Format a byte count using binary units from the active locale.
 export function bytes(n: number): string {

@@ -5,7 +5,7 @@ import { NAlert, NButton, NCard, NInput, NModal, NSpace, NSwitch, NTimePicker, u
 import { Download } from '@lucide/vue'
 import { api } from '../api'
 import { ApiError } from '../apiError'
-import { formatBuild } from '../format'
+import { formatBuild } from '../buildIdentity'
 import { store } from '../store'
 import type { UpdatePreferences, UpdateSelection, UpdateStatus } from '../types'
 
