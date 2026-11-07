@@ -32,6 +32,7 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/ordo-systems/keen-proxy/internal/stats"
 	"github.com/ordo-systems/keen-proxy/internal/trusttunnel"
+	"github.com/ordo-systems/keen-proxy/internal/update"
 )
 
 const cookieName = "keenproxy_token"
@@ -55,10 +56,11 @@ type Daemon interface {
 
 // Server binds daemon operations, authentication policy, and embedded UI assets.
 type Server struct {
-	D     Daemon
-	Token string
-	UI    fs.FS
-	Log   *slog.Logger
+	D       Daemon
+	Token   string
+	UI      fs.FS
+	Log     *slog.Logger
+	Updates *update.Manager
 
 	// Track the last audited trusted login per address so opening another page
 	// does not produce a separate login event.
@@ -119,6 +121,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/journal/{kind}", s.auth(s.journalPage))
 	mux.Handle("GET /api/journal/{kind}/stream", s.auth(s.journalStream))
 	mux.Handle("GET /api/journal/{kind}/export", s.auth(s.journalExport))
+	s.updateRoutes(mux)
 	mux.Handle("/api/", http.NotFoundHandler())
 	mux.Handle("/", s.ui())
 	return s.lanOnly(mux)

@@ -103,6 +103,15 @@ esac''')
 
 
 class BootstrapTest(BootstrapFixture):
+    @property
+    def release_record(self):
+        return self.prefix / 'share/keenproxy/release'
+
+    def assert_release(self, current, previous='', variant='full'):
+        self.assertEqual(self.release_record.read_text(),
+                         f'current {current}\nprevious {previous}\nvariant {variant}\n')
+        self.assertEqual(self.release_record.stat().st_mode & 0o777, 0o600)
+
     def test_uninstall_stops_service_and_preserves_settings_without_network(self):
         self.release('v1.2.3')
         self.assertEqual(self.install().returncode, 0)
@@ -119,6 +128,7 @@ class BootstrapTest(BootstrapFixture):
             self.assertFalse((self.prefix / 'running').exists())
             self.assertFalse(self.binary.exists())
             self.assertFalse(self.service.exists())
+            self.assertFalse(self.release_record.exists())
             self.assertEqual(token.read_text(), 'test token\n')
             self.assertIn('# local settings', self.config.read_text())
             self.assertTrue(client.exists())
@@ -157,6 +167,7 @@ exec /bin/rm "$@"
         self.assertIn('restoring the previous installation', result.stderr)
         self.assertEqual(self.binary.read_bytes(), binary.read_bytes())
         self.assertEqual(self.service.read_bytes(), service)
+        self.assert_release('v1.2.3')
         self.assertTrue((self.prefix / 'running').exists())
 
     def test_bootstrap_installs_starts_and_preserves_configuration_on_update(self):
@@ -165,6 +176,7 @@ exec /bin/rm "$@"
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.binary.read_bytes(), first.read_bytes())
         self.assertEqual(self.config.stat().st_mode & 0o777, 0o600)
+        self.assert_release('v1.2.3')
         self.assertTrue((self.prefix / 'running').exists())
         self.config.write_text('schema_version: 1\n# user setting\n')
         token = self.config.with_name('token')
@@ -174,6 +186,7 @@ exec /bin/rm "$@"
         for _ in range(2):
             result = self.install()
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assert_release('v1.2.4', 'v1.2.3')
         self.assertEqual(self.binary.read_bytes(), next_release.read_bytes())
         self.assertIn('# user setting', self.config.read_text())
         self.assertEqual(token.read_text(), 'test fixture\n')
@@ -184,6 +197,7 @@ exec /bin/rm "$@"
         result = self.install('--version', '0.9.0', '--lite')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.binary.read_bytes(), release.read_bytes())
+        self.assert_release('v0.9.0', variant='lite')
         self.assertNotIn('/main/version.txt', self.requests.read_text())
 
     def test_bad_checksum_keeps_running_release(self):
@@ -204,7 +218,34 @@ exec /bin/rm "$@"
         result = self.install('--version', 'v1.2.4')
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.binary.read_bytes(), first.read_bytes())
+        self.assert_release('v1.2.3')
         self.assertTrue((self.prefix / 'running').exists())
+
+    def test_expected_release_guards_updates_and_downgrades(self):
+        first = self.release('v1.2.3')
+        second = self.release('v1.2.4')
+        self.assertEqual(self.install().returncode, 0)
+        before = self.requests.read_bytes()
+        for expected in ('v1.2.2', 'v1.2.3\nv1.2.2'):
+            result = self.install('--version', 'v1.2.4', '--expect-current', expected)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(self.requests.read_bytes(), before)
+            self.assertEqual(self.binary.read_bytes(), first.read_bytes())
+            self.assert_release('v1.2.3')
+        result = self.install('--version', 'v1.2.4', '--expect-current', 'v1.2.3')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.binary.read_bytes(), second.read_bytes())
+        result = self.install('--version', 'v1.2.3', '--expect-current', 'v1.2.4')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.binary.read_bytes(), first.read_bytes())
+        self.assert_release('v1.2.3', 'v1.2.4')
+
+    def test_expected_release_requires_managed_version_metadata(self):
+        result = self.install('--version', 'v1.2.4', '--expect-current', 'v1.2.3')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.requests.exists())
+        self.assertFalse(self.binary.exists())
+        self.assertFalse(self.release_record.exists())
 
     def test_missing_assets_and_unknown_cpu_leave_existing_files(self):
         first = self.release('v1.2.3')

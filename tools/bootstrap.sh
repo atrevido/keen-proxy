@@ -7,6 +7,7 @@ umask 077
 fail() { printf 'KeenProxy: %s\n' "$*" >&2; exit 1; }
 usage() {
     printf '%s\n' 'Usage: sh -s -- [--version vX.Y.Z] [--lite] [--without-trusttunnel]' \
+        '       sh -s -- --version vX.Y.Z --expect-current vX.Y.Z [--lite] [--without-trusttunnel]' \
         '       sh -s -- --uninstall'
 }
 
@@ -17,13 +18,15 @@ export PATH
 main=https://raw.githubusercontent.com/ordo-systems/keen-proxy/main
 releases=https://github.com/ordo-systems/keen-proxy/releases/download
 version=
-variant=
+expected_current=
+variant=full
 trusttunnel=1
 uninstall=0
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --version) [ "$#" -ge 2 ] && [ -n "$2" ] || fail 'missing --version value'; version=$2; shift ;;
-        --lite) variant=lite- ;;
+        --expect-current) [ "$#" -ge 2 ] && [ -n "$2" ] || fail 'missing --expect-current value'; expected_current=$2; shift ;;
+        --lite) variant=lite ;;
         --without-trusttunnel) trusttunnel=0 ;;
         --uninstall) uninstall=1 ;;
         -h|--help) usage; exit 0 ;;
@@ -31,8 +34,11 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
-if [ "$uninstall" = 1 ] && { [ -n "$version$variant" ] || [ "$trusttunnel" = 0 ]; }; then
+if [ "$uninstall" = 1 ] && { [ -n "$version$expected_current" ] || [ "$variant" = lite ] || [ "$trusttunnel" = 0 ]; }; then
     fail '--uninstall cannot be combined with installation options'
+fi
+if [ -n "$expected_current" ] && [ -z "$version" ]; then
+    fail '--expect-current requires an explicit --version'
 fi
 
 case "$prefix" in /*) ;; *) fail 'Entware prefix must be absolute' ;; esac
@@ -96,6 +102,27 @@ service_action() {
 
 managed_service() {
     [ -f "$service" ] && [ ! -L "$service" ] && grep -Fxq '# KeenProxy Entware service' "$service"
+}
+
+valid_release_tag() {
+    case "$1" in ''|*[!0-9A-Za-z.-]*) return 1 ;; esac
+    printf '%s\n' "$1" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$'
+}
+
+release_field() {
+    [ -f "$prefix/$release_record" ] && [ ! -L "$prefix/$release_record" ] || return 0
+    awk -v field="$1" '$1 == field && NF == 2 {print $2}' "$prefix/$release_record"
+}
+
+# The installer lock protects the history read and the staged record moves with the binary.
+stage_release_record() {
+    previous_tag=$(release_field current)
+    if [ "$previous_tag" = "$tag" ]; then
+        previous_tag=$(release_field previous)
+    fi
+    if ! valid_release_tag "$previous_tag"; then previous_tag=; fi
+    mkdir -p "$work/payload/share/keenproxy"
+    printf 'current %s\nprevious %s\nvariant %s\n' "$tag" "$previous_tag" "$variant" > "$work/payload/$release_record"
 }
 
 backup_file() {
@@ -172,7 +199,8 @@ uninstall_release() {
 }
 
 service="$prefix/etc/init.d/S99keenproxy"
-payload='bin/keenproxy etc/init.d/S99keenproxy'
+release_record=share/keenproxy/release
+payload="bin/keenproxy etc/init.d/S99keenproxy $release_record"
 mkdir -p "$prefix/tmp" "$prefix/var/lock"
 lock="$prefix/var/lock/keenproxy-install.lock"
 mkdir "$lock" 2>/dev/null || fail 'another installer is active or an interrupted run left a lock'
@@ -188,12 +216,17 @@ if [ "$uninstall" = 1 ]; then
     uninstall_release
     exit 0
 fi
+if [ -n "$expected_current" ]; then
+    valid_release_tag "$expected_current" || fail 'invalid expected release version'
+    [ "$(release_field current)" = "$expected_current" ] || fail 'installed release changed or is not recorded'
+fi
 
 for tool in curl sha256sum; do
     command -v "$tool" >/dev/null 2>&1 || fail "missing dependency: $tool"
 done
 arch=$(architecture)
-asset="keenproxy-${variant}linux-$arch"
+asset="keenproxy-linux-$arch"
+if [ "$variant" = lite ]; then asset="keenproxy-lite-linux-$arch"; fi
 if [ -f "$prefix/etc/ssl/certs/ca-certificates.crt" ]; then
     export CURL_CA_BUNDLE="$prefix/etc/ssl/certs/ca-certificates.crt"
 fi
@@ -201,10 +234,8 @@ if [ -z "$version" ]; then
     fetch "$main/version.txt" "$work/version.txt"
     version=$(cat "$work/version.txt")
 fi
-version=${version#v}
-case "$version" in ''|*[!0-9A-Za-z.-]*) fail 'invalid release version' ;; esac
-printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$' || fail 'invalid release version'
-tag="v$version"
+tag="v${version#v}"
+valid_release_tag "$tag" || fail 'invalid release version'
 base="$releases/$tag"
 fetch "$base/SHA256SUMS" "$work/SHA256SUMS"
 for name in "$asset" install.sh S99keenproxy; do
@@ -242,6 +273,7 @@ if [ -f "$service" ] && service_action check; then was_running=1; fi
 if [ "$was_running" = 0 ] && pidof keenproxy >/dev/null 2>&1; then
     fail 'stop the existing unmanaged KeenProxy process before installing'
 fi
+stage_release_record
 changed=0
 for path in $payload; do
     backup_file "$path"

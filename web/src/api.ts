@@ -1,17 +1,22 @@
 import type { DiagnosticReport, Catalog, FeatureStatus, DNSCheck, Config, GeoLookup, GeoStatus, Device, DomainStatus, Session, HostStat, JournalKind, JournalPage, LinkPreview, StatsSnapshot, Status } from './types'
+import type { UpdatePreferences, UpdateSelection, UpdateStatus } from './types'
+import { ApiError } from './apiError.ts'
 
-// Keeps the HTTP status available to callers alongside the server error.
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message)
-  }
-}
+export { ApiError } from './apiError.ts'
 
 // The shell uses this callback to show login after an unauthorized request.
 let onUnauthorized: () => void = () => {}
 // Register the application-wide handler for expired or missing authentication.
 export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn
+}
+
+// Preserve status even when an older build or intermediary sends plain text.
+function httpError(status: number, text: string): ApiError {
+  let detail: unknown
+  try { ({ error: detail } = JSON.parse(text)) } catch { /* Use the status below. */ }
+  const message = typeof detail === 'string' && detail ? detail : `HTTP ${status}`
+  return new ApiError(status, message)
 }
 
 // Send cookie-authenticated JSON requests and route non-login 401s to the shell.
@@ -23,12 +28,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   const text = await res.text()
-  const data = text ? JSON.parse(text) : undefined
   if (!res.ok) {
     if (res.status === 401 && path !== '/api/login') onUnauthorized()
-    throw new ApiError(res.status, data?.error ?? `HTTP ${res.status}`)
+    throw httpError(res.status, text)
   }
-  return data as T
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 // Typed API boundary; callers own draft changes and EventSource cleanup.
@@ -53,6 +57,10 @@ export const api = {
   // open=true audits trusted-network access when the panel is opened.
   session: (open = false) => request<Session>('GET', `/api/session${open ? '?open=1' : ''}`),
   status: () => request<Status>('GET', '/api/status'),
+  updates: () => request<UpdateStatus>('GET', '/api/updates'),
+  checkUpdates: () => request<UpdateStatus>('POST', '/api/updates/check', {}),
+  saveUpdatePreferences: (prefs: UpdatePreferences) => request<UpdateStatus>('PUT', '/api/updates/preferences', prefs),
+  installUpdate: (selection: UpdateSelection) => request<UpdateStatus>('POST', '/api/updates/install', selection),
   config: () => request<Config>('GET', '/api/config'),
   saveConfig: (cfg: Config) => request<Config>('PUT', '/api/config', cfg),
   validateConfig: (cfg: Config) => request<{ ok: boolean }>('POST', '/api/config/validate', cfg),
