@@ -41,6 +41,7 @@ class LanguagePolicyTest(unittest.TestCase):
     def test_cli_exit_status_reports_policy_violations(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            (root / '.git').mkdir()
             source = root / 'sample.go'
             with patch.object(checker, '__file__', str(root / 'tools/check-language.py')), patch.object(checker.subprocess, 'check_output', return_value=b'sample.go\0'), contextlib.redirect_stdout(io.StringIO()) as output, contextlib.redirect_stderr(io.StringIO()):
                 source.write_text('// \u041f\u0440\u0438\u043c\u0435\u0440\n')
@@ -49,3 +50,22 @@ class LanguagePolicyTest(unittest.TestCase):
                 source.write_text('// English\n')
                 self.assertEqual(checker.main(), 0)
                 self.assertIn("Source language check passed", output.getvalue())
+
+    def test_release_archive_uses_manifest_without_git(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / '.release-source-files').write_bytes(b'sample.go\0')
+            (root / 'local.txt').write_text('\u041f\u0440\u0438\u043c\u0435\u0440\n')
+            source = root / 'sample.go'
+            with patch.object(checker, '__file__', str(root / 'tools/check-language.py')), patch.object(checker.subprocess, 'check_output', side_effect=AssertionError('Git must not run in archives')), contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                source.write_text('// English\n')
+                self.assertEqual(checker.main(), 0)
+                source.write_text('// \u041f\u0440\u0438\u043c\u0435\u0440\n')
+                self.assertEqual(checker.main(), 1)
+
+    def test_archive_without_file_list_does_not_scan_untracked_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(checker, '__file__', str(root / 'tools/check-language.py')), contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(checker.main(), 0)
+                self.assertIn('Source language check skipped', output.getvalue())

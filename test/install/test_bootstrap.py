@@ -55,16 +55,17 @@ cp "$FIXTURES/$path" "$out"
     def command(self, name, script):
         self.executable(self.commands / name, script)
 
-    def release(self, tag, arch='arm64', lite=False, start=True):
+    def release(self, tag, arch='arm64', lite=False, start=True, dry_run='exit 0'):
         folder = self.mirror / tag
         folder.mkdir()
         asset = f'keenproxy-{"lite-" if lite else ""}linux-{arch}'
-        (folder / asset).write_text(f'#!/bin/sh\n# {tag}\nexit 0\n')
+        (folder / asset).write_text(
+            f'#!/bin/sh\n# {tag}\nif [ "$1" = --fixture-start ]; then exit {0 if start else 1}; fi\n{dry_run}\n')
         (folder / 'install.sh').write_bytes((ROOT / 'tools/install.sh').read_bytes())
         self.executable(folder / 'S99keenproxy', f'''# KeenProxy Entware service
 state="$KEENPROXY_PREFIX/running"
 case "$1" in
-    start) {'touch "$state"' if start else 'exit 1'} ;;
+    start) "$KEENPROXY_PREFIX/bin/keenproxy" --fixture-start && touch "$state" ;;
     check) test -f "$state" ;;
     stop) rm -f "$state" ;;
     *) exit 2 ;;
@@ -153,3 +154,23 @@ esac''')
         self.assertIn('unmanaged', result.stderr)
         self.assertIn('echo old', self.binary.read_text())
         self.assertFalse(self.config.exists())
+
+    def test_dry_run_does_not_print_credentials(self):
+        self.release('v1.2.3', dry_run='echo synthetic-password >&2; exit 1')
+        result = self.install()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('failed validation', result.stderr)
+        self.assertNotIn('synthetic-password', result.stdout + result.stderr)
+
+    def test_upgrade_refuses_to_replace_files_during_service_action(self):
+        first = self.release('v1.2.3')
+        self.assertEqual(self.install().returncode, 0)
+        self.release('v1.2.4')
+        lock = self.prefix / 'var/run/keenproxy/action.lock'
+        lock.mkdir(parents=True)
+        result = self.install('--version', 'v1.2.4')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('service action already in progress', result.stderr)
+        self.assertEqual(self.binary.read_bytes(), first.read_bytes())
+        self.assertTrue((self.prefix / 'running').exists())
+        self.assertTrue(lock.is_dir())

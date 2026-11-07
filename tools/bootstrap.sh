@@ -73,7 +73,20 @@ ensure_firewall_tools() {
     "$prefix/sbin/iptables" -t nat -S >/dev/null || fail 'IPv4 NAT unavailable; check the firmware Netfilter component'
 }
 
-service_action() { sh "$prefix/etc/init.d/S99keenproxy" "$1"; }
+lock_service() {
+    state="$prefix/var/run/keenproxy"
+    if [ "$prefix" = /opt ]; then state=/var/run/keenproxy; fi
+    mkdir -p "$state"
+    mkdir "$state/action.lock" 2>/dev/null || fail 'service action already in progress'
+    service_lock="$state/action.lock"
+    printf '%s\n' "$work" > "$service_lock/owner"
+}
+
+# Use the verified controller throughout the transaction, including when the
+# installed init script predates lock delegation. Keep this copy through rollback.
+service_action() {
+    KEENPROXY_SERVICE_LOCK_TOKEN="$work" sh "$work/S99keenproxy" "$1"
+}
 
 install_payload() {
     for path in $payload; do
@@ -95,18 +108,23 @@ restore_payload() {
 finish() {
     result=$?
     trap - EXIT
+    keep_work=0
     if [ "$replacing" = 1 ]; then
         echo 'KeenProxy: restoring the previous installation' >&2
         if { [ -f "$prefix/etc/init.d/S99keenproxy" ] && ! service_action stop; } || ! restore_payload; then
             echo "KeenProxy: rollback failed; recovery files retained at $work" >&2
-            rmdir "$lock" || :
-            exit 1
+            keep_work=1
+            result=1
         fi
     fi
-    if [ "$restart_previous" = 1 ]; then
+    if [ "$restart_previous" = 1 ] && [ "$keep_work" = 0 ]; then
         service_action start || echo 'KeenProxy: previous service did not restart; check its status' >&2
     fi
-    [ -z "$work" ] || rm -rf "$work"
+    if [ -n "$service_lock" ]; then
+        rm -f "$service_lock/owner" || :
+        rmdir "$service_lock" || :
+    fi
+    if [ -n "$work" ] && [ "$keep_work" = 0 ]; then rm -rf "$work"; fi
     rmdir "$lock" || :
     exit "$result"
 }
@@ -117,6 +135,7 @@ mkdir -p "$prefix/tmp" "$prefix/var/lock"
 lock="$prefix/var/lock/keenproxy-install.lock"
 mkdir "$lock" 2>/dev/null || fail 'another installer is active or an interrupted run left a lock'
 work=
+service_lock=
 replacing=0
 was_running=0
 restart_previous=0
@@ -149,15 +168,11 @@ if [ ! -f "$config" ]; then
 fi
 chmod 755 "$work/$asset"
 # Dry-run output can contain connection credentials. Keep it off the console.
-"$work/$asset" -dry-run -config "$config_source" >/dev/null || fail 'candidate binary or configuration failed validation'
+"$work/$asset" -dry-run -config "$config_source" >/dev/null 2>&1 || fail 'candidate binary or configuration failed validation'
 
 service="$prefix/etc/init.d/S99keenproxy"
 if [ -e "$service" ] || [ -L "$service" ]; then
     [ -f "$service" ] && [ ! -L "$service" ] && grep -Fxq '# KeenProxy Entware service' "$service" || fail 'existing init script is not managed by this installer'
-    if service_action check; then was_running=1; fi
-fi
-if [ "$was_running" = 0 ] && pidof keenproxy >/dev/null 2>&1; then
-    fail 'stop the existing unmanaged KeenProxy process before installing'
 fi
 ensure_firewall_tools
 
@@ -166,12 +181,17 @@ if [ "$trusttunnel" = 0 ]; then set -- "$@" --without-trusttunnel; fi
 sh "$work/install.sh" "$@" || fail 'could not stage release files'
 mkdir -p "$work/payload/etc/init.d"
 chmod 755 "$work/S99keenproxy"
-mv "$work/S99keenproxy" "$work/payload/etc/init.d/S99keenproxy"
+cp -p "$work/S99keenproxy" "$work/payload/etc/init.d/S99keenproxy"
 payload='bin/keenproxy etc/init.d/S99keenproxy'
 if [ "$trusttunnel" = 1 ]; then
     payload="$payload bin/trusttunnel_client share/keenproxy/trusttunnel/LICENSE share/keenproxy/trusttunnel/version"
 fi
 
+lock_service
+if [ -f "$service" ] && service_action check; then was_running=1; fi
+if [ "$was_running" = 0 ] && pidof keenproxy >/dev/null 2>&1; then
+    fail 'stop the existing unmanaged KeenProxy process before installing'
+fi
 changed=0
 for path in $payload; do
     if [ -e "$prefix/$path" ] || [ -L "$prefix/$path" ]; then

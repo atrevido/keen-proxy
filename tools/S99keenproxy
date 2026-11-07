@@ -77,8 +77,14 @@ case "${1:-}" in
     start|stop|restart)
         mkdir -p "$state"
         lock="$state/action.lock"
-        mkdir "$lock" 2>/dev/null || { echo 'KeenProxy: service action already in progress' >&2; exit 1; }
-        trap 'rmdir "$lock"' EXIT
+        if [ -n "${KEENPROXY_SERVICE_LOCK_TOKEN:-}" ]; then
+            owner=
+            if [ -r "$lock/owner" ]; then read -r owner < "$lock/owner" || :; fi
+            [ "$owner" = "$KEENPROXY_SERVICE_LOCK_TOKEN" ] || { echo 'KeenProxy: invalid installer lock' >&2; exit 1; }
+        else
+            mkdir "$lock" 2>/dev/null || { echo 'KeenProxy: service action already in progress' >&2; exit 1; }
+            trap 'rmdir "$lock"' EXIT
+        fi
         trap 'exit 1' INT TERM
         case "$1" in
             start) start ;;
