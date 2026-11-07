@@ -6,6 +6,8 @@ Selective traffic routing for Keenetic and Netcraze routers running Entware, wit
 
 KeenProxy lets you choose which devices, domains, IP ranges, and countries use a tunnel, connect directly, or are blocked. The web panel shows router load and lets you install, schedule, or roll back releases on a managed Entware installation. Router compatibility and protocol support depend on the firmware, kernel modules, and build tags. The project is experimental.
 
+[![KeenProxy web panel overview with tunnel traffic, router load, and connection status (synthetic demo data)](docs/assets/screenshots/readme-overview.png)](https://ordo-systems.github.io/keen-proxy/demo/)
+
 ## Documentation and live demo
 
 - [English documentation](https://ordo-systems.github.io/keen-proxy/) · [Russian documentation](https://ordo-systems.github.io/keen-proxy/ru/)
