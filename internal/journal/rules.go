@@ -33,10 +33,10 @@ func list(s string) []string {
 // or network explanation. An empty rule means no rule matched.
 func DescribeRule(cfg *model.Config, rule string) string {
 	if rule == "" {
-		return "ни одно правило не подошло — напрямую"
+		return "no rule matched — direct"
 	}
 	if strings.Contains(rule, "ip_is_private=true") {
-		return "частный адрес — всегда напрямую"
+		return "private address — always direct"
 	}
 	var who, what string
 	for _, m := range reRuleSet.FindAllStringSubmatch(rule, -1) {
@@ -44,18 +44,18 @@ func DescribeRule(cfg *model.Config, rule string) string {
 		invert := m[1] != ""
 		switch t := tags[0]; {
 		case t == tagClientOff:
-			who = "устройство не участвует"
+			who = "device excluded"
 		case strings.HasPrefix(t, tagClientFull):
-			who = "устройство в полном туннеле"
+			who = "device in full tunnel"
 		case t == tagClientSplt:
-			who = "устройство"
+			who = "device"
 		case strings.HasPrefix(t, tagGroup):
 			what = groupByIndex(cfg, t)
 		case strings.HasPrefix(t, "dns-"):
 			if cfg != nil {
 				for _, g := range cfg.Groups {
 					if compile.DomainTag(g) == t {
-						what = "резерв по IP из DNS: группа «" + g.Name + "»"
+						what = "DNS IP fallback: group «" + g.Name + "»"
 						break
 					}
 				}
@@ -74,8 +74,8 @@ func DescribeRule(cfg *model.Config, rule string) string {
 		return who + ": " + what
 	case what != "":
 		return what
-	case who == "устройство":
-		return "устройство: ни одна группа не подошла — напрямую"
+	case who == "device":
+		return "device: no group matched — direct"
 	case who != "":
 		return who
 	}
@@ -85,9 +85,9 @@ func DescribeRule(cfg *model.Config, rule string) string {
 func groupByIndex(cfg *model.Config, tag string) string {
 	i, err := strconv.Atoi(strings.TrimPrefix(tag, tagGroup))
 	if err != nil || cfg == nil || i < 0 || i >= len(cfg.Groups) {
-		return "группа " + tag
+		return "group " + tag
 	}
-	return "группа «" + cfg.Groups[i].Name + "»"
+	return "group «" + cfg.Groups[i].Name + "»"
 }
 
 // countryGroup labels country tags and inversion, using a configured group name only for an exact match.
@@ -96,14 +96,14 @@ func countryGroup(cfg *model.Config, tags []string, invert bool) string {
 	for _, t := range tags {
 		codes = append(codes, strings.ToUpper(strings.TrimPrefix(t, tagGeoIP)))
 	}
-	desc := "страны " + strings.Join(codes, ", ")
+	desc := "countries " + strings.Join(codes, ", ")
 	if invert {
-		desc = "все, кроме " + strings.Join(codes, ", ")
+		desc = "all except " + strings.Join(codes, ", ")
 	}
 	if cfg != nil {
 		for _, g := range cfg.Groups {
 			if g.IsCountry() && g.Except == invert && slices.Equal(g.Countries, codes) {
-				return "группа «" + g.Name + "» (" + desc + ")"
+				return "group «" + g.Name + "» (" + desc + ")"
 			}
 		}
 	}
@@ -114,7 +114,7 @@ func countryGroup(cfg *model.Config, tags []string, invert bool) string {
 // denotes a split-mode group rule; otherwise the network mode determines the label.
 func networkLabel(cfg *model.Config, cidrs []string, withGroup bool) string {
 	if cfg == nil {
-		return "сеть " + strings.Join(cidrs, ", ")
+		return "network " + strings.Join(cidrs, ", ")
 	}
 	for _, c := range cidrs {
 		p, err := netip.ParsePrefix(c)
@@ -126,18 +126,18 @@ func networkLabel(cfg *model.Config, cidrs []string, withGroup bool) string {
 			if err != nil || np.Masked() != p.Masked() {
 				continue
 			}
-			name := "сеть «" + n.Name + "»"
+			name := "network «" + n.Name + "»"
 			switch {
 			case withGroup:
 				return name
 			case n.Mode == model.ModeOff:
-				return name + " не участвует"
+				return name + " excluded"
 			case n.Mode == model.ModeFull:
-				return name + " в полном туннеле"
+				return name + " in full tunnel"
 			default:
-				return name + ": ни одна группа не подошла — напрямую"
+				return name + ": no group matched — direct"
 			}
 		}
 	}
-	return "сеть " + strings.Join(cidrs, ", ")
+	return "network " + strings.Join(cidrs, ", ")
 }

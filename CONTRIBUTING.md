@@ -31,6 +31,7 @@ The main code boundaries are:
 
 - Follow Go formatting and the existing TypeScript/Vue style.
 - Write short English comments explaining contracts, ownership, units, and non-obvious ordering. Keep comments close to the code they describe.
+- Keep runtime diagnostics and generated comments in English. Put Russian text in `docs/ru/` or Russian localization resources; preserve essential Unicode test values using escapes. `make check-language` enforces this boundary and runs as part of `make test`.
 - Preserve configuration compatibility, the shared draft/Apply workflow, and rollback behavior.
 - Update the Go model, compiler, API, frontend types, examples, and tests together when changing the schema.
 - Add a failing behavioral test before fixing a bug when practical. Use controlled clocks and injected network boundaries instead of real services.
@@ -46,6 +47,8 @@ CGO_ENABLED=0 make test
 CGO_ENABLED=0 make vet
 cd web && npm test && npm run build
 ```
+
+The Entware service tests use a C compiler (`cc`) on Linux to build a small test daemon. They run as part of `make test-install` and use a temporary prefix without accessing a router.
 
 For routing, DNS, or firewall behavior, also run `make integration` with Docker. This uses a privileged disposable container; review the Makefile and test script before running it. Changes to separate tools should be tested from their own Go modules as appropriate.
 
@@ -80,6 +83,6 @@ Version `1.0.0` marks a defined, stable user-facing contract and a commitment to
 
 Maintainers review the proposed version and changelog in a release PR before publishing. See [RELEASING.md](RELEASING.md) for the release process and automation status.
 
-Public project guides live in the repository. Local plans, investigations, generated QA reports, and deployment notes belong in ignored `docs-reports/`; local agent memory belongs in ignored `.serena/`. Do not force-add those directories or production artifacts.
+AI-assisted contributions follow the required skills and quality checks in [AGENTS.md](AGENTS.md). The shared [Serena memories](.serena/memories/core.md) hold public project context in English. Keep local plans, investigations, generated QA reports, and deployment notes in ignored `docs-reports/`. Keep local Serena configuration, caches, and production artifacts out of Git.
 
 By contributing, you agree that your original contributions are provided under the project's GPL-3.0-only license. Retain existing copyright/license notices and clearly identify any third-party code or data. Do not contribute material you are not authorized to redistribute.

@@ -144,7 +144,7 @@ func (d *Daemon) probeAll(ctx context.Context, ids []string, f model.Failover) m
 func (d *Daemon) probe(ctx context.Context, id, rawURL string) (time.Duration, error) {
 	out, engCtx, ok := d.eng.Outbound(id)
 	if !ok {
-		return 0, fmt.Errorf("соединение не запущено")
+		return 0, fmt.Errorf("connection is not running")
 	}
 	u, err := url.Parse(rawURL)
 	if err != nil {
@@ -159,7 +159,7 @@ func (d *Daemon) probe(ctx context.Context, id, rawURL string) (time.Duration, e
 	if err != nil {
 		ips, lerr := net.DefaultResolver.LookupNetIP(ctx, "ip4", u.Hostname())
 		if lerr != nil || len(ips) == 0 {
-			return 0, fmt.Errorf("адрес проверки %s не разрешился: %v", u.Hostname(), lerr)
+			return 0, fmt.Errorf("probe address %s did not resolve: %v", u.Hostname(), lerr)
 		}
 		addr = ips[0]
 	}
@@ -218,31 +218,31 @@ func (d *Daemon) switchLocked(now time.Time) {
 		if next == cur {
 			if cur != model.TargetDirect && d.health[cur].down(now, downAfter) && !d.allDown[fc.ID] {
 				d.allDown[fc.ID] = true
-				d.log.Error("ни одно соединение цепочки не отвечает", "connection", fc.ID)
-				d.audit("watchdog", "Нет рабочего соединения", fc.ID, "error",
-					fmt.Sprintf("не отвечает ни одно из %s — трафик остаётся на «%s»", d.chainNames(fc.Chain), d.connName(cur)))
+				d.log.Error("no connection in the chain is available", "connection", fc.ID)
+				d.audit("watchdog", "No working connection", fc.ID, "error",
+					fmt.Sprintf("none of %s is available — traffic remains on «%s»", d.chainNames(fc.Chain), d.connName(cur)))
 			}
 			continue
 		}
 		if !d.eng.Select(fc.Tag, next) {
-			d.log.Error("селектор не переключился", "connection", fc.ID, "to", next)
+			d.log.Error("selector did not switch", "connection", fc.ID, "to", next)
 			continue
 		}
 		d.active[fc.ID] = next
 		d.allDown[fc.ID] = false
 		if index(fc.Chain, next) > index(fc.Chain, cur) {
 			h := d.health[cur]
-			d.log.Warn("соединение не отвечает, переключаюсь на резервное", "connection", fc.ID, "from", cur, "to", next, "err", h.err)
-			d.audit("watchdog", "Переключение на резервное", fc.ID, "warn",
-				fmt.Sprintf("«%s» не отвечает %s (%s) — трафик через «%s»", d.connName(cur), roundDur(now.Sub(h.since)), h.err, d.connName(next)))
+			d.log.Warn("connection is unavailable, switching to fallback", "connection", fc.ID, "from", cur, "to", next, "err", h.err)
+			d.audit("watchdog", "Switch to fallback", fc.ID, "warn",
+				fmt.Sprintf("«%s» unavailable for %s (%s) — traffic via «%s»", d.connName(cur), roundDur(now.Sub(h.since)), h.err, d.connName(next)))
 		} else {
-			d.log.Info("соединение снова отвечает, возвращаюсь", "connection", fc.ID, "from", cur, "to", next)
-			action := "Возврат на основное"
+			d.log.Info("connection is available again, switching back", "connection", fc.ID, "from", cur, "to", next)
+			action := "Return to primary"
 			if next != fc.ID {
-				action = "Возврат на более приоритетное"
+				action = "Return to higher priority"
 			}
 			d.audit("watchdog", action, fc.ID, "ok",
-				fmt.Sprintf("«%s» снова отвечает %s — трафик через него, а не через «%s»", d.connName(next), roundDur(now.Sub(d.health[next].since)), d.connName(cur)))
+				fmt.Sprintf("«%s» available again for %s — traffic via it instead of «%s»", d.connName(next), roundDur(now.Sub(d.health[next].since)), d.connName(cur)))
 		}
 	}
 }
@@ -291,14 +291,14 @@ func index(chain []string, id string) int {
 
 func roundDur(d time.Duration) string {
 	if d < time.Minute {
-		return fmt.Sprintf("%d с", int(d.Seconds()))
+		return fmt.Sprintf("%d s", int(d.Seconds()))
 	}
-	return fmt.Sprintf("%d мин %d с", int(d.Minutes()), int(d.Seconds())%60)
+	return fmt.Sprintf("%d min %d s", int(d.Minutes()), int(d.Seconds())%60)
 }
 
 func (d *Daemon) connName(id string) string {
 	if id == model.TargetDirect {
-		return "Напрямую"
+		return "Direct"
 	}
 	for _, cn := range d.cfg.Connections {
 		if cn.ID == id && cn.Name != "" {

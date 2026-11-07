@@ -44,8 +44,9 @@ type Options struct {
 	WatchInterval time.Duration // watchdog interval for firewall and neighbor checks
 	Firewall      *netfilter.Firewall
 	Log           *slog.Logger
-	Journals      journal.Set // nil creates in-memory journals
-	SingBoxLog    string      // sing-box log destination (see engine.LogOutput)
+	Journals      journal.Set                                                          // nil creates in-memory journals
+	SingBoxLog    string                                                               // sing-box log destination (see engine.LogOutput)
+	DeviceNames   func(context.Context, map[string]netip.Addr) map[string]devices.Name // optional local name source
 }
 
 // Daemon owns runtime components and coordinates serialized configuration changes.
@@ -63,23 +64,24 @@ type Daemon struct {
 	opt               Options
 	log               *slog.Logger
 
-	mu        sync.Mutex // serializes apply and protects runtime state below, except atomic live
-	cfg       *model.Config
-	eng       engine.Engine
-	dns       *dnsfront.Server
-	route     netfilter.TProxyRoute
-	routeOn   bool
-	plan      netfilter.Plan
-	planOn    bool
-	neighbors map[string]netip.Addr
-	tt        []compile.TrustTunnelClient
-	ttProcs   map[string]*supervise.Process
-	ttStop    context.CancelFunc
-	ttWG      sync.WaitGroup
-	started   time.Time
-	restored  int // number of watchdog firewall restorations
-	stats     *stats.Tracker
-	geo       geoState
+	mu          sync.Mutex // serializes apply and protects runtime state below, except atomic live
+	cfg         *model.Config
+	eng         engine.Engine
+	dns         *dnsfront.Server
+	route       netfilter.TProxyRoute
+	routeOn     bool
+	plan        netfilter.Plan
+	planOn      bool
+	neighbors   map[string]netip.Addr
+	deviceNames map[string]cachedDeviceName
+	tt          []compile.TrustTunnelClient
+	ttProcs     map[string]*supervise.Process
+	ttStop      context.CancelFunc
+	ttWG        sync.WaitGroup
+	started     time.Time
+	restored    int // number of watchdog firewall restorations
+	stats       *stats.Tracker
+	geo         geoState
 	// serverHosts maps connection IDs to server hosts from the latest compilation.
 	serverHosts map[string]string
 	journals    journal.Set
@@ -98,6 +100,9 @@ type Daemon struct {
 // New creates a daemon with default paths and in-memory journals when omitted.
 // It does not start listeners or install interception rules.
 func New(opt Options) *Daemon {
+	if opt.DeviceNames == nil {
+		opt.DeviceNames = devices.NewNameLookup()
+	}
 	if opt.WatchInterval == 0 {
 		opt.WatchInterval = 30 * time.Second
 	}
@@ -139,24 +144,25 @@ func (d *Daemon) Run(ctx context.Context) error {
 	d.mu.Unlock()
 	defer d.shutdown()
 	if err != nil {
-		d.audit("system", "Запуск keenProxy", "core", "error", err.Error())
+		d.audit("system", "Start keenProxy", "core", "error", err.Error())
 		return err
 	}
-	d.log.Info("keenProxy запущен", "mode", cfg.Intercept.Mode, "sources", len(d.plan.Sources), "dns", d.dns.Addr())
-	d.audit("system", "Запуск keenProxy", "core", "ok",
-		fmt.Sprintf("перехват %s, источников %d, DNS %s", cfg.Intercept.Mode, len(d.plan.Sources), d.dns.Addr()))
+	d.log.Info("keenProxy started", "mode", cfg.Intercept.Mode, "sources", len(d.plan.Sources), "dns", d.dns.Addr())
+	d.audit("system", "Start keenProxy", "core", "ok",
+		fmt.Sprintf("interception %s, sources %d, DNS %s", cfg.Intercept.Mode, len(d.plan.Sources), d.dns.Addr()))
 	go d.runGeoUpdates(ctx)
 	go d.runFailover(ctx)
 	go d.runDomains(ctx)
 	go d.runFilterUpdates(ctx)
+	go d.runDeviceNames(ctx)
 
 	tick := time.NewTicker(d.opt.WatchInterval)
 	defer tick.Stop()
 	for {
 		select {
 		case <-ctx.Done():
-			d.log.Info("остановка keenProxy")
-			d.audit("system", "Остановка keenProxy", "core", "info", "правила перехвата сняты, сеть работает напрямую")
+			d.log.Info("stopping keenProxy")
+			d.audit("system", "Stop keenProxy", "core", "info", "interception rules removed, network uses direct routing")
 			return nil
 		case <-tick.C:
 			d.watch(ctx)
@@ -172,17 +178,17 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 	by := who.Who
 	from := ""
 	if who.From != "" {
-		from = " (с " + who.From + ")"
+		from = " (from " + who.From + ")"
 	}
 	cfg.Defaults()
 	catalog.AutoUpdate(cfg)
 	if err := cfg.Validate(); err != nil {
-		d.audit(by, "Конфиг не принят", "config", "error", err.Error()+from)
+		d.audit(by, "Configuration rejected", "config", "error", err.Error()+from)
 		return err
 	}
 	// Compile first so protocol errors do not disturb the running configuration.
 	if _, err := compile.Compile(compile.Input{Config: cfg, RuleSetDir: d.opt.RuleSetDir}); err != nil {
-		d.audit(by, "Конфиг не принят", "config", "error", err.Error()+from)
+		d.audit(by, "Configuration rejected", "config", "error", err.Error()+from)
 		return err
 	}
 	d.mu.Lock()
@@ -190,15 +196,15 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 	prev := d.cfg
 	changes := configChanges(prev, cfg)
 	if err := d.applyLocked(ctx, cfg); err != nil {
-		d.log.Error("новый конфиг не применился, возвращаю прежний", "err", err)
-		details := err.Error() + "; возвращён прежний конфиг"
+		d.log.Error("new configuration failed to apply, restoring previous configuration", "err", err)
+		details := err.Error() + "; previous configuration restored"
 		if prev != nil {
 			if rbErr := d.applyLocked(ctx, prev); rbErr != nil {
-				d.log.Error("откат тоже не удался", "err", rbErr)
-				details = err.Error() + "; откат тоже не удался: " + rbErr.Error()
+				d.log.Error("rollback also failed", "err", rbErr)
+				details = err.Error() + "; rollback also failed: " + rbErr.Error()
 			}
 		}
-		d.audit(by, "Конфиг не применился", "config", "error", details+from)
+		d.audit(by, "Configuration apply failed", "config", "error", details+from)
 		return err
 	}
 	raw, err := cfg.Marshal()
@@ -207,19 +213,19 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 	}
 	if previous, readErr := os.ReadFile(d.opt.ConfigPath); readErr == nil {
 		if err := writeFile(d.opt.ConfigPath+".previous", previous, 0o600); err != nil {
-			return fmt.Errorf("предыдущий конфиг не сохранён: %w", err)
+			return fmt.Errorf("previous configuration was not saved: %w", err)
 		}
 	}
 	if err := writeFile(d.opt.ConfigPath, raw, 0o600); err != nil {
-		d.audit(by, "Конфиг применён, но не сохранён", "config", "warn", err.Error()+from)
-		return fmt.Errorf("конфиг применён, но не сохранён: %w", err)
+		d.audit(by, "Configuration applied but not saved", "config", "warn", err.Error()+from)
+		return fmt.Errorf("configuration applied but not saved: %w", err)
 	}
-	d.log.Info("конфиг применён и сохранён")
-	core := "ядро без перезапуска"
+	d.log.Info("configuration applied and saved")
+	core := "core not restarted"
 	if d.coreRestarted {
-		core = "ядро перезапущено"
+		core = "core restarted"
 	}
-	d.audit(by, "Применение конфига", "config", "ok", changes+"; "+core+from)
+	d.audit(by, "Apply configuration", "config", "ok", changes+"; "+core+from)
 	go d.refreshConnCountries(context.Background())
 	return nil
 }
@@ -247,7 +253,7 @@ func (d *Daemon) applyLocked(ctx context.Context, cfg *model.Config) error {
 		return err
 	} else if restarted && prev != nil {
 		d.coreRestarted = true
-		d.log.Info("ядро sing-box перезапущено с новым конфигом")
+		d.log.Info("sing-box core restarted with new configuration")
 	}
 	d.reselectLocked()
 	d.filters.Configure(cfg.Filters)
@@ -283,7 +289,7 @@ func (d *Daemon) applyLocked(ctx context.Context, cfg *model.Config) error {
 	d.plan = out.Plan
 	if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
 		d.removeFirewall()
-		return fmt.Errorf("правила перехвата: %w", err)
+		return fmt.Errorf("interception rules: %w", err)
 	}
 	d.planOn = true
 	return nil
@@ -341,37 +347,37 @@ func (d *Daemon) watch(ctx context.Context) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if n := d.readNeighbors(d.cfg); !maps.Equal(n, d.neighbors) {
-		d.audit("watchdog", "Адреса устройств обновлены", "clients", "info", neighborsChange(d.neighbors, n))
+		d.audit("watchdog", "Device addresses updated", "clients", "info", neighborsChange(d.neighbors, n))
 		d.neighbors = n
 		out, err := d.compileLocked()
 		if err != nil {
-			d.log.Error("перекомпиляция", "err", err)
+			d.log.Error("recompile", "err", err)
 			return
 		}
 		// Client addresses live in watched rule-set files, so sing-box can
 		// pick up changes without restarting.
 		if restarted, err := d.eng.Apply(out.SingBox); err != nil {
-			d.log.Error("перезапуск sing-box", "err", err)
+			d.log.Error("restart sing-box", "err", err)
 		} else if restarted {
-			d.log.Warn("конфиг sing-box изменился при смене адресов, ядро перезапущено")
+			d.log.Warn("sing-box configuration changed after address updates, core restarted")
 			d.reselectLocked()
 		}
 		d.plan = out.Plan
 		if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
-			d.log.Error("обновление правил", "err", err)
+			d.log.Error("rule update", "err", err)
 		}
 		return
 	}
 	if !d.opt.Firewall.Healthy(ctx, d.plan) {
 		if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
-			d.log.Error("восстановление правил", "err", err)
-			d.audit("watchdog", "Правила перехвата не восстановлены", "firewall", "error", err.Error())
+			d.log.Error("rule restoration", "err", err)
+			d.audit("watchdog", "Interception rules not restored", "firewall", "error", err.Error())
 			return
 		}
 		d.restored++
-		d.log.Warn("правила перехвата пропали (вероятно, NDM перестроил firewall) — восстановлены")
-		d.audit("watchdog", "Правила перехвата восстановлены", "firewall", "warn",
-			fmt.Sprintf("правил в firewall не было — вероятно, NDM перестроил его; восстановлений с запуска: %d", d.restored))
+		d.log.Warn("interception rules disappeared (NDM likely rebuilt firewall) — restored")
+		d.audit("watchdog", "Interception rules restored", "firewall", "warn",
+			fmt.Sprintf("firewall rules were missing — NDM likely rebuilt it; restorations since start: %d", d.restored))
 	}
 }
 
@@ -428,25 +434,25 @@ func (d *Daemon) startTrustTunnel(clients []compile.TrustTunnelClient) {
 	d.ttStop = cancel
 	dir := filepath.Join(filepath.Dir(d.opt.RuleSetDir), "trusttunnel")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		d.log.Error("каталог TrustTunnel", "err", err)
+		d.log.Error("TrustTunnel directory", "err", err)
 		return
 	}
 	for _, c := range clients {
 		path := filepath.Join(dir, c.ID+".toml")
 		// Configuration contains secrets, so restrict access to the owner.
 		if err := writeFile(path, []byte(c.Config), 0o600); err != nil {
-			d.log.Error("конфиг TrustTunnel", "connection", c.ID, "err", err)
+			d.log.Error("TrustTunnel configuration", "connection", c.ID, "err", err)
 			continue
 		}
 		if _, err := os.Stat(c.Binary); err != nil {
-			d.log.Error("trusttunnel_client не найден, соединение работать не будет", "connection", c.ID, "binary", c.Binary)
+			d.log.Error("trusttunnel_client not found, connection will not work", "connection", c.ID, "binary", c.Binary)
 			continue
 		}
 		p := &supervise.Process{Name: "trusttunnel/" + c.ID, Path: c.Binary, Args: []string{"--config", path}, Log: d.log}
 		d.ttProcs[c.ID] = p
 		d.ttWG.Add(1)
 		go func() { defer d.ttWG.Done(); p.Run(ctx) }()
-		d.log.Info("TrustTunnel запущен", "connection", c.ID, "socks", c.SocksPort)
+		d.log.Info("TrustTunnel started", "connection", c.ID, "socks", c.SocksPort)
 	}
 }
 
@@ -464,7 +470,7 @@ func (d *Daemon) stopTrustTunnel() {
 func (d *Daemon) readNeighbors(cfg *model.Config) map[string]netip.Addr {
 	n, err := devices.ReadARP(d.opt.ARPPath, cfg.LAN.Interface)
 	if err != nil {
-		d.log.Warn("ARP недоступен, клиенты без статического IP не участвуют", "err", err)
+		d.log.Warn("ARP unavailable, clients without static IP are excluded", "err", err)
 		return map[string]netip.Addr{}
 	}
 	return n
@@ -476,7 +482,7 @@ func (d *Daemon) removeFirewall() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := d.opt.Firewall.Remove(ctx, d.plan); err != nil && !errors.Is(err, context.Canceled) {
-		d.log.Warn("снятие правил", "err", err)
+		d.log.Warn("remove rules", "err", err)
 	}
 	d.planOn = false
 }
@@ -571,12 +577,14 @@ func (d *Daemon) Hosts(tag, query string, limit int) ([]stats.Host, int) {
 	return d.stats.Hosts(tag, query, limit)
 }
 
-// Device combines an ARP neighbor with its optional configured client entry.
+// Device combines an ARP neighbor, configured client identity, and observed hostname.
 type Device struct {
-	MAC    string     `json:"mac"`
-	IP     string     `json:"ip"`
-	Client string     `json:"client,omitempty"` // configured client name
-	Mode   model.Mode `json:"mode,omitempty"`
+	MAC            string     `json:"mac"`
+	IP             string     `json:"ip"`
+	Client         string     `json:"client,omitempty"` // configured client name
+	Mode           model.Mode `json:"mode,omitempty"`
+	Hostname       string     `json:"hostname,omitempty"`
+	HostnameSource string     `json:"hostname_source,omitempty"`
 }
 
 // Devices merges current LAN neighbors with configured client names and identities.
@@ -594,6 +602,9 @@ func (d *Daemon) Devices() []Device {
 	var out []Device
 	for mac, ip := range d.neighbors {
 		dev := Device{MAC: mac, IP: ip.String()}
+		if cached, ok := d.deviceNames[mac]; ok && cached.ip == ip && time.Now().Before(cached.expires) {
+			dev.Hostname, dev.HostnameSource = cached.name.Hostname, cached.name.Source
+		}
 		if c, ok := known[mac]; ok {
 			dev.Client, dev.Mode = c.Name, c.Mode
 		}

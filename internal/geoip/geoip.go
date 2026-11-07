@@ -156,12 +156,12 @@ func downloadOne(ctx context.Context, client *http.Client, url, path string) err
 	db, err := Open(tmp)
 	if err != nil {
 		os.Remove(tmp)
-		return fmt.Errorf("%s: файл не MMDB: %w", url, err)
+		return fmt.Errorf("%s: file is not MMDB: %w", url, err)
 	}
 	if db.Country(netip.MustParseAddr("77.88.8.8")) == "" && db.Country(netip.MustParseAddr("8.8.8.8")) == "" {
 		db.Close()
 		os.Remove(tmp)
-		return fmt.Errorf("%s: в базе нет поля country.iso_code", url)
+		return fmt.Errorf("%s: database has no country.iso_code field", url)
 	}
 	db.Close()
 	return os.Rename(tmp, path)

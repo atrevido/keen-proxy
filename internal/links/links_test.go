@@ -62,7 +62,7 @@ func TestParse(t *testing.T) {
 			gj, _ := json.Marshal(got)
 			wj, _ := json.Marshal(want)
 			if string(gj) != string(wj) {
-				t.Errorf("%s\n  %s = %s, ждали %s", c.link, path, gj, wj)
+				t.Errorf("%s\n  %s = %s, expected %s", c.link, path, gj, wj)
 			}
 		}
 	}
@@ -72,20 +72,20 @@ func TestParseErrors(t *testing.T) {
 	for link, want := range map[string]string{
 		"vless://u@h:443?type=xhttp":       "Xray",
 		"vless://u@h:443?security=reality": "pbk",
-		"wireguard://x":                    "не поддерживается",
-		"ss://YWVzOnB3@h:1?plugin=obfs":    "плагины",
+		"wireguard://x":                    "not supported",
+		"ss://YWVzOnB3@h:1?plugin=obfs":    "plugins",
 		"vless://@h:443":                   "UUID",
-		"nonsense":                         "схемы",
+		"nonsense":                         "scheme",
 	} {
 		_, err := Parse(link)
 		if err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("%s: ошибка %v, ждали содержащую %q", link, err, want)
+			t.Errorf("%s: error %v, expected to contain %q", link, err, want)
 		}
 	}
 }
 
 func TestName(t *testing.T) {
-	if n := Name("vless://u@h:1#%D0%A4%D0%B8%D0%BD%D0%BB%D1%8F%D0%BD%D0%B4%D0%B8%D1%8F"); n != "Финляндия" {
+	if n := Name("vless://u@h:1#%D0%A4%D0%B8%D0%BD%D0%BB%D1%8F%D0%BD%D0%B4%D0%B8%D1%8F"); n != "\u0424\u0438\u043d\u043b\u044f\u043d\u0434\u0438\u044f" {
 		t.Errorf("Name = %q", n)
 	}
 }

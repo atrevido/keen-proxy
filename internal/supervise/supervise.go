@@ -54,7 +54,7 @@ func (p *Process) Run(ctx context.Context) {
 		if time.Since(started) > p.Healthy {
 			delay = p.MinDelay
 		}
-		p.Log.Warn("процесс завершился, перезапуск", "name", p.Name, "err", err, "after", delay)
+		p.Log.Warn("process exited, restarting", "name", p.Name, "err", err, "after", delay)
 		select {
 		case <-ctx.Done():
 			return

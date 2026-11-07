@@ -27,9 +27,9 @@ ip -n client route add default via 192.168.77.1
 ip link add veth-w type veth peer name eth0 netns wan
 ip addr add 198.51.100.1/24 dev veth-w && ip link set veth-w up
 ip -n wan addr add 198.51.100.2/24 dev eth0
-ip -n wan addr add 198.51.100.3/24 dev eth0 # обычный сайт; .2 — DNS и туннельные серверы
-ip -n wan addr add 198.51.100.4/24 dev eth0 # «Steam»: доступен напрямую, но по базе стран — Финляндия
-ip -n wan addr add 198.51.100.5/24 dev eth0 # DNS fallback: RU, без правила — напрямую
+ip -n wan addr add 198.51.100.3/24 dev eth0 # ordinary site; .2 hosts DNS and tunnel servers
+ip -n wan addr add 198.51.100.4/24 dev eth0 # Steam: reachable directly, but mapped to Finland by GeoIP
+ip -n wan addr add 198.51.100.5/24 dev eth0 # DNS fallback: RU, direct without a rule
 ip -n wan link set eth0 up && ip -n wan link set lo up
 
 # --- Synthetic internet: controlled DNS and HTTP targets
@@ -67,9 +67,9 @@ sleep 1
 
 # --- Establish the negative control before enabling interception
 if ip netns exec client curl -s -m 3 -o /dev/null http://198.51.100.3/; then
-	fail "без keenProxy HTTP не должен проходить (нет NAT)"
+	fail "HTTP must fail without keenProxy (no NAT)"
 fi
-ok "без keenProxy HTTP с клиента не проходит"
+ok "client HTTP fails without keenProxy"
 
 /work/mkgeo /tmp/geo.mmdb 198.51.100.0/24=RU 198.51.100.4/32=FI 203.0.113.0/24=FI
 SS="ss://$(printf 'aes-128-gcm:test-pass' | base64 | tr -d '=\n')@198.51.100.2:8388"
@@ -82,14 +82,14 @@ geoip: {file: /tmp/geo.mmdb}
 connections:
   - {id: ss, type: link, link: "$SS"}
   - {id: vless, type: link, link: "vless://11111111-2222-3333-4444-555555555555@198.51.100.2:8443?type=tcp"}
-  - {id: main, name: Основное, type: link, link: "$SS_MAIN", fallback: vless}
+  - {id: main, name: Main, type: link, link: "$SS_MAIN", fallback: vless}
 failover: {url: "http://203.0.113.80/", interval: 1, down_after: 2, up_after: 3}
 groups:
-  - {name: Реклама, target: block, entries: ["ads.test"]}
-  - {name: Всё кроме России, target: ss, countries: [RU], except: true}
-  - {name: Через VLESS, target: vless, entries: ["hidden.test"]}
-  - {name: Steam напрямую, target: direct, entries: ["steam.test"]}
-  - {name: С резервным, target: main, entries: ["backup.test"]}
+  - {name: Advertising, target: block, entries: ["ads.test"]}
+  - {name: All except Russia, target: ss, countries: [RU], except: true}
+  - {name: Via VLESS, target: vless, entries: ["hidden.test"]}
+  - {name: Steam direct, target: direct, entries: ["steam.test"]}
+  - {name: With fallback, target: main, entries: ["backup.test"]}
 networks:
   - {name: LAN, cidr: 192.168.77.0/24, mode: split}
 YAML
@@ -99,43 +99,43 @@ $KEENPROXY -config /tmp/config.yaml -rule-sets /tmp/rule-sets -watch 1s \
 KPID=$!
 for i in $(seq 1 50); do
 	iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null && break
-	kill -0 $KPID 2>/dev/null || { cat /tmp/keenproxy.log; fail "keenProxy завершился"; }
+	kill -0 $KPID 2>/dev/null || { cat /tmp/keenproxy.log; fail "keenProxy exited"; }
 	sleep 0.2
 done
-iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null || { cat /tmp/keenproxy.log; fail "правила не поставлены"; }
-ok "keenProxy запущен, правила на месте"
+iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null || { cat /tmp/keenproxy.log; fail "interception rules were not installed"; }
+ok "keenProxy started with interception rules installed"
 
 # --- Intercept UDP/TCP DNS to any destination and block a selected domain
 a=$(ip netns exec client dig +short +time=2 +tries=1 @8.8.8.8 example.test A)
 [ "$a" = "198.51.100.2" ] || fail "DNS UDP: '$a'"
-ok "DNS UDP перехвачен (запрос к 8.8.8.8 ответил наш фронтенд)"
+ok "UDP DNS intercepted (our frontend answered a query to 8.8.8.8)"
 a=$(ip netns exec client dig +tcp +short +time=2 +tries=1 @8.8.8.8 example.test A)
 [ "$a" = "198.51.100.2" ] || fail "DNS TCP: '$a'"
-ok "DNS TCP перехвачен"
+ok "TCP DNS intercepted"
 a=$(ip netns exec client dig +short +time=2 +tries=1 @192.168.77.1 x.ads.test A)
-[ "$a" = "0.0.0.0" ] || fail "блокировка: '$a'"
-ok "заблокированный домен → 0.0.0.0"
+[ "$a" = "0.0.0.0" ] || fail "blocking: '$a'"
+ok "blocked domain → 0.0.0.0"
 
 # --- Prove TCP forwarding through sing-box
-ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.3/ || { cat /tmp/keenproxy.log; fail "HTTP через keenProxy"; }
-grep -q '^198.51.100.1 ' /tmp/http.log || fail "сервер должен видеть адрес роутера: $(cat /tmp/http.log)"
-ok "HTTP с клиента прошёл через sing-box (сервер видит 198.51.100.1)"
+ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.3/ || { cat /tmp/keenproxy.log; fail "HTTP through keenProxy"; }
+grep -q '^198.51.100.1 ' /tmp/http.log || fail "server must see the router address: $(cat /tmp/http.log)"
+ok "client HTTP passed through sing-box (server sees 198.51.100.1)"
 
 # --- Hidden targets require the tunnel server in the WAN namespace
-ip netns exec client curl -s -m 5 -o /dev/null http://203.0.113.80/ || { cat /tmp/keenproxy.log /tmp/sbserver.log; fail "Shadowsocks: закрытый сайт недоступен"; }
-grep -q 'inbound/shadowsocks.*203.0.113.80' /tmp/sbserver.log || { cat /tmp/sbserver.log; fail "соединение пришло не через Shadowsocks"; }
-ok "группа «всё, кроме России»: закрытый сайт ушёл в Shadowsocks"
+ip netns exec client curl -s -m 5 -o /dev/null http://203.0.113.80/ || { cat /tmp/keenproxy.log /tmp/sbserver.log; fail "Shadowsocks: restricted site is unavailable"; }
+grep -q 'inbound/shadowsocks.*203.0.113.80' /tmp/sbserver.log || { cat /tmp/sbserver.log; fail "connection did not arrive through Shadowsocks"; }
+ok "all-except-Russia group routed the restricted site through Shadowsocks"
 # Sniffed HTTP Host selects VLESS; address .81 is absent from explicit groups.
-ip netns exec client curl -s -m 5 -o /dev/null -H 'Host: hidden.test' http://203.0.113.81/ || { cat /tmp/keenproxy.log /tmp/sbserver.log; fail "VLESS по домену"; }
-grep -q 'inbound/vless.*203.0.113.81' /tmp/sbserver.log || { cat /tmp/sbserver.log; fail "соединение пришло не через VLESS"; }
-ok "домен из белого списка важнее страны: hidden.test ушёл в VLESS, а не в Shadowsocks"
+ip netns exec client curl -s -m 5 -o /dev/null -H 'Host: hidden.test' http://203.0.113.81/ || { cat /tmp/keenproxy.log /tmp/sbserver.log; fail "domain-based VLESS route"; }
+grep -q 'inbound/vless.*203.0.113.81' /tmp/sbserver.log || { cat /tmp/sbserver.log; fail "connection did not arrive through VLESS"; }
+ok "explicit domain wins over country: hidden.test used VLESS instead of Shadowsocks"
 # Explicit domain routing precedes country rules within a routed policy.
 # The same address without a hostname takes the country-selected tunnel.
-ip netns exec client curl -s -m 5 -o /dev/null -H 'Host: steam.test' http://198.51.100.4/ || { cat /tmp/keenproxy.log; fail "Steam напрямую"; }
-grep -q '^198.51.100.1 ' /tmp/steam.log || { cat /tmp/steam.log; fail "Steam должен идти напрямую (сервер видит роутер)"; }
-ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.4/ || { cat /tmp/keenproxy.log; fail "финский адрес без домена"; }
-grep -q 'inbound/shadowsocks.*198.51.100.4' /tmp/sbserver.log || { cat /tmp/sbserver.log; fail "финский адрес без домена должен уйти в Shadowsocks"; }
-ok "«не Россия» в туннель, Steam напрямую: steam.test пошёл напрямую, тот же адрес без домена — через Shadowsocks"
+ip netns exec client curl -s -m 5 -o /dev/null -H 'Host: steam.test' http://198.51.100.4/ || { cat /tmp/keenproxy.log; fail "Steam direct"; }
+grep -q '^198.51.100.1 ' /tmp/steam.log || { cat /tmp/steam.log; fail "Steam must connect directly (server sees the router)"; }
+ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.4/ || { cat /tmp/keenproxy.log; fail "Finnish address without a domain"; }
+grep -q 'inbound/shadowsocks.*198.51.100.4' /tmp/sbserver.log || { cat /tmp/sbserver.log; fail "Finnish address without a domain must use Shadowsocks"; }
+ok "outside-Russia tunnel with Steam direct: steam.test used direct, the same IP without a domain used Shadowsocks"
 
 # --- The live tracker must account for bytes on each selected outbound
 TOKEN=$(cat /opt/etc/keenproxy/token)
@@ -147,10 +147,10 @@ o = {x["tag"]: x for x in s["outbounds"] or []}
 assert o.get("ss", {}).get("down_total", 0) > 0, o.get("ss")
 assert o.get("vless", {}).get("down_total", 0) > 0, o.get("vless")
 assert o.get("direct", {}).get("down_total", 0) > 0, o.get("direct")
-' || { echo "$STATS"; fail "статистика не посчитала трафик туннелей"; }
+' || { echo "$STATS"; fail "statistics did not count tunnel traffic"; }
 HOSTS=$(curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/stats/hosts?tag=vless")
-echo "$HOSTS" | grep -q '203.0.113.81\|hidden.test' || { echo "$HOSTS"; fail "нет хоста в таблице трафика VLESS"; }
-ok "API статистики: байты по ss, vless и direct посчитаны, хост VLESS в таблице"
+echo "$HOSTS" | grep -q '203.0.113.81\|hidden.test' || { echo "$HOSTS"; fail "host is missing from the VLESS traffic table"; }
+ok "statistics API counted ss/vless/direct bytes and listed the VLESS host"
 
 # --- Verify route explanations, audit events and on-disk journal export
 ROUTES=$(curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/routes?limit=200")
@@ -161,18 +161,18 @@ def find(host, out):
     for x in e:
         if x["host"] == host and x["outbound"] == out:
             return x
-    raise SystemExit("нет записи %s → %s: %s" % (host, out, [(x["host"], x["outbound"], x["rule"]) for x in e]))
-assert find("steam.test", "direct")["rule"] == "сеть «LAN»: группа «Steam напрямую»", find("steam.test", "direct")
-assert find("hidden.test", "vless")["rule"] == "сеть «LAN»: группа «Через VLESS»", find("hidden.test", "vless")
+    raise SystemExit("missing record %s → %s: %s" % (host, out, [(x["host"], x["outbound"], x["rule"]) for x in e]))
+assert find("steam.test", "direct")["rule"] == "network «LAN»: group «Steam direct»", find("steam.test", "direct")
+assert find("hidden.test", "vless")["rule"] == "network «LAN»: group «Via VLESS»", find("hidden.test", "vless")
 ss = find("198.51.100.4", "ss")
-assert ss["rule"] == "сеть «LAN»: группа «Всё кроме России» (все, кроме RU)", ss
+assert ss["rule"] == "network «LAN»: group «All except Russia» (all except RU)", ss
 assert ss["client"].startswith("192.168.77.10:"), ss
-' || { echo "$ROUTES" | head -c 3000; fail "журнал маршрутизации"; }
+' || { echo "$ROUTES" | head -c 3000; fail "routing journal"; }
 AUDIT=$(curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/audit")
-echo "$AUDIT" | grep -q 'Запуск keenProxy' || { echo "$AUDIT"; fail "нет записи о запуске в аудите"; }
-[ -s /tmp/journal/routes.jsonl ] && [ -s /tmp/journal/audit.jsonl ] || { ls -la /tmp/journal; fail "журналы не пишутся на диск"; }
-curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/routes/export?since=1h" | grep -q 'steam.test.*Steam напрямую' || fail "выгрузка журнала"
-ok "журнал: steam.test — «Steam напрямую», финский адрес — «всё, кроме России», аудит запуска, файлы и выгрузка"
+echo "$AUDIT" | grep -q 'Start keenProxy' || { echo "$AUDIT"; fail "startup audit record is missing"; }
+[ -s /tmp/journal/routes.jsonl ] && [ -s /tmp/journal/audit.jsonl ] || { ls -la /tmp/journal; fail "journals are not written to disk"; }
+curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/routes/export?since=1h" | grep -q 'steam.test.*Steam direct' || fail "journal export"
+ok "journal: Steam direct and country routes, startup audit, files and export"
 
 # --- DNS fallback: preview is isolated; a live rule-set reload changes routing.
 api_get() { curl -fsS -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/$1"; }
@@ -211,10 +211,10 @@ for i in $(seq 1 25); do
 	iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null && break
 	sleep 0.2
 done
-iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null || fail "сторож не вернул снятый переход"
-ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.3/ || fail "HTTP после восстановления"
-ok "сторож вернул снятый переход, HTTP снова работает"
-curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/audit?actor=watchdog" | grep -q 'Правила перехвата восстановлены' || fail "нет записи сторожа в аудите"
+iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null || fail "watchdog did not restore the removed jump"
+ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.3/ || fail "HTTP after recovery"
+ok "watchdog restored the removed jump and HTTP works again"
+curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/audit?actor=watchdog" | grep -q 'Interception rules restored' || fail "watchdog audit record is missing"
 # A direct connection to a closed port must produce an engine error record.
 ip netns exec client curl -s -m 3 -o /dev/null http://198.51.100.3:81/ || true
 SYS=""
@@ -223,12 +223,12 @@ for i in $(seq 1 25); do
 	echo "$SYS" | grep -q '"source":"sing-box"' && break
 	sleep 0.2
 done
-echo "$SYS" | grep -q '"source":"sing-box"' || { echo "$SYS"; tail -20 /tmp/keenproxy.log; fail "журнал sing-box не собирается"; }
-ok "аудит записал восстановление правил сторожем, ошибки sing-box попадают в системный журнал"
+echo "$SYS" | grep -q '"source":"sing-box"' || { echo "$SYS"; tail -20 /tmp/keenproxy.log; fail "sing-box journal is not collected"; }
+ok "audit records watchdog repairs and sing-box errors reach the system journal"
 
 # --- Fail over from the offline primary, then recover after the up hysteresis
 api() { curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086$1"; }
-waitfor() { # путь API, шаблон, секунд
+waitfor() { # API path, pattern, seconds
 	for i in $(seq 1 $(($3 * 5))); do
 		api "$1" | grep -q "$2" && return 0
 		sleep 0.2
@@ -237,23 +237,23 @@ waitfor() { # путь API, шаблон, секунд
 }
 # Schedule a request and verify its host, actual outbound and route explanation.
 route_is() {
-	ip netns exec client curl -s -m 5 -o /dev/null -H 'Host: backup.test' http://203.0.113.80/ || fail "backup.test недоступен"
+	ip netns exec client curl -s -m 5 -o /dev/null -H 'Host: backup.test' http://203.0.113.80/ || fail "backup.test is unavailable"
 	api "/api/journal/routes?limit=20" | python3 -c '
 import json, sys
 out, note = sys.argv[1], sys.argv[2]
 e = [x for x in json.load(sys.stdin)["entries"] if x["host"] == "backup.test"][0]
 assert e["outbound"] == out and note in e["rule"], e
-' "$1" "$2" || fail "backup.test должен идти через $1"
+' "$1" "$2" || fail "backup.test must use $1"
 }
-waitfor "/api/journal/audit?target=main" 'Переключение на резервное' 10 || fail "не переключилось на резервное"
-waitfor "/api/status" '"main":{"active":"vless"' 2 || fail "статус не показывает резервное"
-route_is vless "резервное: «Основное» не отвечает"
-ok "основное не отвечает — трафик через резервное (vless), аудит и журнал это показывают"
+waitfor "/api/journal/audit?target=main" 'Switch to fallback' 10 || fail "did not switch to fallback"
+waitfor "/api/status" '"main":{"active":"vless"' 2 || fail "status does not show fallback"
+route_is vless "fallback: «Main» is unavailable"
+ok "primary unavailable: traffic uses fallback VLESS, confirmed by audit and routing journal"
 ip netns exec wan /work/sbserver /tmp/server-main.json >/tmp/sbserver-main.log 2>&1 &
-waitfor "/api/journal/audit?target=main" 'Возврат на основное' 15 || fail "не вернулось на основное"
-route_is main "группа «С резервным»"
-grep -q 'inbound/shadowsocks.*203.0.113.80' /tmp/sbserver-main.log || fail "сервер основного не видит соединения"
-ok "основное ожило — через up_after трафик вернулся на него"
+waitfor "/api/journal/audit?target=main" 'Return to primary' 15 || fail "did not return to primary"
+route_is main "group «With fallback»"
+grep -q 'inbound/shadowsocks.*203.0.113.80' /tmp/sbserver-main.log || fail "primary server did not receive the connection"
+ok "primary recovered and traffic returned after up_after"
 
 # --- DNS guard must also catch TCP already redirected into a local inbound.
 ip netns exec wan python3 -u -m http.server 853 --bind 198.51.100.3 >/tmp/dot-guard.log 2>&1 &
@@ -271,7 +271,7 @@ kill -TERM $KPID
 wait $KPID || true
 if iptables-save | grep -q KEENPROXY; then
 	iptables-save | grep KEENPROXY
-	fail "после остановки остались правила"
+	fail "interception rules remain after shutdown"
 fi
-ok "после SIGTERM правил KEENPROXY не осталось"
+ok "SIGTERM removed all KEENPROXY rules"
 echo "PASS"

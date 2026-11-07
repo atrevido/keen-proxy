@@ -53,7 +53,7 @@ func (d *Daemon) RefreshFilters(ctx context.Context) error { return d.filters.Re
 func (d *Daemon) runFilterUpdates(ctx context.Context) {
 	for {
 		if err := d.filters.Refresh(ctx, true); err != nil {
-			d.log.Warn("обновление фильтров", "error", err)
+			d.log.Warn("filter update", "error", err)
 		}
 		select {
 		case <-ctx.Done():
@@ -88,10 +88,10 @@ func (d *Daemon) dnsDial(id string) func(context.Context, string, string) (net.C
 		}
 		out, engCtx, ok := d.eng.Outbound(tag)
 		if !ok {
-			return nil, fmt.Errorf("DNS соединение %s не запущено", id)
+			return nil, fmt.Errorf("DNS connection %s is not running", id)
 		}
 		if stats.Resolve(out).Tag() == model.TargetDirect {
-			return nil, fmt.Errorf("DNS: direct в цепочке, используйте явный резерв")
+			return nil, fmt.Errorf("DNS: direct in connection chain, use an explicit fallback")
 		}
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {
@@ -167,10 +167,10 @@ func (d *Daemon) recordDNSRoute(route string) {
 	}
 	d.featureMu.Unlock()
 	if prev != route && route == "direct-fallback" {
-		d.audit("dns", "Прямой резерв DNS", "dns", "warn", "Туннель DNS не ответил: запросы ушли напрямую к зашифрованному резолверу")
+		d.audit("dns", "Direct DNS fallback", "dns", "warn", "DNS tunnel did not respond: requests went directly to the encrypted resolver")
 	}
 	if prev == "direct-fallback" && route != prev {
-		d.audit("dns", "Возврат DNS на выбранный маршрут", "dns", "ok", route)
+		d.audit("dns", "Restore selected DNS route", "dns", "ok", route)
 	}
 }
 

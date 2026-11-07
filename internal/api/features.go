@@ -26,12 +26,12 @@ func (s *Server) presetPreview(w http.ResponseWriter, r *http.Request) {
 		IncludePrefixes bool          `json:"include_prefixes"`
 	}
 	if err := decodeFeatureRequest(w, r, &req); err != nil || req.Config == nil {
-		writeError(w, 400, "нужны config и id")
+		writeError(w, 400, "config and id required")
 		return
 	}
 	p, ok := catalog.Find(req.ID)
 	if !ok {
-		writeError(w, 400, "неизвестный пресет")
+		writeError(w, 400, "unknown preset")
 		return
 	}
 	if req.IncludePrefixes {
@@ -43,12 +43,12 @@ func (s *Server) presetPreview(w http.ResponseWriter, r *http.Request) {
 	if req.Index != nil {
 		index = *req.Index
 		if index < 0 || index >= len(c.Groups) {
-			writeError(w, 400, "индекс группы вне диапазона")
+			writeError(w, 400, "group index out of range")
 			return
 		}
 		g = c.Groups[index]
 		if g.Preset == nil || g.Preset.ID != req.ID {
-			writeError(w, 400, "другой пресет группы")
+			writeError(w, 400, "different group preset")
 			return
 		}
 	}
@@ -87,7 +87,7 @@ func (s *Server) features(w http.ResponseWriter, r *http.Request) {
 func (s *Server) refreshFilters(w http.ResponseWriter, r *http.Request) {
 	d, ok := s.D.(featureDaemon)
 	if !ok {
-		writeJSON(w, 200, map[string]any{"demo": true, "message": "Демо: загрузка списков не выполняется"})
+		writeJSON(w, 200, map[string]any{"demo": true, "message": "Demo: list downloads are disabled"})
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
@@ -113,7 +113,7 @@ func (s *Server) checkDNS(w http.ResponseWriter, r *http.Request) {
 	}
 	d, ok := s.D.(featureDaemon)
 	if !ok {
-		writeJSON(w, 200, daemon.DNSCheck{Demo: true, Route: "demo", Error: "Демо: сетевой запрос не выполняется"})
+		writeJSON(w, 200, daemon.DNSCheck{Demo: true, Route: "demo", Error: "Demo: network requests are disabled"})
 		return
 	}
 	// Connection profiles in a draft are not running yet. Avoid testing another
@@ -121,7 +121,7 @@ func (s *Server) checkDNS(w http.ResponseWriter, r *http.Request) {
 	live := s.D.Config()
 	if c.DNS.Route == "connection" {
 		if !reflect.DeepEqual(c.Connections, live.Connections) {
-			writeError(w, 400, "Сначала примените изменения соединений")
+			writeError(w, 400, "Apply connection changes first")
 			return
 		}
 	}

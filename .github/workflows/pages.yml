@@ -2,10 +2,10 @@ name: Documentation
 
 on:
   pull_request:
-    paths: ['docs/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
+    paths: ['docs/**', 'locales/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
   push:
     branches: [main]
-    paths: ['docs/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
+    paths: ['docs/**', 'locales/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
   workflow_dispatch:
     inputs:
       deploy:
@@ -37,6 +37,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Check source language
+        run: make check-language
       - name: Build English and Russian documentation
         run: |
           pip install -r requirements-docs.txt

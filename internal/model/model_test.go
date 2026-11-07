@@ -25,19 +25,19 @@ connections:
         endpoint: 203.0.113.10:42820
         public_key: cHVibGlj
 groups:
-  - name: Зарубежное
+  - name: Foreign
     target: fi
     entries: ["youtube.com", "*.googlevideo.com", "149.154.160.0/20"]
-  - name: Реклама
+  - name: Ads
     target: block
     entries: ["ads.example.com"]
 networks:
-  - name: Дом
+  - name: Home
     cidr: 192.168.7.0/24
     mode: split
     target: fi
 clients:
-  - name: Телефон
+  - name: Phone
     mac: 02:00:00:00:00:10
     mode: full
     target: fi
@@ -49,7 +49,7 @@ func TestParseValid(t *testing.T) {
 		t.Fatal(err)
 	}
 	if c.Intercept.TCPPort == 0 || c.DNS.Listen == "" {
-		t.Fatalf("умолчания не заполнены: %+v", c.Intercept)
+		t.Fatalf("defaults not populated: %+v", c.Intercept)
 	}
 }
 
@@ -61,11 +61,11 @@ func TestValidateCollectsAllErrors(t *testing.T) {
 	).Replace(validYAML)
 	_, err := Parse([]byte(bad))
 	if err == nil {
-		t.Fatal("ожидалась ошибка")
+		t.Fatal("expected an error")
 	}
-	for _, want := range []string{`неизвестная цель "nope"`, "mac:", `неизвестный режим "magic"`} {
+	for _, want := range []string{`unknown target "nope"`, "mac:", `unknown mode "magic"`} {
 		if !strings.Contains(err.Error(), want) {
-			t.Errorf("в ошибке нет %q:\n%v", want, err)
+			t.Errorf("error is missing %q:\n%v", want, err)
 		}
 	}
 }
@@ -73,7 +73,7 @@ func TestValidateCollectsAllErrors(t *testing.T) {
 func TestUnknownFieldRejected(t *testing.T) {
 	_, err := Parse([]byte(validYAML + "\nfoo: 1\n"))
 	if err == nil || !strings.Contains(err.Error(), "foo") {
-		t.Fatalf("неизвестное поле должно отклоняться, получили %v", err)
+		t.Fatalf("unknown field must be rejected, got %v", err)
 	}
 }
 
@@ -87,11 +87,11 @@ func TestParseEntry(t *testing.T) {
 		{"Example.COM", EntryDomain, "example.com", ""},
 		{"*.example.com", EntryDomain, "example.com", ""},
 		{".example.com.", EntryDomain, "example.com", ""},
-		{"пример.рф", EntryDomain, "xn--e1afmkfd.xn--p1ai", ""},
+		{"\u043f\u0440\u0438\u043c\u0435\u0440.\u0440\u0444", EntryDomain, "xn--e1afmkfd.xn--p1ai", ""},
 		{"1.2.3.4", EntryPrefix, "", "1.2.3.4/32"},
 		{"10.1.2.3/8", EntryPrefix, "", "10.0.0.0/8"},
 		{"2001:db8::1", EntryPrefix, "", "2001:db8::1/128"},
-		{"example.com # комментарий", EntryDomain, "example.com", ""},
+		{"example.com # comment", EntryDomain, "example.com", ""},
 	}
 	for _, c := range cases {
 		e, err := ParseEntry(c.in)
@@ -100,12 +100,12 @@ func TestParseEntry(t *testing.T) {
 			continue
 		}
 		if e.Kind != c.kind || e.Domain != c.domain || (c.prefix != "" && e.Prefix.String() != c.prefix) {
-			t.Errorf("%q: получили %+v", c.in, e)
+			t.Errorf("%q: got %+v", c.in, e)
 		}
 	}
-	for _, bad := range []string{"", "localhost", "# только комментарий", "http://x"} {
+	for _, bad := range []string{"", "localhost", "# only comment", "http://x"} {
 		if _, err := ParseEntry(bad); err == nil {
-			t.Errorf("%q должно быть ошибкой", bad)
+			t.Errorf("%q must fail", bad)
 		}
 	}
 }
@@ -121,11 +121,11 @@ func TestParseUpstream(t *testing.T) {
 	for in, want := range cases {
 		got, err := ParseUpstream(in)
 		if err != nil || got != want {
-			t.Errorf("%q: %+v, %v; ждали %+v", in, got, err, want)
+			t.Errorf("%q: %+v, %v; expected %+v", in, got, err, want)
 		}
 	}
 	if _, err := ParseUpstream("ftp://x"); err == nil {
-		t.Error("ftp:// должно быть ошибкой")
+		t.Error("ftp:// must fail")
 	}
 }
 
@@ -140,7 +140,7 @@ func TestCountryGroup(t *testing.T) {
 		"  - {name: g, target: direct, entries: [\"!geoip:ru\"]}\n",
 	} {
 		if _, err := Parse([]byte(base + bad)); err == nil {
-			t.Errorf("%q должно быть ошибкой", bad)
+			t.Errorf("%q must fail", bad)
 		}
 	}
 }
@@ -157,29 +157,29 @@ connections:
 		t.Fatal(err)
 	}
 	if got := strings.Join(cfg.Chain("fi"), ","); got != "fi,nl,de" {
-		t.Errorf("цепочка fi: %s", got)
+		t.Errorf("fi chain: %s", got)
 	}
 	if got := strings.Join(cfg.Chain("de"), ","); got != "de" {
-		t.Errorf("цепочка de: %s", got)
+		t.Errorf("de chain: %s", got)
 	}
 	if cfg.Failover.DownAfter != 60 || cfg.Failover.UpAfter != 120 || cfg.Failover.Interval != 15 {
-		t.Errorf("умолчания: %+v", cfg.Failover)
+		t.Errorf("defaults: %+v", cfg.Failover)
 	}
 	cfg, err = Parse([]byte(fmt.Sprintf(base, ", fallback: direct")))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := strings.Join(cfg.Chain("fi"), ","); got != "fi,nl,de,direct" {
-		t.Errorf("с direct: %s", got)
+		t.Errorf("with direct: %s", got)
 	}
 	for tail, want := range map[string]string{
-		", fallback: fi":    "по кругу",
-		", fallback: de":    "самим соединением",
-		", fallback: block": "не block",
-		", fallback: xx":    "неизвестное резервное",
+		", fallback: fi":    "cycle",
+		", fallback: de":    "connection itself",
+		", fallback: block": "not block",
+		", fallback: xx":    "unknown fallback",
 	} {
 		if _, err := Parse([]byte(fmt.Sprintf(base, tail))); err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("%s: ждали «%s», получили %v", tail, want, err)
+			t.Errorf("%s: expected %s, got %v", tail, want, err)
 		}
 	}
 }
@@ -193,6 +193,6 @@ func TestNoTokenFrom(t *testing.T) {
 		t.Errorf("%v", got)
 	}
 	if _, err := Parse([]byte("api: {no_token_from: [\"192.168.7.1\"]}\n")); err == nil || !strings.Contains(err.Error(), "no_token_from") {
-		t.Errorf("адрес без маски должен быть ошибкой: %v", err)
+		t.Errorf("address without a prefix must fail: %v", err)
 	}
 }

@@ -34,15 +34,15 @@ connections:
         public_key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         keepalive: 25
 groups:
-  - {name: Зарубежное, target: fi, entries: ["youtube.com", "149.154.160.0/20"]}
-  - {name: Реклама, target: block, entries: ["ads.example.com"]}
-  - {name: Банк, target: direct, entries: ["bank.ru"]}
+  - {name: Foreign, target: fi, entries: ["youtube.com", "149.154.160.0/20"]}
+  - {name: Ads, target: block, entries: ["ads.example.com"]}
+  - {name: Bank, target: direct, entries: ["bank.ru"]}
 networks:
-  - {name: Дом, cidr: 192.168.7.0/24, mode: split, target: fi}
+  - {name: Home, cidr: 192.168.7.0/24, mode: split, target: fi}
 clients:
-  - {name: Телефон, mac: "02:00:00:00:00:10", mode: full, target: fi}
+  - {name: Phone, mac: "02:00:00:00:00:10", mode: full, target: fi}
   - {name: Mac, mac: "aa:bb:cc:dd:ee:01", ip: 192.168.7.88, mode: "off"}
-  - {name: Нет в сети, mac: "aa:bb:cc:dd:ee:02", mode: full, target: fi}
+  - {name: Offline, mac: "aa:bb:cc:dd:ee:02", mode: full, target: fi}
 `
 
 func compileWith(t *testing.T, phone string) Output {
@@ -75,11 +75,11 @@ func TestSingBoxAcceptsConfig(t *testing.T) {
 	ctx := engine.Context(context.Background())
 	opts, err := sjson.UnmarshalExtendedContext[option.Options](ctx, config)
 	if err != nil {
-		t.Fatalf("sing-box не разобрал конфиг: %v\n%s", err, out.SingBox)
+		t.Fatalf("sing-box could not parse configuration: %v\n%s", err, out.SingBox)
 	}
 	instance, err := box.New(box.Options{Context: ctx, Options: opts})
 	if err != nil {
-		t.Fatalf("sing-box отверг конфиг: %v\n%s", err, out.SingBox)
+		t.Fatalf("sing-box rejected configuration: %v\n%s", err, out.SingBox)
 	}
 	instance.Close()
 }
@@ -128,7 +128,7 @@ func TestRuleOrder(t *testing.T) {
 		"192.168.7.0/24  → direct",
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
-		t.Errorf("порядок правил:\n%s\nждали:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+		t.Errorf("rule order:\n%s\nexpected:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 	if cfg.Route.Final != "direct" {
 		t.Errorf("final = %q", cfg.Route.Final)
@@ -148,7 +148,7 @@ func TestPlanFromModel(t *testing.T) {
 		t.Errorf("Excluded = %v", p.Excluded)
 	}
 	if p.DNSPort != 5354 || p.LAN != "br0" {
-		t.Errorf("план: %+v", p)
+		t.Errorf("plan: %+v", p)
 	}
 	found := false
 	for _, b := range p.Bypass {
@@ -157,7 +157,7 @@ func TestPlanFromModel(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Error("адрес WireGuard-сервера должен быть в Bypass")
+		t.Error("WireGuard server address must be in Bypass")
 	}
 }
 
@@ -174,13 +174,13 @@ func joinField(v any) string {
 func TestAddressChangeKeepsConfig(t *testing.T) {
 	a, b := compileWith(t, "192.168.7.104"), compileWith(t, "192.168.7.120")
 	if string(a.SingBox) != string(b.SingBox) {
-		t.Error("конфиг sing-box не должен зависеть от адреса устройства")
+		t.Error("sing-box configuration must not depend on device address")
 	}
 	full := string(b.RuleSets["clients-full-fi.json"])
 	if !strings.Contains(full, "192.168.7.120/32") || strings.Contains(full, "192.168.7.104") {
 		t.Errorf("clients-full-fi.json:\n%s", full)
 	}
 	if split := string(b.RuleSets["clients-split.json"]); !strings.Contains(split, noSource) {
-		t.Errorf("пустой класс должен содержать заглушку:\n%s", split)
+		t.Errorf("empty class must contain a placeholder:\n%s", split)
 	}
 }

@@ -67,9 +67,9 @@ connections:
     type: trusttunnel
     trusttunnel: {link: "%[6]s"}
 groups:
-  - {name: Всё, target: reality, entries: ["example.org"]}
+  - {name: All, target: reality, entries: ["example.org"]}
 networks:
-  - {name: Дом, cidr: 192.168.7.0/24, mode: split}
+  - {name: Home, cidr: 192.168.7.0/24, mode: split}
 `, uuid, zero32, vmess, ss, zero32, ttLink())
 }
 
@@ -91,11 +91,11 @@ func TestAllConnectionTypesAccepted(t *testing.T) {
 	ctx := engine.Context(context.Background())
 	opts, err := sjson.UnmarshalExtendedContext[option.Options](ctx, out.SingBox)
 	if err != nil {
-		t.Fatalf("sing-box не разобрал конфиг: %v", err)
+		t.Fatalf("sing-box could not parse configuration: %v", err)
 	}
 	instance, err := box.New(box.Options{Context: ctx, Options: opts})
 	if err != nil {
-		t.Fatalf("sing-box отверг конфиг: %v", err)
+		t.Fatalf("sing-box rejected configuration: %v", err)
 	}
 	instance.Close()
 
@@ -113,7 +113,7 @@ func TestAllConnectionTypesAccepted(t *testing.T) {
 		"tuic": "tuic", "anytls": "anytls", "socks": "socks", "raw-http": "http", "raw-wg": "wireguard", "tt": "socks",
 	} {
 		if types[tag] != want {
-			t.Errorf("%s: тип %q, ждали %q", tag, types[tag], want)
+			t.Errorf("%s: type %q, expected %q", tag, types[tag], want)
 		}
 	}
 
@@ -127,7 +127,7 @@ func TestAllConnectionTypesAccepted(t *testing.T) {
 	}
 	for _, ip := range []string{"203.0.113.1/32", "203.0.113.11/32", "203.0.113.50/32"} {
 		if !bypass[ip] {
-			t.Errorf("адрес сервера %s должен быть в Bypass", ip)
+			t.Errorf("server address %s must be in Bypass", ip)
 		}
 	}
 }
@@ -135,15 +135,15 @@ func TestAllConnectionTypesAccepted(t *testing.T) {
 func TestBadConnections(t *testing.T) {
 	for conn, want := range map[string]string{
 		`{id: x, type: link, link: "vless://u@h:443?type=xhttp"}`:           "Xray",
-		`{id: x, type: singbox, outbound: {server: h}}`:                     "нет type",
+		`{id: x, type: singbox, outbound: {server: h}}`:                     "missing type",
 		`{id: x, type: singbox, outbound: {type: http, tag: y}}`:            "tag",
-		`{id: x, type: trusttunnel, trusttunnel: {link: "tt://?AQ"}}`:       "обрыв",
-		`{id: x, type: openvpn}`:                                            "неизвестный тип",
-		`{id: x, type: link, link: "socks5://h:1", outbound: {type: http}}`: "несколько",
+		`{id: x, type: trusttunnel, trusttunnel: {link: "tt://?AQ"}}`:       "truncated",
+		`{id: x, type: openvpn}`:                                            "unknown type",
+		`{id: x, type: link, link: "socks5://h:1", outbound: {type: http}}`: "multiple",
 	} {
 		_, err := model.Parse([]byte("connections:\n  - " + conn + "\n"))
 		if err == nil || !strings.Contains(err.Error(), want) {
-			t.Errorf("%s: %v, ждали %q", conn, err, want)
+			t.Errorf("%s: %v, expected %q", conn, err, want)
 		}
 	}
 }

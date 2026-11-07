@@ -70,7 +70,7 @@ func (d *Daemon) onRoute(m adapter.InboundContext, rule adapter.Rule, out adapte
 		e.Outbound = real.Tag()
 		// The fallback selector chose a non-primary connection.
 		if head, ok := strings.CutPrefix(out.Tag(), compile.FailoverTagPrefix); ok && head != real.Tag() {
-			note = " · резервное: «" + connLabel(cfg, head) + "» не отвечает"
+			note = " · fallback: «" + connLabel(cfg, head) + "» is unavailable"
 		}
 	}
 	if rule != nil {
@@ -97,7 +97,7 @@ func connLabel(cfg *model.Config, id string) string {
 // configChanges summarizes configuration differences for the audit journal.
 func configChanges(prev, cfg *model.Config) string {
 	if prev == nil {
-		return "первый запуск"
+		return "first start"
 	}
 	var parts []string
 	count := func(name string, a, b int, same bool) {
@@ -105,31 +105,31 @@ func configChanges(prev, cfg *model.Config) string {
 		case a != b:
 			parts = append(parts, fmt.Sprintf("%s: %d → %d", name, a, b))
 		case !same:
-			parts = append(parts, name+" изменены")
+			parts = append(parts, name+" changed")
 		}
 	}
-	count("соединения", len(prev.Connections), len(cfg.Connections), reflect.DeepEqual(prev.Connections, cfg.Connections))
-	count("группы", len(prev.Groups), len(cfg.Groups), reflect.DeepEqual(prev.Groups, cfg.Groups))
-	count("сети", len(prev.Networks), len(cfg.Networks), reflect.DeepEqual(prev.Networks, cfg.Networks))
-	count("устройства", len(prev.Clients), len(cfg.Clients), reflect.DeepEqual(prev.Clients, cfg.Clients))
+	count("connections", len(prev.Connections), len(cfg.Connections), reflect.DeepEqual(prev.Connections, cfg.Connections))
+	count("groups", len(prev.Groups), len(cfg.Groups), reflect.DeepEqual(prev.Groups, cfg.Groups))
+	count("networks", len(prev.Networks), len(cfg.Networks), reflect.DeepEqual(prev.Networks, cfg.Networks))
+	count("devices", len(prev.Clients), len(cfg.Clients), reflect.DeepEqual(prev.Clients, cfg.Clients))
 	if !reflect.DeepEqual(prev.DNS, cfg.DNS) {
-		parts = append(parts, "DNS изменён")
+		parts = append(parts, "DNS changed")
 	}
 	if !reflect.DeepEqual(prev.Intercept, cfg.Intercept) {
-		parts = append(parts, "перехват изменён")
+		parts = append(parts, "interception changed")
 	}
 	if !reflect.DeepEqual(prev.API.NoTokenFrom, cfg.API.NoTokenFrom) {
 		if len(cfg.API.NoTokenFrom) == 0 {
-			parts = append(parts, "вход без токена выключен")
+			parts = append(parts, "tokenless login disabled")
 		} else {
-			parts = append(parts, "вход без токена из "+strings.Join(cfg.API.NoTokenFrom, ", "))
+			parts = append(parts, "tokenless login from "+strings.Join(cfg.API.NoTokenFrom, ", "))
 		}
 	}
 	if !reflect.DeepEqual(prev.GeoIP, cfg.GeoIP) {
-		parts = append(parts, "база стран изменена")
+		parts = append(parts, "country database changed")
 	}
 	if len(parts) == 0 {
-		return "без изменений"
+		return "no changes"
 	}
 	return strings.Join(parts, "; ")
 }
@@ -151,11 +151,11 @@ func neighborsChange(old, cur map[string]netip.Addr) string {
 	sort.Strings(gone)
 	var parts []string
 	if len(added) > 0 {
-		parts = append(parts, "появились: "+strings.Join(added, ", "))
+		parts = append(parts, "added: "+strings.Join(added, ", "))
 	}
 	if len(gone) > 0 {
-		parts = append(parts, "ушли: "+strings.Join(gone, ", "))
+		parts = append(parts, "removed: "+strings.Join(gone, ", "))
 	}
-	parts = append(parts, fmt.Sprintf("в сети: %d", len(cur)))
+	parts = append(parts, fmt.Sprintf("online: %d", len(cur)))
 	return strings.Join(parts, "; ")
 }

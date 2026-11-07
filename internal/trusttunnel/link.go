@@ -39,14 +39,14 @@ func ParseLink(link string) (Endpoint, error) {
 	link = strings.TrimSpace(link)
 	payload, ok := strings.CutPrefix(link, "tt://?")
 	if !ok {
-		return Endpoint{}, fmt.Errorf("ссылка TrustTunnel должна начинаться с tt://?")
+		return Endpoint{}, fmt.Errorf("TrustTunnel link must start with tt://?")
 	}
 	if i := strings.IndexByte(payload, '#'); i >= 0 {
 		payload = payload[:i]
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(payload, "="))
 	if err != nil {
-		return Endpoint{}, fmt.Errorf("tt://: не base64url: %w", err)
+		return Endpoint{}, fmt.Errorf("tt://: invalid base64url: %w", err)
 	}
 	e := Endpoint{HasIPv6: true}
 	r := reader{b: raw}
@@ -61,7 +61,7 @@ func ParseLink(link string) (Endpoint, error) {
 		}
 		val, err := r.take(n)
 		if err != nil {
-			return Endpoint{}, fmt.Errorf("поле 0x%02x: %w", tag, err)
+			return Endpoint{}, fmt.Errorf("field 0x%02x: %w", tag, err)
 		}
 		switch tag {
 		case 0x00:
@@ -100,22 +100,22 @@ func ParseLink(link string) (Endpoint, error) {
 			// Skip unknown tags as required by the specification.
 		}
 		if err != nil {
-			return Endpoint{}, fmt.Errorf("поле 0x%02x: %w", tag, err)
+			return Endpoint{}, fmt.Errorf("field 0x%02x: %w", tag, err)
 		}
 	}
 	if e.Version > supportedVersion {
-		return Endpoint{}, fmt.Errorf("версия ссылки %d новее поддерживаемой %d", e.Version, supportedVersion)
+		return Endpoint{}, fmt.Errorf("link version %d is newer than supported version %d", e.Version, supportedVersion)
 	}
 	if e.SubscriptionURL != "" && e.Hostname == "" {
-		return Endpoint{}, fmt.Errorf("ссылка-подписка без параметров сервера пока не поддерживается")
+		return Endpoint{}, fmt.Errorf("subscription link without server parameters is not supported yet")
 	}
 	switch {
 	case e.Hostname == "":
-		return Endpoint{}, fmt.Errorf("в ссылке нет hostname")
+		return Endpoint{}, fmt.Errorf("link is missing hostname")
 	case len(e.Addresses) == 0:
-		return Endpoint{}, fmt.Errorf("в ссылке нет адресов сервера")
+		return Endpoint{}, fmt.Errorf("link is missing server addresses")
 	case e.Username == "" || e.Password == "":
-		return Endpoint{}, fmt.Errorf("в ссылке нет логина или пароля")
+		return Endpoint{}, fmt.Errorf("link is missing username or password")
 	}
 	return e, nil
 }
@@ -131,11 +131,11 @@ func (r *reader) done() bool { return r.off >= len(r.b) }
 // varint decodes a QUIC integer whose first two bits encode its byte length.
 func (r *reader) varint() (uint64, error) {
 	if r.done() {
-		return 0, fmt.Errorf("обрыв данных")
+		return 0, fmt.Errorf("truncated data")
 	}
 	n := 1 << (r.b[r.off] >> 6)
 	if r.off+n > len(r.b) {
-		return 0, fmt.Errorf("обрыв переменного целого")
+		return 0, fmt.Errorf("truncated varint")
 	}
 	v := uint64(r.b[r.off] & 0x3f)
 	for i := 1; i < n; i++ {
@@ -147,7 +147,7 @@ func (r *reader) varint() (uint64, error) {
 
 func (r *reader) take(n uint64) ([]byte, error) {
 	if uint64(len(r.b)-r.off) < n {
-		return nil, fmt.Errorf("длина %d больше оставшихся данных", n)
+		return nil, fmt.Errorf("length %d exceeds remaining data", n)
 	}
 	v := r.b[r.off : r.off+int(n)]
 	r.off += int(n)
@@ -156,7 +156,7 @@ func (r *reader) take(n uint64) ([]byte, error) {
 
 func boolean(v []byte) (bool, error) {
 	if len(v) != 1 || v[0] > 1 {
-		return false, fmt.Errorf("неверный bool")
+		return false, fmt.Errorf("invalid bool")
 	}
 	return v[0] == 1, nil
 }

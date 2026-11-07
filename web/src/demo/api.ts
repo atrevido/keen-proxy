@@ -1,4 +1,5 @@
 import { catalog, createDemo } from './model.ts'
+import { DEMO_JOURNAL_LIMIT, DEMO_TICK_MS } from './telemetry.ts'
 import type { Config, JournalKind, LinkPreview } from '../types'
 
 const demo = createDemo()
@@ -11,6 +12,24 @@ function parseLink(link: string): LinkPreview {
 
 function download(data: unknown, type: string) {
   return URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type }))
+}
+
+// Poll the local journal and deliver only records added after subscription.
+function journalStream(kind: JournalKind) {
+  let cursor = demo.journal(kind, { limit: 1 }).entries[0]?.id ?? 0
+  const stream = {
+    onmessage: null as ((event: MessageEvent) => void) | null,
+    close() { clearInterval(timer); stream.onmessage = null },
+  }
+  const timer = setInterval(() => {
+    const { entries } = demo.journal(kind, { limit: DEMO_JOURNAL_LIMIT })
+    for (const entry of entries.reverse()) {
+      if (entry.id <= cursor) continue
+      cursor = entry.id
+      stream.onmessage?.(new MessageEvent('message', { data: JSON.stringify(entry) }))
+    }
+  }, DEMO_TICK_MS)
+  return stream
 }
 
 // Identical caller contract to the router API; all effects stay in this module's memory.
@@ -33,19 +52,20 @@ export const api = {
   saveConfig: async (config: Config) => demo.save(config),
   validateConfig: async (config: Config) => { demo.validate(config); return { ok: true } },
   devices: async () => [
-    { mac: '02:00:00:00:00:10', ip: '192.168.7.10', client: 'Phone', mode: 'full' as const },
+    { mac: '02:00:00:00:00:10', ip: '192.168.7.10', client: 'Phone', mode: 'full' as const, hostname: 'phone.local', hostname_source: 'dhcp' as const },
     { mac: 'aa:bb:cc:dd:ee:01', ip: '192.168.7.20', client: 'TV', mode: 'split' as const },
     { mac: 'aa:bb:cc:dd:ee:02', ip: '192.168.7.30', client: 'Work laptop', mode: 'off' as const },
+    { mac: '02:00:00:00:00:40', ip: '192.168.7.40', hostname: 'nas.local', hostname_source: 'dns' as const },
   ],
   parseLink: async (link: string) => parseLink(link),
-  stats: async (_series = false) => demo.stats(),
+  stats: async (series = false) => demo.stats(series),
   hosts: async (tag: string, q = '', limit = 200) => {
-    const hosts = (demo.stats().outbounds?.find(o => o.tag === tag)?.top ?? []).filter(h => h.host.includes(q))
+    const hosts = (demo.stats(false).outbounds?.find(o => o.tag === tag)?.top ?? []).filter(h => h.host.toLowerCase().includes(q.toLowerCase()))
     return { hosts: hosts.slice(0, limit), total: hosts.length }
   },
-  journal: async (kind: JournalKind, _params: Record<string, string | number | undefined>) => demo.journal(kind),
-  journalStream: (_kind: JournalKind): Pick<EventSource, 'onmessage' | 'close'> => ({ onmessage: null, close() {} }),
-  journalExportURL: (kind: JournalKind, _since: string) => download(demo.journal(kind).entries, 'application/json'),
+  journal: async (kind: JournalKind, params: Record<string, string | number | undefined>) => demo.journal(kind, params),
+  journalStream,
+  journalExportURL: (kind: JournalKind, _since: string) => download(demo.journal(kind, { limit: DEMO_JOURNAL_LIMIT }).entries, 'application/json'),
   configExportURL: (_redacted = false) => download(demo.config(), 'application/json'),
 } satisfies typeof import('../api').api
 

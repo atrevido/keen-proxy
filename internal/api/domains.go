@@ -22,21 +22,21 @@ func (s *Server) resolveDomains(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32<<10))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, 400, "неверный запрос DNS")
+		writeError(w, 400, "invalid DNS request")
 		return
 	}
 	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		writeError(w, 400, "лишние данные")
+		writeError(w, 400, "unexpected trailing data")
 		return
 	}
 	if len(req.Names) == 0 || len(req.Names) > 100 {
-		writeError(w, 400, "нужно от 1 до 100 доменов")
+		writeError(w, 400, "between 1 and 100 domains required")
 		return
 	}
 	for _, name := range req.Names {
 		e, err := model.ParseEntry(name)
 		if err != nil || e.Kind != model.EntryDomain {
-			writeError(w, 400, "нужен домен, не IP или подсеть")
+			writeError(w, 400, "domain required, not an IP or subnet")
 			return
 		}
 	}

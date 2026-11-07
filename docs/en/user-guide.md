@@ -26,13 +26,15 @@ Expand an entry to see its current DNS observations and expiration. A resolved a
 
 ![Domain groups, targets, and address observations](../assets/screenshots/en-rules.png)
 
+See [Country rules](routing.md#country-rules) for an illustrated setup, country exclusions, and rule precedence.
+
 ## 4. Try a preset
 
 Open **Rules → Presets**, select a target, then preview a collection. Inspect the added/removed entries and accept it into the draft. Presets can be enabled, disabled, or removed. The static demo includes one original example collection; it does not redistribute the full community catalog.
 
 ## 5. Choose devices and networks
 
-Open **Connections → Clients**. Network defaults apply to matching subnets; per-device entries let you select a policy for individual clients. **Split** uses selective rules, **Full** selects a default connection, and **Off** bypasses KeenProxy interception for that policy. Review both the device and network settings before Apply.
+Open **Connections → Clients**. Network defaults apply to matching subnets; per-device entries let you select a policy for individual clients. **Split** uses selective rules, **Full** selects a default connection, and **Off** bypasses KeenProxy interception for that policy. Review both the device and network settings before Apply. When available, the device row also shows a discovered hostname and its DHCP/DNS source. A manually assigned name takes priority; searching matches either name. Discovery refreshes in the background and does not write names to configuration.
 
 ![Networks and individual client policies](../assets/screenshots/en-clients.png)
 

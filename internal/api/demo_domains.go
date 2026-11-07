@@ -17,7 +17,7 @@ import (
 func demoResolve(c *domaincache.Cache, names []string) {
 	for _, name := range names {
 		if strings.HasSuffix(name, ".invalid") {
-			c.SetError(name, "Демо: DNS NXDOMAIN")
+			c.SetError(name, "Demo: DNS NXDOMAIN")
 			continue
 		}
 		hash := fnv.New32a()
@@ -50,10 +50,10 @@ func (d *Demo) RefreshDomains(ctx context.Context, names []string, preview bool)
 	for _, name := range names {
 		e, err := model.ParseEntry(name)
 		if err != nil || e.Kind != model.EntryDomain {
-			return daemon.DomainStatus{}, fmt.Errorf("неверный домен")
+			return daemon.DomainStatus{}, fmt.Errorf("invalid domain")
 		}
 		if !preview && !compile.MatchesDomain(cfg, e.Domain) {
-			return daemon.DomainStatus{}, fmt.Errorf("домен не применён")
+			return daemon.DomainStatus{}, fmt.Errorf("domain not applied")
 		}
 		clean = append(clean, e.Domain)
 	}

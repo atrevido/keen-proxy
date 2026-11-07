@@ -141,11 +141,11 @@ func (d *Daemon) RefreshDomains(ctx context.Context, names []string, preview boo
 	}
 
 	if len(names) == 0 || len(names) > 100 {
-		return DomainStatus{}, fmt.Errorf("нужно от 1 до 100 доменов")
+		return DomainStatus{}, fmt.Errorf("between 1 and 100 domains required")
 	}
 	cfg := d.live.Load()
 	if cfg == nil {
-		return DomainStatus{}, fmt.Errorf("демон не запущен")
+		return DomainStatus{}, fmt.Errorf("daemon is not running")
 	}
 	matcher := compile.NewDomainMatcher(cfg)
 	clean := make([]string, 0, len(names))
@@ -153,10 +153,10 @@ func (d *Daemon) RefreshDomains(ctx context.Context, names []string, preview boo
 	for _, name := range names {
 		e, err := model.ParseEntry(name)
 		if err != nil || e.Kind != model.EntryDomain {
-			return DomainStatus{}, fmt.Errorf("неверный домен: %s", name)
+			return DomainStatus{}, fmt.Errorf("invalid domain: %s", name)
 		}
 		if !preview && !matcher.Match(e.Domain) {
-			return DomainStatus{}, fmt.Errorf("домен отсутствует в применённом списке: %s", e.Domain)
+			return DomainStatus{}, fmt.Errorf("domain is not in the applied list: %s", e.Domain)
 		}
 		if !seen[e.Domain] {
 			clean = append(clean, e.Domain)
@@ -175,7 +175,7 @@ func (d *Daemon) RefreshDomains(ctx context.Context, names []string, preview boo
 	for _, name := range clean {
 		if d.live.Load() != cfg {
 			wg.Wait()
-			return DomainStatus{}, fmt.Errorf("конфигурация изменилась")
+			return DomainStatus{}, fmt.Errorf("configuration changed")
 		}
 		select {
 		case d.domainSlots <- struct{}{}:
@@ -368,7 +368,7 @@ func dnsRouteNote(cfg *model.Config, records []domaincache.Record, raw, ip strin
 	}
 	note := " · DNS: " + strings.Join(names, ", ")
 	if len(domainConflicts(cfg, records)[ip]) > 1 {
-		note += " · неоднозначный IP, выбран порядок групп"
+		note += " · ambiguous IP, using group order"
 	}
 	return note
 }
@@ -385,7 +385,7 @@ func (d *Daemon) cleanDNSFilesLocked() {
 		if !e.IsDir() && strings.HasPrefix(name, "dns-") && strings.HasSuffix(name, ".json") {
 			if _, ok := keep[name]; !ok {
 				if err := os.Remove(filepath.Join(d.opt.RuleSetDir, name)); err != nil && !os.IsNotExist(err) {
-					d.log.Warn("не удалось удалить устаревший DNS набор", "err", err)
+					d.log.Warn("failed to remove stale DNS rule set", "err", err)
 				}
 			}
 		}

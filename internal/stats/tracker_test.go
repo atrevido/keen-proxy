@@ -42,27 +42,27 @@ func TestTrackerCountsAndSamples(t *testing.T) {
 	}
 	o := snap.Outbounds[0]
 	if o.Tag != "fi" || o.UpTotal != 100 || o.DownTotal != 300 || o.Active != 1 || o.Unique != 1 {
-		t.Errorf("сводка: %+v", o)
+		t.Errorf("summary: %+v", o)
 	}
 	if o.Down != 300*8/SampleInterval.Seconds() {
-		t.Errorf("скорость: %v", o.Down)
+		t.Errorf("speed: %v", o.Down)
 	}
 	if len(o.Top) != 1 || o.Top[0].Host != "youtube.com" || o.Top[0].Requests != 1 {
-		t.Errorf("топ: %+v", o.Top)
+		t.Errorf("top: %+v", o.Top)
 	}
 
 	c.Close()
 	tr.sample(time.Now())
 	o = tr.Snapshot(false).Outbounds[0]
 	if o.Active != 0 || o.Unique != 0 || o.PeakUniq != 1 || o.Down != 0 {
-		t.Errorf("после закрытия: %+v", o)
+		t.Errorf("after close: %+v", o)
 	}
 	hosts, total := tr.Hosts("fi", "tube", 10)
 	if total != 1 || len(hosts) != 1 || hosts[0].Down != 300 {
-		t.Errorf("хосты: %+v %d", hosts, total)
+		t.Errorf("hosts: %+v %d", hosts, total)
 	}
 	if h, _ := tr.Hosts("fi", "nomatch", 10); len(h) != 0 {
-		t.Errorf("фильтр: %+v", h)
+		t.Errorf("filter: %+v", h)
 	}
 }
 
@@ -75,6 +75,6 @@ func TestEvictsOldHosts(t *testing.T) {
 		b.Close()
 	}
 	if _, total := tr.Hosts("direct", "", 0); total != maxHosts {
-		t.Errorf("хостов %d, ждали предел %d", total, maxHosts)
+		t.Errorf("hosts %d, want limit %d", total, maxHosts)
 	}
 }

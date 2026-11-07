@@ -4,6 +4,11 @@ Selective traffic routing for Keenetic and Netcraze routers running Entware, wit
 
 KeenProxy lets you choose which devices, domains, IP ranges, and countries use a tunnel, connect directly, or are blocked. It is an experimental project under active development. Router compatibility and protocol support depend on the firmware, kernel modules, and build tags.
 
+## Documentation and live demo
+
+- [English documentation](https://atrevido.github.io/keen-proxy/) · [Russian documentation](https://atrevido.github.io/keen-proxy/ru/)
+- [Interactive browser demo](https://atrevido.github.io/keen-proxy/demo/) — the same interface with synthetic data and an in-memory API; no router required. Changes reset on reload.
+
 ## What works today
 
 - Device and network policies: split routing, full tunneling, direct access, and per-device overrides identified by MAC address.
@@ -75,7 +80,32 @@ The default paths are:
 | Rule sets and derived state | `/opt/var/lib/keenproxy/` |
 | API listener | Defined by `api.listen` |
 
-The installer copies a supplied executable KeenProxy binary and preserves an existing configuration. It verifies the downloaded optional TrustTunnel client against pinned checksums; it does not authenticate a user-supplied KeenProxy binary. It does **not** configure init/autostart or start/restart services. After copying the matching binary and installer to an Entware router, run:
+On a prepared Entware router, install `curl` and a CA bundle if needed. Run these commands from the Entware root shell. [Router preparation guide](docs/en/getting-started.md#prepare-the-router)
+
+```sh
+opkg update && opkg install curl ca-bundle ca-certificates
+curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
+```
+
+The bootstrap reads `version.txt` from `main`, selects the ARM64 or MIPSLE asset, and verifies the binary and installer files against the tagged release's `SHA256SUMS`. It installs missing Entware `iptables` tools, installs the pinned TrustTunnel client by default, and registers and starts `/opt/etc/init.d/S99keenproxy`. Entware runs the init script on boot. The first start enables LAN DNS interception even with an empty routing policy. Stop any competing interceptor first.
+
+Run the same command again to update. Existing configuration and tokens are preserved. Select a specific published release with `--version`, choose the smaller build with `--lite`, or skip the optional client with `--without-trusttunnel`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z --lite --without-trusttunnel
+```
+
+Replace `vX.Y.Z` with a real release tag. The release must contain the binary, `install.sh`, `S99keenproxy`, and `SHA256SUMS`. If assets are still publishing, retry when they are available. Check or stop the service with `/opt/etc/init.d/S99keenproxy status` or `/opt/etc/init.d/S99keenproxy stop`.
+
+To remove an installation managed by the bootstrap:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+```
+
+This stops KeenProxy and removes its binary and Entware init script. It keeps the configuration, API token, logs, rule sets, and optional TrustTunnel client. Reinstall with the regular install command to reuse the saved settings.
+
+For offline or manual setup, `tools/install.sh` copies a supplied executable and optionally verifies and installs the pinned TrustTunnel client. It preserves configuration and leaves service setup to the operator. After copying the binary and installer to the router, run:
 
 ```sh
 /opt/bin/sh /opt/tmp/install.sh \

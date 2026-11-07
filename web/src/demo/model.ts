@@ -1,5 +1,6 @@
 import initial from './config.json' with { type: 'json' }
-import type { Catalog, Config, DiagnosticReport, DomainStatus, JournalKind, JournalPage, StatsSnapshot, Status } from '../types'
+import { createTelemetry } from './telemetry.ts'
+import type { Catalog, Config, DiagnosticReport, DomainStatus, JournalKind, Status } from '../types'
 
 // Only synthetic examples are bundled; the demo never imports runtime configuration.
 export const catalog: Catalog = {
@@ -24,19 +25,34 @@ function validate(config: Config) {
 }
 
 // Owns one browser session's synthetic applied state and previous configuration.
-export function createDemo() {
+export function createDemo(now: () => number = () => Date.now()) {
   let saved = copy(initial as Config)
   let previous = copy(saved)
-  const started = new Date().toISOString()
+  const telemetry = createTelemetry(now)
+  telemetry.sync(saved)
 
   function save(config: Config) {
     validate(config)
+    telemetry.sync(saved)
     previous = copy(saved)
     saved = copy(config)
+    telemetry.applied()
     return copy(saved)
   }
 
-  return { config: () => copy(saved), previous: () => copy(previous), save, validate, preview, diagnostics: (connection: string) => diagnostics(saved, connection), domains: (names?: string[]) => domains(saved, names), status: () => status(saved, started), stats: () => stats(saved), journal }
+  return {
+    config: () => copy(saved), previous: () => copy(previous), save, validate, preview,
+    diagnostics: (connection: string) => diagnostics(saved, connection),
+    domains: (names?: string[]) => domains(saved, names), status: () => status(saved, telemetry.started),
+    stats(series = true) {
+      telemetry.sync(saved)
+      return telemetry.stats(saved, series)
+    },
+    journal(kind: JournalKind, params: Record<string, string | number | undefined> = {}) {
+      telemetry.sync(saved)
+      return telemetry.journal(kind, params)
+    },
+  }
 }
 
 // Preview updates a copy and leaves the session unchanged.
@@ -70,30 +86,9 @@ function status(saved: Config, started: string): Status {
   return {
     started, mode: saved.intercept.mode, sources: 2, connections: saved.connections?.length ?? 0,
     groups: saved.groups?.length ?? 0, entries: (saved.groups ?? []).reduce((n, g) => n + g.entries.length, 0),
-    clients: saved.clients?.length ?? 0, online_devices: 3, dns: '127.0.0.1:5353', firewall: true, restored: 0,
+    clients: saved.clients?.length ?? 0, online_devices: 4, dns: '127.0.0.1:5353', firewall: true, restored: 0,
     trusttunnel: [], geoip: { loaded: true, type: 'Synthetic demo', built: started }, conn_countries: { fi: 'FI', nl: 'NL', de: 'DE' },
     failover: { fi: { active: 'fi', chain: ['fi', 'nl', 'de'] } },
     health: Object.fromEntries((saved.connections ?? []).map(c => [c.id, { ok: true, checked: new Date().toISOString(), since: started, latency_ms: 42 }])),
   }
-}
-
-// Generate illustrative traffic history without a timer or network operation.
-function stats(saved: Config): StatsSnapshot {
-  const now = Date.now()
-  return { system: { cpu: 14, mem_pct: 28, mem_mb: 72 }, outbounds: [...(saved.connections ?? []).map(c => c.id), 'direct'].map((tag, i) => ({
-    tag, active: 3 + i, unique: 5 + i, down: 280000 * (i + 1), up: 32000 * (i + 1), down_total: 182000000 * (i + 1), up_total: 21000000 * (i + 1), peak_down: 1800000, peak_unique: 20,
-    series: Array.from({ length: 60 }, (_, n) => ({ t: now - (59 - n) * 3000, unique: 5 + i, down: (Math.sin(n / 4 + i) + 2) * 200000, up: 32000 })),
-    top: [{ host: 'video.example.com', down: 12000000, up: 800000, requests: 42, last_seen: now }],
-  })) }
-}
-
-// Provide one representative record for each journal category.
-function journal(kind: JournalKind): JournalPage {
-  const time = new Date().toISOString()
-  const records = {
-    routes: [{ id: 1, time, host: 'video.example.com', ip: '192.0.2.10', client: '192.168.7.10', outbound: 'nl', rule: 'Video and social media', network: 'Main LAN', destination_port: 443, count: 3 }],
-    audit: [{ id: 2, time, actor: 'demo', action: 'config.apply', result: 'ok', details: 'Synthetic session only' }],
-    system: [{ id: 3, time, level: 'info', source: 'demo', message: 'Browser demo: no router or network operations' }],
-  }
-  return { entries: records[kind], has_more: false, facets: {} }
 }

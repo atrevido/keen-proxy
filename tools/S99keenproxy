@@ -1,0 +1,96 @@
+#!/bin/sh
+# KeenProxy Entware service
+# Run in a subshell because Entware may source its init scripts.
+(
+set -eu
+umask 077
+prefix=${KEENPROXY_PREFIX:-/opt}
+PATH="$prefix/bin:$prefix/sbin:$PATH"
+export PATH
+binary="$prefix/bin/keenproxy"
+state="$prefix/var/run/keenproxy"
+if [ "$prefix" = /opt ]; then state=/var/run/keenproxy; fi
+pidfile="$state/pid"
+
+owns_pid() {
+    [ -f "$pidfile" ] || return 1
+    read -r pid < "$pidfile" || return 1
+    case "$pid" in ''|*[!0-9]*|0|1) return 1 ;; esac
+    running=$(readlink "/proc/$pid/exe" 2>/dev/null) || return 1
+    expected=$(readlink -f "$binary") || return 1
+    [ "$running" = "$expected" ]
+}
+
+start() {
+    if owns_pid; then return 0; fi
+    if pidof keenproxy >/dev/null 2>&1; then
+        echo 'KeenProxy: an unmanaged process is already running' >&2
+        return 1
+    fi
+    if [ -r "$prefix/etc/ssl/certs/ca-certificates.crt" ]; then
+        export SSL_CERT_FILE="$prefix/etc/ssl/certs/ca-certificates.crt"
+    fi
+    # The daemon writes a bounded system journal beside its rule sets.
+    (
+        trap '' HUP
+        exec "$binary" -config "$prefix/etc/keenproxy/config.yaml" \
+            -rule-sets "$prefix/var/lib/keenproxy/rule-sets" \
+            -iptables "$prefix/sbin/iptables" -iptables-restore "$prefix/sbin/iptables-restore"
+    ) </dev/null >/dev/null 2>&1 &
+    child=$!
+    if ! printf '%s\n' "$child" > "$pidfile"; then
+        kill -TERM "$child" 2>/dev/null || :
+        return 1
+    fi
+    remaining=20
+    while [ "$remaining" -gt 0 ]; do
+        sleep 1
+        if ! owns_pid; then break; fi
+        if "$prefix/sbin/iptables" -t nat -C PREROUTING -j KEENPROXY_DNS >/dev/null 2>&1; then
+            return 0
+        fi
+        remaining=$((remaining - 1))
+    done
+    echo 'KeenProxy: startup failed; inspect the system journal' >&2
+    stop || :
+    return 1
+}
+
+stop() {
+    if owns_pid; then
+        kill -TERM "$pid" 2>/dev/null || :
+        remaining=30
+        while owns_pid && [ "$remaining" -gt 0 ]; do
+            sleep 1
+            remaining=$((remaining - 1))
+        done
+        if owns_pid; then
+            echo 'KeenProxy: process did not stop after SIGTERM' >&2
+            return 1
+        fi
+    fi
+    rm -f "$pidfile"
+}
+
+case "${1:-}" in
+    check|status) owns_pid ;;
+    start|stop|restart)
+        mkdir -p "$state"
+        lock="$state/action.lock"
+        if [ -n "${KEENPROXY_SERVICE_LOCK_TOKEN:-}" ]; then
+            owner=
+            if [ -r "$lock/owner" ]; then read -r owner < "$lock/owner" || :; fi
+            [ "$owner" = "$KEENPROXY_SERVICE_LOCK_TOKEN" ] || { echo 'KeenProxy: invalid installer lock' >&2; exit 1; }
+        else
+            mkdir "$lock" 2>/dev/null || { echo 'KeenProxy: service action already in progress' >&2; exit 1; }
+            trap 'rmdir "$lock"' EXIT
+        fi
+        trap 'exit 1' INT TERM
+        case "$1" in
+            start) start ;;
+            stop) stop ;;
+            restart) stop && start ;;
+        esac ;;
+    *) echo 'Usage: S99keenproxy {start|stop|restart|check|status}' >&2; exit 2 ;;
+esac
+)

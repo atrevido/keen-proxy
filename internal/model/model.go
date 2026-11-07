@@ -313,11 +313,11 @@ func (c *Config) Validate() error {
 	switch c.Intercept.Mode {
 	case InterceptRedirect, InterceptTProxy:
 	default:
-		add("intercept.mode: неизвестный режим %q", c.Intercept.Mode)
+		add("intercept.mode: unknown mode %q", c.Intercept.Mode)
 	}
 	if c.Intercept.RouteTable < 1 || c.Intercept.RouteTable > 252 {
 		// Keenetic BusyBox ip accepts table IDs up to 255; 253–255 are reserved.
-		add("intercept.route_table: %d вне диапазона 1–252", c.Intercept.RouteTable)
+		add("intercept.route_table: %d outside range 1–252", c.Intercept.RouteTable)
 	}
 	if _, err := netip.ParseAddrPort(c.DNS.Listen); err != nil {
 		add("dns.listen: %v", err)
@@ -327,7 +327,7 @@ func (c *Config) Validate() error {
 	}
 	for i, s := range c.API.NoTokenFrom {
 		if _, err := netip.ParsePrefix(strings.TrimSpace(s)); err != nil {
-			add("api.no_token_from[%d]: %q — нужна сеть вида 192.168.1.0/24", i, s)
+			add("api.no_token_from[%d]: %q requires a network such as 192.168.1.0/24", i, s)
 		}
 	}
 	for i, u := range c.DNS.Upstreams {
@@ -340,11 +340,11 @@ func (c *Config) Validate() error {
 	for i, cn := range c.Connections {
 		switch {
 		case cn.ID == "":
-			add("connections[%d]: пустой id", i)
+			add("connections[%d]: empty id", i)
 		case cn.ID == TargetDirect || cn.ID == TargetBlock:
-			add("connections[%d]: id %q зарезервирован", i, cn.ID)
+			add("connections[%d]: id %q is reserved", i, cn.ID)
 		case conns[cn.ID]:
-			add("connections[%d]: повтор id %q", i, cn.ID)
+			add("connections[%d]: duplicate id %q", i, cn.ID)
 		}
 		conns[cn.ID] = true
 		validateConnection(cn, add)
@@ -354,31 +354,31 @@ func (c *Config) Validate() error {
 		switch {
 		case cn.Fallback == "" || cn.Fallback == TargetDirect:
 		case cn.Fallback == cn.ID:
-			add("%s: резервное не может быть самим соединением", where)
+			add("%s: fallback cannot be the connection itself", where)
 		case cn.Fallback == TargetBlock:
-			add("%s: резервным может быть соединение или direct, но не block", where)
+			add("%s: fallback must be a connection or direct, not block", where)
 		case !conns[cn.Fallback]:
-			add("%s: неизвестное резервное %q", where, cn.Fallback)
+			add("%s: unknown fallback %q", where, cn.Fallback)
 		default:
 			// Chain stops before repeats; a fallback on its final member indicates a cycle.
 			chain := c.Chain(cn.ID)
 			if next := fallbackOf(c, chain[len(chain)-1]); next != "" {
-				add("%s: резервные идут по кругу: %s → %s", where, strings.Join(chain, " → "), next)
+				add("%s: fallback cycle: %s → %s", where, strings.Join(chain, " → "), next)
 			}
 		}
 	}
 	if u, err := url.Parse(c.Failover.URL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		add("failover.url: нужен адрес http:// или https://, а не %q", c.Failover.URL)
+		add("failover.url: expected http:// or https:// URL, got %q", c.Failover.URL)
 	}
 	if c.Failover.Interval < 1 || c.Failover.DownAfter < c.Failover.Interval || c.Failover.UpAfter < c.Failover.Interval {
-		add("failover: interval от 1 с, down_after и up_after не меньше interval")
+		add("failover: interval must be at least 1 s; down_after and up_after must be at least interval")
 	}
 	target := func(where, t string, allowEmpty bool) {
 		if t == "" && allowEmpty {
 			return
 		}
 		if t != TargetDirect && t != TargetBlock && !conns[t] {
-			add("%s: неизвестная цель %q", where, t)
+			add("%s: unknown target %q", where, t)
 		}
 	}
 
@@ -386,14 +386,14 @@ func (c *Config) Validate() error {
 		where := fmt.Sprintf("groups[%d] %q", i, g.Name)
 		target(where, g.Target, false)
 		if g.IsCountry() && len(g.Entries) > 0 {
-			add("%s: в группе либо записи, либо страны — разнесите их по разным группам", where)
+			add("%s: entries and countries must be in separate groups", where)
 		}
 		if g.Except && !g.IsCountry() {
-			add("%s: «все, кроме» без стран — выберите хотя бы одну страну", where)
+			add("%s: except requires at least one country", where)
 		}
 		for j, cc := range g.Countries {
 			if len(cc) != 2 || cc[0] < 'A' || cc[0] > 'Z' || cc[1] < 'A' || cc[1] > 'Z' {
-				add("%s countries[%d]: %q — нужен двухбуквенный код ISO заглавными, например RU", where, j, cc)
+				add("%s countries[%d]: %q requires an uppercase two-letter ISO code, such as RU", where, j, cc)
 			}
 		}
 		for j, e := range g.Entries {
@@ -410,7 +410,7 @@ func (c *Config) Validate() error {
 		validateMode(where, n.Mode, false, add)
 		target(where, n.Target, n.Mode != ModeFull)
 		if n.Target == TargetBlock {
-			add("%s: сеть нельзя целиком направить в block, выключите её (mode: off)", where)
+			add("%s: a whole network cannot target block; disable it with mode: off", where)
 		}
 	}
 	macs := map[string]bool{}
@@ -420,7 +420,7 @@ func (c *Config) Validate() error {
 		if err != nil {
 			add("%s: mac: %v", where, err)
 		} else if macs[mac.String()] {
-			add("%s: повтор mac %s", where, mac)
+			add("%s: duplicate mac %s", where, mac)
 		} else {
 			macs[mac.String()] = true
 		}
@@ -432,12 +432,12 @@ func (c *Config) Validate() error {
 		validateMode(where, cl.Mode, true, add)
 		target(where, cl.Target, true)
 		if cl.Target == TargetBlock {
-			add("%s: target block для устройства не поддерживается", where)
+			add("%s: target block is not supported for devices", where)
 		}
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("конфиг некорректен:\n  %s", strings.Join(errs, "\n  "))
+		return fmt.Errorf("invalid configuration:\n  %s", strings.Join(errs, "\n  "))
 	}
 	return nil
 }
@@ -456,10 +456,10 @@ func validateMode(where string, m Mode, allowInherit bool, add func(string, ...a
 	case ModeSplit, ModeFull, ModeOff:
 	case ModeInherit:
 		if !allowInherit {
-			add("%s: не задан mode", where)
+			add("%s: missing mode", where)
 		}
 	default:
-		add("%s: неизвестный mode %q", where, m)
+		add("%s: unknown mode %q", where, m)
 	}
 }
 
@@ -473,18 +473,18 @@ func validateConnection(cn Connection, add func(string, ...any)) {
 		}
 	}
 	if set > 1 {
-		add("%s: задано несколько описаний соединения, нужно одно", where)
+		add("%s: multiple connection definitions; expected one", where)
 	}
 	switch cn.Type {
 	case ConnWireGuard:
 		if cn.WireGuard == nil {
-			add("%s: нет секции wireguard", where)
+			add("%s: missing wireguard section", where)
 			return
 		}
 		validateWireGuard(cn.ID, cn.WireGuard, add)
 	case ConnLink:
 		if cn.Link == "" {
-			add("%s: нет link", where)
+			add("%s: missing link", where)
 		} else if _, err := links.Parse(cn.Link); err != nil {
 			add("%s: link: %v", where, err)
 		}
@@ -494,33 +494,33 @@ func validateConnection(cn Connection, add func(string, ...any)) {
 			obj = cn.Endpoint
 		}
 		if obj == nil {
-			add("%s: нужен outbound или endpoint", where)
+			add("%s: outbound or endpoint is required", where)
 			return
 		}
 		if t, _ := obj["type"].(string); t == "" {
-			add("%s: в объекте sing-box нет type", where)
+			add("%s: sing-box object is missing type", where)
 		}
 		if _, ok := obj["tag"]; ok {
-			add("%s: tag не задаётся, он берётся из id", where)
+			add("%s: tag must not be set; it is derived from id", where)
 		}
 	case ConnTrustTunnel:
 		if cn.TrustTunnel == nil {
-			add("%s: нет секции trusttunnel", where)
+			add("%s: missing trusttunnel section", where)
 		} else if _, err := trusttunnel.ParseLink(cn.TrustTunnel.Link); err != nil {
 			add("%s: %v", where, err)
 		}
 	default:
-		add("%s: неизвестный тип %q (wireguard, link, singbox, trusttunnel)", where, cn.Type)
+		add("%s: unknown type %q (wireguard, link, singbox, trusttunnel)", where, cn.Type)
 	}
 }
 
 // validateWireGuard checks tunnel addresses, endpoint syntax, and required key fields.
 func validateWireGuard(id string, wg *WireGuard, add func(string, ...any)) {
 	if wg.PrivateKey == "" {
-		add("connection %q: пустой private_key", id)
+		add("connection %q: empty private_key", id)
 	}
 	if len(wg.Address) == 0 {
-		add("connection %q: нет address", id)
+		add("connection %q: missing address", id)
 	}
 	for _, a := range wg.Address {
 		if _, err := netip.ParsePrefix(a); err != nil {
@@ -531,7 +531,7 @@ func validateWireGuard(id string, wg *WireGuard, add func(string, ...any)) {
 		add("connection %q: peer.endpoint: %v", id, err)
 	}
 	if wg.Peer.PublicKey == "" {
-		add("connection %q: пустой peer.public_key", id)
+		add("connection %q: empty peer.public_key", id)
 	}
 }
 
@@ -550,11 +550,11 @@ func Parse(raw []byte) (*Config, error) {
 	dec := yaml.NewDecoder(strings.NewReader(string(raw)))
 	dec.KnownFields(true)
 	if err := dec.Decode(&c); err != nil {
-		return nil, fmt.Errorf("разбор конфига: %w", err)
+		return nil, fmt.Errorf("parse configuration: %w", err)
 	}
 	var extra any
 	if err := dec.Decode(&extra); err != io.EOF {
-		return nil, fmt.Errorf("нужен ровно один YAML документ")
+		return nil, fmt.Errorf("expected exactly one YAML document")
 	}
 	c.Defaults()
 	if err := c.Validate(); err != nil {

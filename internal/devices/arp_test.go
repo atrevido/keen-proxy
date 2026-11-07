@@ -16,6 +16,6 @@ func TestParseARP(t *testing.T) {
 		t.Errorf("ParseARP(br0) = %v", got)
 	}
 	if all := ParseARP(strings.NewReader(arp), ""); len(all) != 2 {
-		t.Errorf("без фильтра по интерфейсу ждали 2 записи, получили %v", all)
+		t.Errorf("without interface filter want 2 entries, got %v", all)
 	}
 }

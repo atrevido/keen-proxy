@@ -1,0 +1,91 @@
+/* Match the panel palette in web/src/style.css without loading app styles. */
+body[data-md-color-scheme="default"] {
+  --kp-page: #f6f8f4;
+  --kp-surface: #fff;
+  --kp-line: #cdd7ce;
+  --kp-text: #202d27;
+  --kp-muted: #5b685f;
+  --kp-accent: #35652b;
+  --kp-hover: #244a1e;
+  --kp-tint: #e5efdd;
+  --kp-header: #284b25;
+  --kp-header-shade: #203c1e;
+  --kp-header-text: #f6f8f4;
+  --kp-header-muted: #d2e2cb;
+}
+
+body[data-md-color-scheme="slate"] {
+  --kp-page: #141b1c;
+  --kp-surface: #1b2425;
+  --kp-line: #35433f;
+  --kp-text: #e8eeeb;
+  --kp-muted: #a8b4b0;
+  --kp-accent: #b2eb82;
+  --kp-hover: #d4f8bb;
+  --kp-tint: #283925;
+  --kp-header: #1b2425;
+  --kp-header-shade: #101617;
+  --kp-header-text: #e8eeeb;
+  --kp-header-muted: #a8b4b0;
+}
+
+body[data-md-color-scheme][data-md-color-primary] {
+  --md-default-bg-color: var(--kp-page);
+  --md-default-bg-color--light: var(--kp-surface);
+  --md-default-bg-color--lighter: var(--kp-surface);
+  --md-default-bg-color--lightest: var(--kp-tint);
+  --md-default-fg-color: var(--kp-text);
+  --md-default-fg-color--light: var(--kp-muted);
+  --md-default-fg-color--lighter: var(--kp-muted);
+  --md-default-fg-color--lightest: var(--kp-line);
+  --md-primary-fg-color: var(--kp-header);
+  --md-primary-fg-color--light: var(--kp-header);
+  --md-primary-fg-color--dark: var(--kp-header-shade);
+  --md-primary-bg-color: var(--kp-header-text);
+  --md-primary-bg-color--light: var(--kp-header-muted);
+  --md-accent-fg-color: var(--kp-hover);
+  --md-accent-fg-color--transparent: var(--kp-tint);
+  --md-accent-bg-color: var(--kp-page);
+  --md-code-bg-color: var(--kp-surface);
+  --md-code-fg-color: var(--kp-text);
+  --md-typeset-color: var(--kp-text);
+  --md-typeset-a-color: var(--kp-accent);
+  --md-typeset-table-color: var(--kp-line);
+  --md-typeset-table-color--light: var(--kp-tint);
+  --md-footer-bg-color: var(--kp-header);
+  --md-footer-bg-color--dark: var(--kp-header-shade);
+  --md-footer-fg-color: var(--kp-header-text);
+  --md-footer-fg-color--light: var(--kp-header-muted);
+  --md-footer-fg-color--lighter: var(--kp-header-muted);
+}
+
+.md-header {
+  border-bottom: 1px solid var(--kp-line);
+  box-shadow: none;
+}
+
+.md-typeset h1,
+.md-typeset h2 {
+  color: var(--kp-text);
+  font-weight: 650;
+}
+
+.md-typeset :is(p, li, td) a:not(.md-button) {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.md-nav__link--active,
+.md-nav__link--active .md-ellipsis {
+  font-weight: 650;
+}
+
+.md-main :focus-visible {
+  outline: 2px solid var(--kp-accent);
+  outline-offset: 3px;
+}
+
+.md-header :focus-visible {
+  outline: 2px solid var(--kp-header-text);
+  outline-offset: 3px;
+}

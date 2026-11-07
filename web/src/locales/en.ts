@@ -2,6 +2,11 @@ import { redesignEn } from './redesign'
 import type { Messages } from './ru'
 
 const en: Messages = {
+  languageName: 'English',
+  browserDemo: {
+    notice: 'Demo · synthetic data · changes reset on reload · no network checks.',
+    documentation: 'Documentation',
+  },
   ui: redesignEn,
   features: {
  "presetApplyFirst": "Enable and apply the preset first. IPs are not resolved before that.",
@@ -328,6 +333,7 @@ const en: Messages = {
     fallbackHint: 'If this connection does not respond for {down} s, traffic automatically moves to the backup, and if that one is down too — to its backup. Once this connection works again for {up} s, traffic comes back. With “Direct” as a backup, blocking bypass is lost while it is in use.',
   },
   clients: {
+    discoveredName: '{name} · discovered via {source}',
     intro: 'Manage local networks and the devices in them. Set a connection for each client individually.',
     deviceIP: 'Device {ip}',
     removeTitle: 'Remove the device from clients?',

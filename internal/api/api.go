@@ -127,7 +127,7 @@ func (s *Server) lanOnly(next http.Handler) http.Handler {
 		host, _, _ := net.SplitHostPort(r.RemoteAddr)
 		a, err := netip.ParseAddr(host)
 		if err != nil || !(a.IsPrivate() || a.IsLoopback() || a.IsLinkLocalUnicast()) {
-			http.Error(w, "доступ только из локальной сети", http.StatusForbidden)
+			http.Error(w, "access restricted to local networks", http.StatusForbidden)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -166,7 +166,7 @@ func (s *Server) trustedNet(r *http.Request) (netip.Prefix, bool) {
 func (s *Server) auth(h http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, trusted := s.trustedNet(r); !trusted && !s.tokenOK(r) {
-			writeError(w, http.StatusUnauthorized, "нужен вход по токену")
+			writeError(w, http.StatusUnauthorized, "token login required")
 			return
 		}
 		h(w, r)
@@ -180,20 +180,20 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		Token string `json:"token"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "неверный запрос")
+		writeError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 	if subtle.ConstantTimeCompare([]byte(strings.TrimSpace(req.Token)), []byte(s.Token)) != 1 {
-		s.auditLogin(r, "error", "неверный токен")
+		s.auditLogin(r, "error", "invalid token")
 		time.Sleep(500 * time.Millisecond) // Slow repeated token guesses.
-		writeError(w, http.StatusUnauthorized, "неверный токен")
+		writeError(w, http.StatusUnauthorized, "invalid token")
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: cookieName, Value: s.Token, Path: "/", HttpOnly: true,
 		SameSite: http.SameSiteStrictMode, MaxAge: int((30 * 24 * time.Hour).Seconds()),
 	})
-	s.auditLogin(r, "ok", "вход по токену")
+	s.auditLogin(r, "ok", "token login")
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -205,7 +205,7 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 	if trusted {
 		out["network"] = p.String()
 		if !s.tokenOK(r) && r.URL.Query().Get("open") == "1" && s.firstTrustedVisit(clientIP(r)) {
-			s.auditLogin(r, "ok", "без токена — адрес из сети "+p.String())
+			s.auditLogin(r, "ok", "without token — address in network "+p.String())
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
@@ -237,7 +237,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
 	cfg := s.D.Config()
 	if cfg == nil {
-		writeError(w, http.StatusServiceUnavailable, "демон ещё запускается")
+		writeError(w, http.StatusServiceUnavailable, "daemon is still starting")
 		return
 	}
 	writeJSON(w, http.StatusOK, cfg)
@@ -275,7 +275,7 @@ func (s *Server) validateConfig(w http.ResponseWriter, r *http.Request) {
 func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 	cfg, err := decodeConfig(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "неверный конфиг: "+err.Error())
+		writeError(w, http.StatusBadRequest, "invalid configuration: "+err.Error())
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
@@ -317,7 +317,7 @@ func (s *Server) parseLink(w http.ResponseWriter, r *http.Request) {
 		Link string `json:"link"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 64<<10)).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "неверный запрос")
+		writeError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 	link := strings.TrimSpace(req.Link)

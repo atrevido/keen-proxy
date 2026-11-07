@@ -18,29 +18,29 @@ func (d *Demo) startJournals() {
 	now := time.Now().Add(-4 * time.Hour)
 	audit := d.journals[journal.Audit]
 	for _, e := range []journal.Entry{
-		{Actor: "system", Action: "Запуск keenProxy", Target: "core", Result: "ok", Details: "перехват tproxy, источников 3, DNS 0.0.0.0:5354"},
-		{Actor: "system", Action: "База стран обновлена", Target: "geoip", Result: "ok", Details: now.Format("2006-01") + "-01"},
-		{Actor: "watchdog", Action: "Адреса устройств обновлены", Target: "clients", Result: "info", Details: "появились: 192.168.7.35 (f0:18:98:44:55:66); в сети: 6"},
-		{Actor: "watchdog", Action: "Правила перехвата восстановлены", Target: "firewall", Result: "warn", Details: "правил в firewall не было — вероятно, NDM перестроил его; восстановлений с запуска: 1"},
-		{Actor: "user", Action: "Вход в панель", Target: "auth", Result: "ok", Details: "вход по токену, 192.168.7.50"},
-		{Actor: "user", Action: "Конфиг не принят", Target: "config", Result: "error", Details: "конфиг некорректен: groups[5] \"Steam\": неизвестная цель \"nl2\" (с 192.168.7.50)"},
-		{Actor: "user", Action: "Применение конфига", Target: "config", Result: "ok", Details: "группы: 5 → 6; ядро без перезапуска (с 192.168.7.50)"},
+		{Actor: "system", Action: "Start keenProxy", Target: "core", Result: "ok", Details: "interception tproxy, sources 3, DNS 0.0.0.0:5354"},
+		{Actor: "system", Action: "Country database updated", Target: "geoip", Result: "ok", Details: now.Format("2006-01") + "-01"},
+		{Actor: "watchdog", Action: "Device addresses updated", Target: "clients", Result: "info", Details: "added: 192.168.7.35 (f0:18:98:44:55:66); online: 6"},
+		{Actor: "watchdog", Action: "Interception rules restored", Target: "firewall", Result: "warn", Details: "firewall rules were missing — NDM likely rebuilt it; restorations since start: 1"},
+		{Actor: "user", Action: "Panel login", Target: "auth", Result: "ok", Details: "token login, 192.168.7.50"},
+		{Actor: "user", Action: "Configuration rejected", Target: "config", Result: "error", Details: "invalid configuration: groups[5] \"Steam\": unknown target \"nl2\" (from 192.168.7.50)"},
+		{Actor: "user", Action: "Apply configuration", Target: "config", Result: "ok", Details: "groups: 5 → 6; core not restarted (from 192.168.7.50)"},
 	} {
 		// Emit history chronologically, from startup a few hours ago to recent events.
 		now = now.Add(time.Duration(rand.IntN(25)+5) * time.Minute)
 		e.Time = now
 		audit.Add(e)
 	}
-	audit.Add(journal.Entry{Time: time.Now().Add(-3 * time.Minute), Actor: "watchdog", Action: "Переключение на резервное", Target: "fi", Result: "warn",
-		Details: "«Финляндия WG» не отвечает 1 мин 4 с (dial tcp 203.0.113.10:51820: i/o timeout) — трафик через «Нидерланды Reality»"})
+	audit.Add(journal.Entry{Time: time.Now().Add(-3 * time.Minute), Actor: "watchdog", Action: "Switch to fallback", Target: "fi", Result: "warn",
+		Details: "«Finland WG» unavailable for 1 min 4 s (dial tcp 203.0.113.10:51820: i/o timeout) — traffic via «Netherlands Reality»"})
 	sys := d.journals[journal.System]
 	for i, e := range []journal.Entry{
-		{Level: "INFO", Source: "keenproxy", Message: "keenProxy запущен mode=tproxy sources=3 dns=0.0.0.0:5354"},
-		{Level: "INFO", Source: "keenproxy", Message: "база стран загружена built=" + time.Now().Format("2006-01") + "-01 type=DBIP-Country-Lite"},
+		{Level: "INFO", Source: "keenproxy", Message: "keenProxy started mode=tproxy sources=3 dns=0.0.0.0:5354"},
+		{Level: "INFO", Source: "keenproxy", Message: "country database loaded built=" + time.Now().Format("2006-01") + "-01 type=DBIP-Country-Lite"},
 		{Level: "WARN", Source: "sing-box", Message: "outbound/wireguard[fi]: peer 203.0.113.10:51820: handshake did not complete after 5 seconds, retrying"},
-		{Level: "INFO", Source: "keenproxy", Message: "конфиг применён и сохранён"},
+		{Level: "INFO", Source: "keenproxy", Message: "configuration applied and saved"},
 		{Level: "ERROR", Source: "sing-box", Message: "inbound/redirect[redirect-in]: process connection from 192.168.7.35:51244: dial tcp 142.250.74.46:443: i/o timeout"},
-		{Level: "WARN", Source: "keenproxy", Message: "правила перехвата пропали (вероятно, NDM перестроил firewall) — восстановлены"},
+		{Level: "WARN", Source: "keenproxy", Message: "interception rules disappeared (NDM likely rebuilt firewall) — restored"},
 	} {
 		e.Time = time.Now().Add(-time.Duration(60-i*9) * time.Minute)
 		sys.Add(e)

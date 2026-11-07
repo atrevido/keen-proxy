@@ -1,4 +1,4 @@
-// Package devices discovers LAN device addresses by MAC.
+// Package devices discovers LAN addresses and optional published hostnames.
 package devices
 
 import (
