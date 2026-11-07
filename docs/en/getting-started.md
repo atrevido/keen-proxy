@@ -1,10 +1,16 @@
 # Getting started
 
+## Experimental OpenWrt support
+
+You can try KeenProxy on OpenWrt routers with **at least 128 MiB of RAM** and enough storage for the binary and its data. Releases provide full and lite Linux binaries for ARM32 (ARMv5 or later, soft float, suffix `armv5`), ARM64 (`arm64`), little-endian MIPS (`mipsle`, soft float), and big-endian MIPS (`mipsbe`, soft float).
+
+OpenWrt testing uses a manually installed binary and configuration. The automated installation and update instructions below apply to Keenetic and Netcraze with Entware. The current interception runtime requires compatible `iptables`, `iptables-restore`, and kernel support. Verify interception with a test client on your firmware, especially on systems using firewall4. [OpenWrt netfilter documentation](https://openwrt.org/docs/guide-user/firewall/netfilter_iptables/netfilter_management)
+
 ## Prepare the router
 
 ### Hardware and firmware
 
-- **CPU.** KeenProxy publishes Linux ARM64 (`aarch64`) and little-endian MIPS (`mipsle` or `mipsel`, soft float) builds. Look up the exact model number in the router manual. For MIPS, confirm the byte order with the Entware package architecture or the model guide.
+- **CPU.** The Entware installer supports ARM64 (`aarch64`) and little-endian MIPS (`mipsle` or `mipsel`, soft float). Look up the exact model number in the router manual. For MIPS, confirm the byte order with the Entware package architecture or the model guide.
 - **Firmware.** Use a Keenetic or Netcraze model with Open Package support (OPKG), an Entware shell, and compatible `iptables` tools. TCP interception uses REDIRECT. UDP interception in `tproxy` mode also requires kernel TPROXY support and policy routing.
 - **Storage.** Use an external USB drive for Entware and KeenProxy. Compare the release binary size with the free space on `/opt` and leave room for Entware, the configuration, rule sets and filter data, and a rollback copy. The lite binary is smaller and supports fewer protocols.
 - **RAM.** The project has no validated minimum across models. Check available memory with your usual router services running. Leave headroom for the engine, connections, and enabled lists, and monitor memory during the first test with your own configuration.

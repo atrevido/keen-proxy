@@ -6,6 +6,8 @@ Selective traffic routing for Keenetic and Netcraze routers running Entware, wit
 
 KeenProxy lets you choose which devices, domains, IP ranges, and countries use a tunnel, connect directly, or are blocked. The web panel shows router load and lets you install, schedule, or roll back releases on a managed Entware installation. Router compatibility and protocol support depend on the firmware, kernel modules, and build tags. The project is experimental.
 
+Experimental OpenWrt builds target ARM32, ARM64, little-endian MIPS, and big-endian MIPS routers with at least 128 MiB of RAM. [OpenWrt requirements](docs/en/getting-started.md#experimental-openwrt-support)
+
 [![KeenProxy web panel overview with tunnel traffic, router load, and connection status (synthetic demo data)](docs/assets/screenshots/readme-overview.png)](https://ordo-systems.github.io/keen-proxy/demo/)
 
 ## Documentation and live demo
@@ -39,7 +41,7 @@ Readable hostnames remain the primary routing signal. DNS-derived IP rules are u
 
 Requirements:
 
-- Go **1.26.1** or the compatible toolchain selected by `go.mod`.
+- Go **1.27.3** or the compatible toolchain selected by `go.mod`.
 - Node.js **22.12+** (or another Vite-compatible version) and npm.
 - Docker for the network-namespace integration suite.
 - For a router: Entware, supported Linux kernel facilities, and compatible iptables tools.
@@ -64,7 +66,7 @@ The development server proxies `/api` to `http://127.0.0.1:8086`. Set `KEENPROXY
 
 ```sh
 make build               # Host binary with the embedded UI
-make build-router        # Linux ARM64 and MIPS little-endian builds
+make build-router        # Linux ARMv5, ARM64, MIPS little-endian, and MIPS big-endian
 make build-router-lite   # Smaller protocol set for constrained routers
 ```
 
