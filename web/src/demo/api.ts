@@ -1,10 +1,15 @@
 import { catalog, createDemo } from './model.ts'
 import { DEMO_JOURNAL_LIMIT, DEMO_TICK_MS } from './telemetry.ts'
 import { createDemoUpdates } from './updates.ts'
-import type { Config, JournalKind, LinkPreview, UpdatePreferences, UpdateSelection } from '../types'
+import type { Config, JournalKind, LinkPreview, Status, UpdatePreferences, UpdateSelection } from '../types'
 
 const demo = createDemo()
 const updates = createDemoUpdates()
+const demoRevisions: Record<string, string> = {
+  'v1.0.0': 'e4f5a6b',
+  'v1.1.0': 'a1b2c3d',
+  'v1.2.0': 'b2c3d4e',
+}
 
 // The demo accepts only metadata previews; it never connects to the supplied endpoint.
 function parseLink(link: string): LinkPreview {
@@ -53,7 +58,13 @@ export const api = {
   login: async (_token: string) => ({ ok: true }),
   logout: async () => ({ ok: true }),
   session: async (_open = false) => ({ authed: true, trusted: false, ip: '192.0.2.100' }),
-  status: async () => demo.status(),
+  status: async (): Promise<Status> => {
+    const { current: version } = updates.status()
+    return {
+      ...demo.status(),
+      build: { version, variant: 'lite', arch: 'arm64', revision: version && demoRevisions[version] },
+    }
+  },
   updates: async () => updates.status(),
   checkUpdates: async () => updates.check(),
   saveUpdatePreferences: async (prefs: UpdatePreferences) => updates.save(prefs),

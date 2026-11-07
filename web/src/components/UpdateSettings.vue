@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NAlert, NButton, NCard, NInput, NModal, NSpace, NSwitch, NTag, NTimePicker, useDialog } from 'naive-ui'
+import { NAlert, NButton, NCard, NInput, NModal, NSpace, NSwitch, NTimePicker, useDialog } from 'naive-ui'
 import { Download } from '@lucide/vue'
 import { api } from '../api'
 import { ApiError } from '../apiError'
+import { formatBuild } from '../format'
 import { store } from '../store'
 import type { UpdatePreferences, UpdateSelection, UpdateStatus } from '../types'
 
@@ -14,6 +15,7 @@ type Action = Mutation | { kind: 'check' }
 const { t } = useI18n()
 const dialog = useDialog()
 const status = ref<UpdateStatus>()
+const build = computed(() => store.state.status?.build)
 const enabled = ref(false)
 const time = ref<string | null>(null)
 const busy = ref<Action['kind']>()
@@ -158,6 +160,29 @@ function reloadPanel() {
 <template>
   <NCard size="small">
     <template #header><span class="update-heading"><Download :size="16" /> {{ t('updates.title') }}</span></template>
+    <NAlert v-if="status?.demo" type="info">{{ t('updates.demoHint') }}</NAlert>
+    <dl v-if="build || status?.available" class="release-versions">
+      <div v-if="build">
+        <dt>{{ t('build.running') }}</dt>
+        <dd><strong>{{ build.version ?? t('ui.unknown') }}</strong></dd>
+      </div>
+      <div v-if="build">
+        <dt>{{ t('build.label') }}</dt>
+        <dd><code>{{ formatBuild(build) }}</code></dd>
+      </div>
+      <div v-if="status?.available && (!build || (status.current && status.current !== build.version))">
+        <dt>{{ t('updates.current') }}</dt>
+        <dd><strong>{{ status.current ?? t('ui.unknown') }}</strong></dd>
+      </div>
+      <div v-if="status?.previous">
+        <dt>{{ t('updates.previous') }}</dt>
+        <dd>{{ status.previous }}</dd>
+      </div>
+      <div v-if="status?.latest">
+        <dt>{{ t('build.available') }}</dt>
+        <dd class="available-release"><strong>{{ status.latest }}</strong></dd>
+      </div>
+    </dl>
     <NAlert v-if="olderPanel" type="info">
       {{ t('updates.olderPanel') }}
       <div><NButton text size="small" :disabled="routingDraft || scheduleDraft" @click="reloadPanel">{{ t('updates.reload') }}</NButton></div>
@@ -165,14 +190,6 @@ function reloadPanel() {
     <p v-else-if="!status" class="muted">{{ t(readFailed ? 'updates.readFailed' : 'updates.loading') }}</p>
     <p v-else-if="!status.available" class="muted">{{ t('updates.unavailable') }}</p>
     <div v-else class="update-body">
-      <NAlert v-if="status.demo" type="info">{{ t('updates.demoHint') }}</NAlert>
-      <div class="release-versions">
-        <span>{{ t('updates.current') }} <strong>{{ status.current ?? t('ui.unknown') }}</strong></span>
-        <span v-if="status.previous">{{ t('updates.previous') }} <strong>{{ status.previous }}</strong></span>
-        <NTag v-if="status.latest" type="warning" size="small" :bordered="false">
-          {{ t('updates.newRelease', { version: status.latest }) }}
-        </NTag>
-      </div>
       <span v-if="status.checked_at && !status.check_failed && !status.latest" class="muted">{{ t('updates.upToDate') }}</span>
       <NAlert v-if="status.check_failed" type="warning">{{ t('updates.checkFailed') }}</NAlert>
 
@@ -233,12 +250,41 @@ function reloadPanel() {
 </template>
 
 <style scoped>
-.update-heading,
-.release-versions {
+.update-heading {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 16px;
+}
+.release-versions {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.release-versions div {
+  display: grid;
+  grid-template-columns: minmax(155px, 1fr) 1.5fr;
+  gap: 12px;
+  padding: 10px 12px;
+}
+.release-versions div + div {
+  border-top: 1px solid var(--line);
+}
+.release-versions dt {
+  color: var(--muted);
+}
+.release-versions dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.available-release {
+  color: var(--accent);
+}
+@media (max-width: 600px) {
+  .release-versions div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
 }
 .update-body,
 .update-schedule {

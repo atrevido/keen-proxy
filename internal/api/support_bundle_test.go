@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -82,6 +83,14 @@ func TestSupportBundleIncludesRetainedHistoryWithoutPrivateValues(t *testing.T) 
 			if files[name] == "" {
 				t.Errorf("missing %s", name)
 			}
+		}
+		var status struct {
+			Build struct {
+				Arch string `json:"arch"`
+			} `json:"build"`
+		}
+		if err := json.Unmarshal([]byte(files["status.json"]), &status); err != nil || status.Build.Arch != runtime.GOARCH {
+			t.Errorf("archive missing build identity: %s", files["status.json"])
 		}
 		for name, data := range files {
 			for _, secret := range []string{s.Token, "private", "retired-password", "192.168.7.42", "aa:bb:cc:dd:ee:ff", "203.0.113.9", "vless://", "example.net"} {

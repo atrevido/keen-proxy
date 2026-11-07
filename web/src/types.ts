@@ -122,8 +122,18 @@ export interface UpdateStatus {
   router_time?: string
 }
 
+// Public identity of the executable serving the panel.
+export interface BuildIdentity {
+  version?: string
+  variant: 'full' | 'lite'
+  arch: string
+  revision?: string
+  dirty?: boolean
+}
+
 // Applied daemon state, runtime capabilities, and connection observations.
 export interface Status {
+  build?: BuildIdentity
   started: string
   mode: string
   sources: number

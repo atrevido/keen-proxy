@@ -35,8 +35,19 @@ onMounted(async()=>{try{profiles.value=(await api.catalog()).dns;status.value=aw
  <NFormItem :label="t('settings.dnsListen')"><NInput v-model:value="cfg.dns.listen"/></NFormItem>
  <NCheckbox v-model:checked="cfg.dns.block_encrypted">{{t('features.block853')}}</NCheckbox><NCheckbox v-model:checked="cfg.dns.firefox_canary">{{t('features.canary')}}</NCheckbox>
  <p class="hint">{{t('features.leakLimits')}}</p>
- <div class="actions"><NButton :loading="busy" @click="check">{{t('features.checkDNS')}}</NButton><span v-if="status?.dns.route">{{t('features.lastRoute')}}: {{status.dns.route}}</span></div>
+ <div class="actions"><NButton class="dns-check" :loading="busy" @click="check">{{t('features.checkDNS')}}</NButton><span v-if="status?.dns.route">{{t('features.lastRoute')}}: {{status.dns.route}}</span></div>
  <NAlert v-if="result" :type="result.error?'warning':'success'">{{result.demo?t('features.demo'):`${result.route} · ${result.latency_ms} ms · ${result.error||'NOERROR'}`}}</NAlert><NAlert v-if="error" type="error">{{error}}</NAlert>
  </NForm>
 </template>
-<style scoped>.actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}.n-checkbox{display:block;margin:10px 0}.hint{font-size:12px;color:var(--muted);margin:10px 0}summary{cursor:pointer;margin:12px 0}a{color:var(--accent)}</style>
+<style scoped>
+.actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}.n-checkbox{display:block;margin:10px 0}.hint{font-size:12px;color:var(--muted);margin:10px 0}summary{cursor:pointer;margin:12px 0}a{color:var(--accent)}
+.dns-check {
+  max-width: 100%;
+  height: auto;
+  min-height: var(--n-height);
+  padding-block: 6px;
+}
+.dns-check :deep(.n-button__content) {
+  white-space: normal;
+}
+</style>

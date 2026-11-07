@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { NButton, NAlert } from 'naive-ui'
+import { NButton, NAlert, NInput, useDialog, useMessage } from 'naive-ui'
 import {
   Activity,
   Server,
@@ -12,11 +12,12 @@ import {
   FileCheck,
   RefreshCw,
   Download,
+  Copy,
 } from '@lucide/vue'
 import { store, targetLabel } from '../store'
 import { api } from '../api'
 import { protocolOf } from '../conn'
-import { duration } from '../format'
+import { duration, formatBuild } from '../format'
 import { sameAppliedConnection, safeDiagnosticsReport } from '../diagnostics'
 import type { DiagnosticReport, FeatureStatus } from '../types'
 import ConnectionHealth from '../components/ConnectionHealth.vue'
@@ -29,6 +30,25 @@ const applied = computed(
   () => JSON.parse(store.state.saved || 'null') as typeof cfg.value | null,
 )
 const st = computed(() => store.state.status)
+const dialog = useDialog()
+const message = useMessage()
+const buildText = computed(() => {
+  const build = st.value?.build
+  return build && [build.version, formatBuild(build)].filter(Boolean).join(' · ')
+})
+
+async function copyBuild(text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    message.success(t('build.copied'))
+  } catch {
+    // Router panels served over HTTP may have no Clipboard API.
+    dialog.info({
+      title: t('build.details'),
+      content: () => h(NInput, { type: 'textarea', readonly: true, value: text, 'aria-label': t('build.details') }),
+    })
+  }
+}
 const selected = ref(
   typeof route.query.connection === 'string'
     ? route.query.connection
@@ -232,6 +252,17 @@ async function downloadBundle() {
     ><NAlert v-if="error" type="error" style="margin-bottom: 24px">{{
       error
     }}</NAlert>
+    <section v-if="buildText" class="bundle-panel build-panel" aria-labelledby="diagnostics-build-heading">
+      <div>
+        <h2 id="diagnostics-build-heading">{{ t('build.details') }}</h2>
+        <p v-if="!demo" class="muted">{{ t('build.inArchive') }}</p>
+        <code>{{ buildText }}</code>
+      </div>
+      <NButton @click="copyBuild(buildText)">
+        <template #icon><Copy :size="18" /></template>
+        {{ t('build.copy') }}
+      </NButton>
+    </section>
     <section class="bundle-panel" aria-labelledby="diagnostics-bundle-heading">
       <div>
         <h2 id="diagnostics-bundle-heading">{{ t('ui.bundleTitle') }}</h2>
@@ -348,6 +379,14 @@ h2 {
 }
 .bundle-panel p + p {
   margin-top: 6px;
+}
+.build-panel {
+  margin-bottom: 16px;
+}
+.build-panel code {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
 }
 .bundle-error {
   flex-basis: 100%;

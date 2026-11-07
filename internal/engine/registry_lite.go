@@ -26,6 +26,9 @@ import (
 	"github.com/sagernet/sing-box/protocol/wireguard"
 )
 
+// BuildVariant identifies the protocol registry compiled into this executable.
+const BuildVariant = "lite"
+
 // Context registers WireGuard, VLESS, Trojan, Shadowsocks, and SOCKS (including
 // TrustTunnel support) for memory-constrained keenproxy_lite builds. Other
 // protocol types are rejected as unknown.

@@ -2,6 +2,10 @@
 # Additional protocol tags increase the binary size.
 TAGS ?= with_quic,with_utls,with_wireguard,with_gvisor
 LDFLAGS := -s -w -buildid=
+ifneq ($(RELEASE_VERSION),)
+LDFLAGS += -X github.com/ordo-systems/keen-proxy/internal/api.releaseVersion=$(RELEASE_VERSION)
+LDFLAGS += -X github.com/ordo-systems/keen-proxy/internal/api.releaseRevision=$(RELEASE_REVISION)
+endif
 
 # Prefer an installed nvm Node 22 toolchain; Vite needs Node 20.19+ or 22.12+.
 NODE_BIN ?= $(shell ls -d $(HOME)/.nvm/versions/node/v22.*/bin 2>/dev/null | tail -1)

@@ -479,6 +479,15 @@ const en: Messages = {
     noData: 'no data',
     off: 'disabled',
   },
+  build: {
+    running: 'Running version',
+    label: 'Build',
+    available: 'Available update',
+    details: 'Build details',
+    inArchive: 'These details are included in the diagnostics archive.',
+    copy: 'Copy build details',
+    copied: 'Build details copied',
+  },
   updates: {
     title: 'Application updates',
     loading: 'Reading update status…',
