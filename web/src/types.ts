@@ -99,6 +99,29 @@ export interface Session {
   ip: string
 }
 
+export interface UpdatePreferences {
+  enabled: boolean
+  time: string
+}
+
+export interface UpdateSelection {
+  rollback: boolean
+  target: string
+}
+
+export interface UpdateStatus {
+  available: boolean
+  demo?: boolean
+  current?: string
+  previous?: string
+  latest?: string
+  checked_at?: string
+  check_failed?: boolean
+  prefs: UpdatePreferences
+  job?: { state: 'running' | 'success' | 'failed'; target: string }
+  router_time?: string
+}
+
 // Applied daemon state, runtime capabilities, and connection observations.
 export interface Status {
   started: string

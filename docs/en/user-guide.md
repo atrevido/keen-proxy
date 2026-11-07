@@ -4,7 +4,7 @@ These screenshots show the same Vue screens shipped by KeenProxy, running in the
 
 ## 1. Read the overview
 
-Open **Overview**. Inspect connection health, recent traffic, and the shortcuts to rules, clients, and diagnostics. Traffic graphs describe observed activity; a healthy-looking graph is not a privacy or leak test.
+Open **Overview** to see connection health, recent traffic, and the router's CPU and memory usage. The usage figures cover the whole router. When a new release is available, follow its notice to **Settings**. Traffic graphs describe observed activity and cannot establish whether traffic leaks.
 
 ![Overview with synthetic traffic and connection cards](../assets/screenshots/en-overview.png)
 
@@ -50,7 +50,9 @@ Open **Diagnostics**, select the applied connection, and run its checks. Read HT
 
 ![Separate HTTP, HTTPS, and transfer diagnostics](../assets/screenshots/en-diagnostics.png)
 
-Open **Logs** to inspect routing decisions, configuration/audit events, or system errors. Search and available filters narrow the view in the router application. Routing decisions explain the selected outbound; they do not prove a successful handshake or transfer. The static demo supplies sample records without a live event stream.
+For a support request, choose **Diagnostics → Diagnostics archive → Download ZIP** in the router panel. The archive contains the retained routing, audit, and system journals, a sanitized summary of the applied configuration, and KeenProxy status. It omits secrets and raw message text. Identifiers such as addresses and names are removed or replaced with aliases that are consistent within one export. Event times and network metadata remain, so review the ZIP before sharing. For the individual connection checks, use **Download report**.
+
+Open **Logs** to inspect routing decisions, configuration/audit events, or system errors. Search and available filters narrow the view in the router application. Routing decisions explain the selected outbound; they do not prove a successful handshake or transfer. In the browser demo, new routing records come from the local simulation.
 
 ![Routing journal with synthetic records](../assets/screenshots/en-journal.png)
 
@@ -59,3 +61,7 @@ Open **Logs** to inspect routing decisions, configuration/audit events, or syste
 Open **Settings** for DNS providers, routing/failure policy, general options, language, and configuration backup/preview controls. Importing or restoring configuration prepares a draft; review it and Apply. Keep unredacted backups private. The browser demo exports only its synthetic JSON-compatible configuration and intentionally disables YAML import.
 
 ![Settings and DNS configuration](../assets/screenshots/en-settings.png)
+
+## 9. Install or roll back a release
+
+Open **Settings → Application updates**. Apply or discard any routing draft before installing or rolling back. Confirm the version and wait for the service to reconnect. You can save a time for automatic installation or leave it off and install releases when ready. See [the update guide](getting-started.md#update-from-the-panel) for first-time setup and rollback requirements.

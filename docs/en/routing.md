@@ -1,5 +1,7 @@
 # Routing and DNS
 
+For diagrams of interception, DNS, and route selection, see [How traffic flows](network-flow.md).
+
 ## Policy building blocks
 
 | Item | Purpose |

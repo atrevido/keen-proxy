@@ -1,15 +1,15 @@
-<img src="docs/assets/ordo-systems-logo.png" alt="Ordo Systems" width="440">
+<img src="docs/assets/logo.png" alt="KeenProxy logo" width="128" align="middle">&nbsp;&nbsp;<img src="docs/assets/ordo-systems-logo.png" alt="Ordo Systems" width="160" align="middle">
 
 # KeenProxy
 
 Selective traffic routing for Keenetic and Netcraze routers running Entware, with an embedded [sing-box](https://github.com/SagerNet/sing-box) engine and a Vue web interface.
 
-KeenProxy lets you choose which devices, domains, IP ranges, and countries use a tunnel, connect directly, or are blocked. It is an experimental project under active development. Router compatibility and protocol support depend on the firmware, kernel modules, and build tags.
+KeenProxy lets you choose which devices, domains, IP ranges, and countries use a tunnel, connect directly, or are blocked. The web panel shows router load and lets you install, schedule, or roll back releases on a managed Entware installation. Router compatibility and protocol support depend on the firmware, kernel modules, and build tags. The project is experimental.
 
 ## Documentation and live demo
 
 - [English documentation](https://ordo-systems.github.io/keen-proxy/) · [Russian documentation](https://ordo-systems.github.io/keen-proxy/ru/)
-- [Interactive browser demo](https://ordo-systems.github.io/keen-proxy/demo/) — the same interface with synthetic data and an in-memory API; no router required. Changes reset on reload.
+- [Interactive browser demo](https://ordo-systems.github.io/keen-proxy/demo/) with live simulated traffic, CPU and memory, and a simulated update and rollback flow. Changes reset on reload.
 
 ## What works today
 
@@ -23,6 +23,7 @@ KeenProxy lets you choose which devices, domains, IP ranges, and countries use a
 - YAML configuration, a shared draft/Apply workflow, import/export, and a previous-configuration backup.
 - Dark/light themes, responsive navigation, connection wizards, file import, and bulk group route changes.
 - Routing, audit, and system journals; connection statistics; and separate HTTP, verified HTTPS, and bounded transfer diagnostics.
+- Release notifications, manual installation and rollback, and optional scheduled updates from the web panel. [Update guide](docs/en/getting-started.md#update-from-the-panel)
 
 ## How routing works
 

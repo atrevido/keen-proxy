@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 412" role="img" aria-labelledby="title">
+  <title id="title">Route selection and connection failover</title>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#4d6c58"/></marker></defs>
+  <rect width="720" height="412" rx="18" fill="#f2f7f2"/>
+  <rect x="210" y="20" width="300" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="360.0" y="51" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Intercepted flow</text>
+  <path d="M360 70V89" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="210" y="90" width="300" height="50" rx="10" fill="#e3f2d5" stroke="#85a490"/>
+  <text x="360.0" y="121" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Passed the global block checks</text>
+  <path d="M210 115H160V163" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M510 115H560V163" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="20" y="164" width="280" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="160.0" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Full tunnel</text>
+  <rect x="420" y="164" width="280" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="560.0" y="195" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Split routing</text>
+  <path d="M160 214V299H204" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M560 214V225H690V299H516" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="560" y="242" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">Explicit rules → DNS IP hints</text>
+  <text x="560" y="261" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">→ country / category → Direct</text>
+  <rect x="205" y="274" width="310" height="50" rx="10" fill="#e3f2d5" stroke="#85a490"/>
+  <text x="360.0" y="305" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Selected route</text>
+  <path d="M360 324V351" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="205" y="352" width="310" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="360.0" y="383" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Active connection in chain</text>
+</svg>
