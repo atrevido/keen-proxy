@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/ordo-systems/keen-proxy/compare/v0.3.0...v0.4.0) (2026-11-07)
+
+
+### Features
+
+* **geoip:** multiple country and category databases with auto-updates ([#6](https://github.com/ordo-systems/keen-proxy/issues/6)) ([868ddaf](https://github.com/ordo-systems/keen-proxy/commit/868ddafb2be21b2e89e44694497d019e998c9f78))
+
+
+### Bug Fixes
+
+* authenticate Release Please with a scoped GitHub App ([#8](https://github.com/ordo-systems/keen-proxy/issues/8)) ([fd3e50d](https://github.com/ordo-systems/keen-proxy/commit/fd3e50d6799d7964e0434443ce58034fbc8bb547))
+
 ## [0.3.0](https://github.com/ordo-systems/keen-proxy/compare/v0.2.0...v0.3.0) (2026-11-07)
 
 
