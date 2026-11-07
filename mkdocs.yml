@@ -36,6 +36,7 @@ nav:
   - Getting started: getting-started.md
   - User guide: user-guide.md
   - Routing and DNS: routing.md
+  - How traffic flows: network-flow.md
   - Troubleshooting: troubleshooting.md
   - Browser demo: browser-demo.md
   - Documentation development: development.md

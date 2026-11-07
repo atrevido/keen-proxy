@@ -10,6 +10,8 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertTriangle,
+  Cpu,
+  MemoryStick,
 } from '@lucide/vue'
 import { api } from '../api'
 import { store } from '../store'
@@ -20,10 +22,19 @@ import type { FeatureStatus } from '../types'
 import AreaChart from '../components/AreaChart.vue'
 import ConnectionHealth from '../components/ConnectionHealth.vue'
 import ConnectionChecks from '../components/ConnectionChecks.vue'
-const { t } = useI18n()
+const { n, t } = useI18n()
 const cfg = computed(() => store.state.config!),
   st = computed(() => store.state.status)
 const { snap, byTag } = useStats(3000, true)
+const system = computed(() => snap.value?.system)
+const memoryUsage = computed(() => system.value?.mem_mb ? system.value.mem_pct : undefined)
+
+function formatUsage(value: number | undefined) {
+  return value === undefined
+    ? t('ui.unknown')
+    : n(value / 100, { style: 'percent', maximumFractionDigits: 1 })
+}
+
 const tab = ref(cfg.value.connections?.[0]?.id ?? '')
 watch(
   () => cfg.value.connections,
@@ -70,7 +81,9 @@ const series = computed(() => [
 const down = computed(() => tunnels.value.reduce((sum, o) => sum + o.down, 0)),
   up = computed(() => tunnels.value.reduce((sum, o) => sum + o.up, 0))
 const features = ref<FeatureStatus | null>(null)
+const updateVersion = ref('')
 let timer: ReturnType<typeof setInterval> | undefined
+let updateTimer: ReturnType<typeof setInterval> | undefined
 async function loadFeatures() {
   try {
     features.value = await api.features()
@@ -78,11 +91,24 @@ async function loadFeatures() {
     /* Keep previous value; no fabricated status. */
   }
 }
+async function loadUpdateNotice() {
+  try {
+    const status = await api.updates()
+    updateVersion.value = status.job?.state === 'running' ? '' : (status.latest ?? '')
+  } catch {
+    // Release checks are independent of the routing dashboard.
+  }
+}
 onMounted(() => {
   void loadFeatures()
   timer = setInterval(loadFeatures, 5000)
+  void loadUpdateNotice()
+  updateTimer = setInterval(loadUpdateNotice, 60_000)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  clearInterval(timer)
+  clearInterval(updateTimer)
+})
 const routingOK = computed(() => !!st.value?.firewall)
 const selectedStats = computed(() => byTag(tab.value))
 </script>
@@ -104,6 +130,10 @@ const selectedStats = computed(() => byTag(tab.value))
       >
     </div>
 
+    <router-link v-if="updateVersion" to="/settings" class="update-notice">
+      {{ t('updates.newRelease', { version: updateVersion }) }} <ChevronRight :size="16" />
+    </router-link>
+
     <div class="metrics">
       <router-link to="/network/connections"
         ><Server :size="28" /><b>{{ cfg.connections?.length ?? 0 }}</b
@@ -115,6 +145,16 @@ const selectedStats = computed(() => byTag(tab.value))
         ><Users :size="28" /><b>{{ st?.online_devices ?? '—' }}</b
         >{{ t('monitor.cOnline') }}</router-link
       >
+      <dl class="resources" :aria-label="t('shell.load')">
+        <div>
+          <dt><Cpu :size="16" aria-hidden="true" />CPU</dt>
+          <dd>{{ formatUsage(system?.cpu) }}</dd>
+        </div>
+        <div>
+          <dt><MemoryStick :size="16" aria-hidden="true" />RAM</dt>
+          <dd>{{ formatUsage(memoryUsage) }}</dd>
+        </div>
+      </dl>
     </div>
     <section class="traffic">
       <div class="section-head">
@@ -231,6 +271,19 @@ h2 {
   color: var(--warn);
   border: 1px solid var(--warn);
 }
+.update-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.update-notice:hover {
+  border-color: var(--accent);
+}
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -247,11 +300,32 @@ h2 {
   text-decoration: none;
   border-right: 1px solid var(--line);
 }
-.metrics a:last-child {
+.metrics a:last-of-type {
   border: 0;
 }
 .metrics b {
   font-size: 30px;
+}
+.resources {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0;
+}
+.resources > div,
+.resources dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.resources dt {
+  color: var(--muted);
+}
+.resources dd {
+  margin: 0;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
 }
 .traffic {
   border-bottom: 1px solid var(--line);

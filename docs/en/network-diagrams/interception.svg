@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 255" role="img" aria-labelledby="title">
+  <title id="title">LAN interception paths</title>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#4d6c58"/></marker></defs>
+  <rect width="720" height="255" rx="18" fill="#f2f7f2"/>
+  <rect x="235" y="20" width="250" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="360.0" y="51" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">LAN device</text>
+  <path d="M360 70V95" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="235" y="96" width="250" height="50" rx="10" fill="#e3f2d5" stroke="#85a490"/>
+  <text x="360.0" y="127" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Router firewall</text>
+  <path d="M235 121H125V184" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M360 146V184" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M485 121H595V184" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="125" y="152" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">UDP / TCP 53</text>
+  <text x="360" y="166" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">Selected IPv4 traffic</text>
+  <text x="595" y="152" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">Outside interception</text>
+  <rect x="20" y="185" width="210" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="125.0" y="216" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">KeenProxy DNS</text>
+  <rect x="255" y="185" width="210" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="360.0" y="216" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Routing engine</text>
+  <rect x="490" y="185" width="210" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="595.0" y="216" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Normal router path</text>
+</svg>

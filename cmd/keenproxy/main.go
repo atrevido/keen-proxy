@@ -22,6 +22,7 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/journal"
 	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/ordo-systems/keen-proxy/internal/netfilter"
+	"github.com/ordo-systems/keen-proxy/internal/update"
 	"github.com/ordo-systems/keen-proxy/web"
 
 	// Routers often lack a CA bundle. The Mozilla roots are used only when the
@@ -71,7 +72,7 @@ func main() {
 		os.Exit(1)
 	}
 	if *uiDemo {
-		if err := serveAPI(ctx, cfg, api.NewDemo(cfg), log); err != nil {
+		if err := serveAPI(ctx, cfg, api.NewDemo(cfg), nil, log); err != nil {
 			log.Error("web interface", "err", err)
 			os.Exit(1)
 		}
@@ -84,9 +85,11 @@ func main() {
 		ConfigPath: *configPath, ARPPath: *arpPath, RuleSetDir: *ruleSetDir, WatchInterval: *watch,
 		Firewall: fw, Log: log, Journals: journals, SingBoxLog: singBoxLog(journals[journal.System], log),
 	})
+	updates := update.NewManaged(*configPath, log)
+	go updates.Run(ctx)
 	// A management API failure must not stop the independent routing daemon.
 	go func() {
-		if err := serveAPI(ctx, cfg, d, log); err != nil {
+		if err := serveAPI(ctx, cfg, d, updates, log); err != nil {
 			log.Error("web interface failed to start", "err", err)
 		}
 	}()
@@ -114,7 +117,7 @@ var singBoxPipe *os.File
 
 // serveAPI serves management requests until cancellation, using startup bind
 // and token settings; it does not apply routing changes itself.
-func serveAPI(ctx context.Context, cfg *model.Config, d api.Daemon, log *slog.Logger) error {
+func serveAPI(ctx context.Context, cfg *model.Config, d api.Daemon, updates *update.Manager, log *slog.Logger) error {
 	token, created, err := api.LoadToken(cfg.API.TokenFile)
 	if err != nil {
 		return fmt.Errorf("token: %w", err)
@@ -124,7 +127,7 @@ func serveAPI(ctx context.Context, cfg *model.Config, d api.Daemon, log *slog.Lo
 	}
 	srv := &http.Server{
 		Addr:              cfg.API.Listen,
-		Handler:           (&api.Server{D: d, Token: token, UI: web.FS(), Log: log}).Handler(),
+		Handler:           (&api.Server{D: d, Token: token, UI: web.FS(), Log: log, Updates: updates}).Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	go func() {

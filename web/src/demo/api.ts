@@ -1,8 +1,10 @@
 import { catalog, createDemo } from './model.ts'
 import { DEMO_JOURNAL_LIMIT, DEMO_TICK_MS } from './telemetry.ts'
-import type { Config, JournalKind, LinkPreview } from '../types'
+import { createDemoUpdates } from './updates.ts'
+import type { Config, JournalKind, LinkPreview, UpdatePreferences, UpdateSelection } from '../types'
 
 const demo = createDemo()
+const updates = createDemoUpdates()
 
 // The demo accepts only metadata previews; it never connects to the supplied endpoint.
 function parseLink(link: string): LinkPreview {
@@ -35,6 +37,7 @@ function journalStream(kind: JournalKind) {
 // Identical caller contract to the router API; all effects stay in this module's memory.
 export const api = {
   diagnosticCheck: async (connection: string) => demo.diagnostics(connection),
+  diagnosticBundle: async (): Promise<Blob> => { throw new Error('Diagnostics archives are available on the router only') },
   catalog: async () => structuredClone(catalog),
   features: async () => ({ demo: true, dns: { route: 'direct', checked: new Date().toISOString(), fallbacks: 0, blocked: 18 }, filters: [] }),
   previewPreset: async (config: Config, id: string, target: string, index?: number) => demo.preview(config, id, target, index),
@@ -51,6 +54,10 @@ export const api = {
   logout: async () => ({ ok: true }),
   session: async (_open = false) => ({ authed: true, trusted: false, ip: '192.0.2.100' }),
   status: async () => demo.status(),
+  updates: async () => updates.status(),
+  checkUpdates: async () => updates.check(),
+  saveUpdatePreferences: async (prefs: UpdatePreferences) => updates.save(prefs),
+  installUpdate: async (selection: UpdateSelection) => updates.install(selection),
   config: async () => demo.config(),
   saveConfig: async (config: Config) => demo.save(config),
   validateConfig: async (config: Config) => { demo.validate(config); return { ok: true } },

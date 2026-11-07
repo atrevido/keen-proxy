@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import DNSSettings from '../components/DNSSettings.vue'
 import YAMLSettings from '../components/YAMLSettings.vue'
+import UpdateSettings from '../components/UpdateSettings.vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NCard, NForm, NFormItem, NInput, NInputNumber, NRadioGroup, NRadio, NDynamicInput, NAlert, NSelect } from 'naive-ui'
 import { Settings, Globe, Shield, Network, Server, MapPin, Unlock, Languages } from '@lucide/vue'
@@ -43,6 +44,7 @@ const langOptions = LOCALES.map((l) => ({ label: l.label, value: l.value }))
     </div>
 
     <div class="cols">
+      <UpdateSettings />
       <NCard size="small"><template #header>YAML</template><YAMLSettings /></NCard>
       <NCard size="small">
         <template #header><span class="hdr"><Globe :size="16" /> DNS</span></template>

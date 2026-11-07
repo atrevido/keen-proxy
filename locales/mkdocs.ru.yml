@@ -15,6 +15,7 @@ plugins:
             Getting started: Начало работы
             User guide: Руководство пользователя
             Routing and DNS: Маршрутизация и DNS
+            How traffic flows: Как проходит трафик
             Troubleshooting: Диагностика и вопросы
             Browser demo: Демо в браузере
             Documentation development: Разработка документации

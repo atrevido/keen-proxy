@@ -10,6 +10,7 @@ Try editing a group, inspecting a connection, previewing a sample preset, select
 - The demo does not contact a router or proxy server, query DNS, fetch filter lists, or perform connectivity checks.
 - Never enter actual credentials. Use the supplied placeholders.
 - The monitor simulates traffic every three seconds. The routing journal receives new synthetic events and supports live pause, filters, and pagination. Apply adds an audit entry. The catalog contains one synthetic preset.
+- **Overview** shows simulated CPU and memory. In **Settings → Application updates**, try installing the sample release, rolling back, or saving an automatic update time. Choose the next minute on the displayed UTC clock to see a scheduled installation while the section is open. The demo does not download a release or restart a service.
 - YAML import is unavailable. Synthetic exports are JSON, which is compatible with YAML 1.2, rather than a production backup format.
 
 The production build continues using the authenticated HTTP API. [Build instructions](development.md) explain how both outputs are created.
