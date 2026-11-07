@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/ordo-systems/keen-proxy/compare/v0.4.0...v0.5.0) (2026-11-07)
+
+
+### Features
+
+* show the running release and build identity ([#13](https://github.com/ordo-systems/keen-proxy/issues/13)) ([236a078](https://github.com/ordo-systems/keen-proxy/commit/236a078106f266026b2d85e01cda31aeac624628))
+
 ## [0.4.0](https://github.com/ordo-systems/keen-proxy/compare/v0.3.0...v0.4.0) (2026-11-07)
 
 
