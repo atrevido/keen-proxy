@@ -1,3 +1,5 @@
+<img src="docs/assets/ordo-systems-logo.png" alt="Ordo Systems" width="440">
+
 # KeenProxy
 
 Selective traffic routing for Keenetic and Netcraze routers running Entware, with an embedded [sing-box](https://github.com/SagerNet/sing-box) engine and a Vue web interface.

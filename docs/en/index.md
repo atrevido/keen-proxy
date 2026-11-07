@@ -1,5 +1,7 @@
 # Your network, your routes
 
+![Ordo Systems](../assets/ordo-systems-logo.png){ width="440" }
+
 KeenProxy is an experimental routing application for compatible Keenetic/Entware environments. It lets you send selected domains, addresses, countries, networks, or devices through a connection, connect directly, or block them. The web interface is the control panel; the router daemon applies the configuration and owns network effects.
 
 ## Start here
