@@ -104,7 +104,9 @@ test('the demo advances one coherent sample and route event per polling interval
   const next = demo.stats().outbounds![0]!
   assert.deepEqual(next.series!.slice(0, -1), first.series!.slice(1))
   assert.equal(next.series!.at(-1)!.down, next.down)
-  assert.equal(next.down_total - first.down_total, next.down * 3)
+  assert.equal(next.series!.at(-1)!.up, next.up)
+  assert.equal(next.down, (next.down_total - first.down_total) * 8 / 3)
+  assert.equal(next.up, (next.up_total - first.up_total) * 8 / 3)
   assert.notEqual(next.down, first.down)
   const route = demo.journal('routes').entries[0]!
   assert.ok(route.id > latest.id)

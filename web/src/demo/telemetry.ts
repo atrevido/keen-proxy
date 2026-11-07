@@ -17,14 +17,22 @@ function tags(config: Config) {
   return [...(config.connections ?? []).map(c => c.id), 'direct']
 }
 
-// Increasing cumulative volumes make each rate agree with the change in its counter.
+// Cumulative traffic counters use bytes, while sampled rates use bits per second.
 function volume(frame: number, scale: number) {
   return scale * (3_000_000 + frame * 120_000 + Math.round(Math.sin(frame / 4 + scale) * 180_000)) * 3
 }
 
+function uploadVolume(downloadBytes: number) {
+  return Math.floor(downloadBytes / 10)
+}
+
 function sample(frame: number, scale: number, epoch: number): StatPoint {
-  const down = (volume(frame, scale) - volume(frame - 1, scale)) / 3
-  return { t: epoch + frame * DEMO_TICK_MS, unique: Math.round(7 + scale + 3 * Math.sin(frame / 3 + scale)), down, up: Math.floor(down / 10) }
+  const total = volume(frame, scale)
+  const previous = volume(frame - 1, scale)
+  const seconds = DEMO_TICK_MS / 1000
+  const down = (total - previous) * 8 / seconds
+  const up = (uploadVolume(total) - uploadVolume(previous)) * 8 / seconds
+  return { t: epoch + frame * DEMO_TICK_MS, unique: Math.round(7 + scale + 3 * Math.sin(frame / 3 + scale)), down, up }
 }
 
 // Build a moving time window without replaying missed ticks or changing old points.
@@ -35,7 +43,7 @@ function snapshot(config: Config, frame: number, epoch: number, series: boolean)
     const total = volume(frame, scale)
     return {
       tag, active: current.unique + scale, unique: current.unique, down: current.down, up: current.up,
-      down_total: total, up_total: Math.floor(total / 10), peak_down: 165_000 * scale, peak_unique: 10 + scale,
+      down_total: total, up_total: uploadVolume(total), peak_down: 1_320_000 * scale, peak_unique: 10 + scale,
       series: series ? Array.from({ length: HISTORY }, (_, i) => sample(frame - HISTORY + 1 + i, scale, epoch)) : null,
       top: hosts.map((host, index) => {
         const share = [0.6, 0.25, 0.15][index]!
