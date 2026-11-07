@@ -37,6 +37,7 @@ function journalStream(kind: JournalKind) {
 // Identical caller contract to the router API; all effects stay in this module's memory.
 export const api = {
   diagnosticCheck: async (connection: string) => demo.diagnostics(connection),
+  diagnosticBundle: async (): Promise<Blob> => { throw new Error('Diagnostics archives are available on the router only') },
   catalog: async () => structuredClone(catalog),
   features: async () => ({ demo: true, dns: { route: 'direct', checked: new Date().toISOString(), fallbacks: 0, blocked: 18 }, filters: [] }),
   previewPreset: async (config: Config, id: string, target: string, index?: number) => demo.preview(config, id, target, index),

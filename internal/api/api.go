@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ordo-systems/keen-proxy/internal/daemon"
@@ -62,6 +63,8 @@ type Server struct {
 	Log     *slog.Logger
 	Updates *update.Manager
 
+	supportBusy atomic.Bool
+
 	// Track the last audited trusted login per address so opening another page
 	// does not produce a separate login event.
 	trustedMu   sync.Mutex
@@ -94,6 +97,7 @@ func LoadToken(path string) (token string, created bool, err error) {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("POST /api/diagnostics/check", s.auth(s.diagnosticCheck))
+	mux.Handle("GET /api/diagnostics/bundle", s.auth(s.supportBundle))
 	mux.Handle("GET /api/catalog", s.auth(s.catalog))
 	mux.Handle("GET /api/features", s.auth(s.features))
 	mux.Handle("POST /api/presets/preview", s.auth(s.presetPreview))

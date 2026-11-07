@@ -19,25 +19,40 @@ function httpError(status: number, text: string): ApiError {
   return new ApiError(status, message)
 }
 
-// Send cookie-authenticated JSON requests and route non-login 401s to the shell.
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+// Share cookie authentication and the login handler across JSON and file requests.
+async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const res = await fetch(path, {
     method,
     credentials: 'same-origin',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   })
-  const text = await res.text()
   if (!res.ok) {
     if (res.status === 401 && path !== '/api/login') onUnauthorized()
-    throw httpError(res.status, text)
+    throw httpError(res.status, await res.text())
   }
+  return res
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const text = await (await send(method, path, body)).text()
   return (text ? JSON.parse(text) : undefined) as T
+}
+
+// Reject an intermediary's HTML response before the browser saves it as a ZIP.
+async function diagnosticBundle(): Promise<Blob> {
+  const res = await send('GET', '/api/diagnostics/bundle')
+  const mime = res.headers.get('Content-Type')?.split(';', 1)[0]
+  if (mime?.trim().toLowerCase() !== 'application/zip') {
+    throw new ApiError(res.status, 'Expected a diagnostics ZIP archive')
+  }
+  return res.blob()
 }
 
 // Typed API boundary; callers own draft changes and EventSource cleanup.
 export const api = {
  diagnosticCheck:(connection:string)=>request<DiagnosticReport>('POST','/api/diagnostics/check',{connection}),
+ diagnosticBundle,
  catalog:()=>request<Catalog>('GET','/api/catalog'),
  features:()=>request<FeatureStatus>('GET','/api/features'),
  previewPreset:(config:Config,id:string,target:string,index?:number)=>request<{config:Config;diff:{added:string[];removed:string[]}}>('POST','/api/presets/preview',{config,id,target,index}),

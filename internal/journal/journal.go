@@ -4,7 +4,6 @@
 package journal
 
 import (
-	"bufio"
 	"encoding/json"
 	"io"
 	"net"
@@ -149,15 +148,11 @@ func (j *Journal) load() {
 		if err != nil {
 			continue
 		}
-		sc := bufio.NewScanner(f)
-		sc.Buffer(make([]byte, 64<<10), 1<<20)
-		for sc.Scan() {
-			var e Entry
-			if json.Unmarshal(sc.Bytes(), &e) == nil {
-				j.pushLocked(e)
-				j.next = max(j.next, e.ID+1)
-			}
-		}
+		_ = visitEntries(f, func(e Entry) error {
+			j.pushLocked(e)
+			j.next = max(j.next, e.ID+1)
+			return nil
+		})
 		f.Close()
 	}
 }
@@ -315,49 +310,17 @@ func (j *Journal) Find(q Query, fields []string) Page {
 // Export writes text entries since the requested time, reading disk when
 // enabled and applying mask to redact secrets.
 func (j *Journal) Export(w io.Writer, kind Kind, since time.Time, mask func(string) string) error {
-	j.mu.Lock()
-	var entries []Entry
-	if j.opt.File == "" {
-		entries = slices.Clone(j.ring)
-	}
-	j.mu.Unlock()
-	if mask == nil {
-		mask = func(s string) string { return s }
-	}
-	emit := func(e Entry) error {
+	return j.Visit(func(e Entry) error {
 		if e.Time.Before(since) {
 			return nil
 		}
-		_, err := io.WriteString(w, mask(Format(kind, e))+"\n")
+		line := Format(kind, e)
+		if mask != nil {
+			line = mask(line)
+		}
+		_, err := io.WriteString(w, line+"\n")
 		return err
-	}
-	if j.opt.File == "" {
-		for _, e := range entries {
-			if err := emit(e); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	for _, path := range []string{j.opt.File + ".1", j.opt.File} {
-		f, err := os.Open(path)
-		if err != nil {
-			continue
-		}
-		sc := bufio.NewScanner(f)
-		sc.Buffer(make([]byte, 64<<10), 1<<20)
-		for sc.Scan() {
-			var e Entry
-			if json.Unmarshal(sc.Bytes(), &e) == nil {
-				if err := emit(e); err != nil {
-					f.Close()
-					return err
-				}
-			}
-		}
-		f.Close()
-	}
-	return nil
+	})
 }
 
 // Format renders one journal entry as a single export line.

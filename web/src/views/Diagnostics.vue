@@ -42,6 +42,9 @@ const features = ref<FeatureStatus | null>(null),
   loading = ref(false),
   error = ref(''),
   updated = ref('')
+const demo = computed(() => features.value?.demo || report.value?.demo)
+const exportingBundle = ref(false)
+const bundleError = ref(false)
 watch(
   () => store.state.saved,
   () => {
@@ -165,8 +168,17 @@ async function check() {
     loading.value = false
   }
 }
+function saveDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 // Export only the sanitized machine-result allowlist, excluding raw errors and secrets.
-function download() {
+function downloadReport() {
   const data = safeDiagnosticsReport(
     st.value,
     report.value,
@@ -174,15 +186,21 @@ function download() {
     store.dirty.value,
     features.value?.demo ?? false,
   )
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    }),
-    url = URL.createObjectURL(blob),
-    a = document.createElement('a')
-  a.href = url
-  a.download = 'keenproxy-diagnostics.json'
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  saveDownload(blob, 'keenproxy-diagnostics.json')
+}
+
+async function downloadBundle() {
+  if (demo.value || exportingBundle.value) return
+  exportingBundle.value = true
+  bundleError.value = false
+  try {
+    saveDownload(await api.diagnosticBundle(), 'keenproxy-diagnostics.zip')
+  } catch {
+    bundleError.value = true
+  } finally {
+    exportingBundle.value = false
+  }
 }
 </script>
 <template>
@@ -200,20 +218,39 @@ function download() {
           @click="check"
           ><template #icon><Activity :size="18" /></template
           >{{ t('ui.check') }}</NButton
-        ><NButton @click="download"
+        ><NButton @click="downloadReport"
           ><template #icon><Download :size="18" /></template
           >{{ t('ui.report') }}</NButton
         >
       </div>
     </div>
     <NAlert
-      v-if="features?.demo || report?.demo"
+      v-if="demo"
       type="info"
       style="margin-bottom: 24px"
       >{{ t('ui.demo') }}</NAlert
     ><NAlert v-if="error" type="error" style="margin-bottom: 24px">{{
       error
     }}</NAlert>
+    <section class="bundle-panel" aria-labelledby="diagnostics-bundle-heading">
+      <div>
+        <h2 id="diagnostics-bundle-heading">{{ t('ui.bundleTitle') }}</h2>
+        <p class="muted">{{ t(demo ? 'ui.bundleDemo' : 'ui.bundleContents') }}</p>
+        <p v-if="!demo" id="diagnostics-bundle-privacy" class="muted">{{ t('ui.bundlePrivacy') }}</p>
+      </div>
+      <NButton
+        v-if="!demo"
+        aria-describedby="diagnostics-bundle-privacy"
+        :loading="exportingBundle"
+        @click="downloadBundle"
+      >
+        <template #icon><Download :size="18" /></template>
+        {{ t('ui.bundleDownload') }}
+      </NButton>
+      <NAlert v-if="bundleError" type="error" class="bundle-error">
+        {{ t('ui.bundleFailed') }}
+      </NAlert>
+    </section>
     <div class="split-view">
       <section>
         <div class="section-head">
@@ -287,6 +324,33 @@ h2 {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+.bundle-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 20px;
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.bundle-panel > div:first-child {
+  flex: 1 1 390px;
+  min-width: 0;
+}
+.bundle-panel h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+.bundle-panel p {
+  margin: 0;
+}
+.bundle-panel p + p {
+  margin-top: 6px;
+}
+.bundle-error {
+  flex-basis: 100%;
 }
 .diagnostic-row {
   display: flex;
