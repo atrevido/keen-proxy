@@ -64,6 +64,7 @@ func TestGeoIPValidation(t *testing.T) {
 		"relative file":    {ID: "c1", File: "geo.mmdb"},
 		"bad id":           {ID: "../etc", URL: "https://geo.example/db.mmdb"},
 		"builtin with url": {ID: "dbip", URL: "https://geo.example/db.mmdb"},
+		"long name":        {ID: "c1", Name: strings.Repeat("a", 65), File: "/opt/db.mmdb"},
 	} {
 		g := GeoIP{Databases: []GeoIPDatabase{db}}
 		g.defaults()
@@ -73,7 +74,8 @@ func TestGeoIPValidation(t *testing.T) {
 			t.Errorf("%s: want error", name)
 		}
 	}
-	g := GeoIP{Databases: []GeoIPDatabase{{ID: "c1", URL: "https://geo.example/db-{month}.mmdb.gz"}, {ID: "c1", File: "/opt/a.mmdb"}}}
+	// The limit counts characters: 64 Cyrillic letters occupy 128 bytes.
+	g := GeoIP{Databases: []GeoIPDatabase{{ID: "c1", Name: strings.Repeat("\u0436", 64), URL: "https://geo.example/db-{month}.mmdb.gz"}, {ID: "c1", File: "/opt/a.mmdb"}}}
 	var errs []string
 	g.validate(func(f string, a ...any) { errs = append(errs, f) })
 	if len(errs) != 1 || !strings.Contains(errs[0], "duplicate") {

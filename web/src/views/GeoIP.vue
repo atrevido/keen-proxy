@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NAlert, NButton, NCard, NCheckbox, NInput, NSelect, NSwitch, NTag, useMessage } from 'naive-ui'
 import { ArrowDown, ArrowUp, Download, MapPin, Search, Trash2 } from '@lucide/vue'
@@ -40,7 +40,8 @@ function when(s?: string) {
   return s ? new Date(s).toLocaleString() : ''
 }
 function updates(b: GeoBuiltin) {
-  const key = { daily: 'daily', weekly: 'weekly', monthly: 'monthly', '6h': 'sixHours' }[b.updates]
+  const keys: Record<string, string> = { daily: 'daily', weekly: 'weekly', monthly: 'monthly', '6h': 'sixHours' }
+  const key = keys[b.updates]
   return key ? t(`geoip.updates.${key}`) : b.updates
 }
 
@@ -120,6 +121,8 @@ watch(
     reload()
   },
 )
+// Apply starts downloads in the background, so keep the status current.
+let timer: ReturnType<typeof setInterval> | undefined
 onMounted(async () => {
   try {
     builtins.value = (await api.catalog()).geoip ?? []
@@ -127,7 +130,9 @@ onMounted(async () => {
     error.value = (e as Error).message
   }
   await reload()
+  timer = setInterval(() => busy.value || reload(), 5000)
 })
+onUnmounted(() => clearInterval(timer))
 </script>
 
 <template>
@@ -200,7 +205,7 @@ onMounted(async () => {
         <div v-if="lookup" class="results">
           <p class="summary">
             <template v-if="lookup.country">{{ flag(lookup.country) }} {{ t('geoip.result', { country: `${countryName(lookup.country)} (${lookup.country})`, db: answeredBy }) }}</template>
-            <template v-else>{{ t('geoip.unknown') }}</template>
+            <template v-else-if="!lookup.categories?.length">{{ t('geoip.unknown') }}</template>
           </p>
           <p v-if="lookup.categories?.length" class="summary">{{ t('geoip.categoriesResult', { labels: lookup.categories.join(', ') }) }}</p>
           <div v-for="r in lookup.results" :key="r.id" class="row">

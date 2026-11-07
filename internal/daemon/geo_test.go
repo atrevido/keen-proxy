@@ -150,3 +150,74 @@ func TestGeoCategoryDatabases(t *testing.T) {
 		t.Fatalf("summary: %+v", info)
 	}
 }
+
+// An upgraded router keeps the single-database layout's file until the first
+// download, and local entries keep managed files they point at.
+func TestGeoLegacyFileAndPrune(t *testing.T) {
+	d := New(Options{RuleSetDir: filepath.Join(t.TempDir(), "rule-sets")})
+	legacy := filepath.Join(d.geoStore.Dir, "country.mmdb")
+	writeGeo(t, legacy, map[string]string{"10.0.0.0/8": "RU"})
+	cfg := &model.Config{GeoIP: model.GeoIP{Databases: []model.GeoIPDatabase{
+		{ID: "local", File: filepath.Join(t.TempDir(), "missing.mmdb"), Enabled: true},
+		{ID: "cat", URL: "https://geo.example/cat.mmdb", Kind: model.GeoIPKindCategory, Enabled: true},
+		{ID: "dbip", Enabled: true},
+	}}}
+	d.mu.Lock()
+	d.adoptLegacyGeo(cfg)
+	d.reloadGeoLocked(cfg)
+	d.mu.Unlock()
+	if cc, id := d.geo.set.Country(netip.MustParseAddr("10.1.1.1")); cc != "RU" || id != "dbip" {
+		t.Fatalf("adopted database: %q %q", cc, id)
+	}
+	if _, err := os.Stat(legacy); err == nil {
+		t.Fatal("legacy file remains")
+	}
+
+	// A local entry points at a file downloaded under a removed ID.
+	writeGeo(t, d.geoStore.Path("old"), map[string]string{"10.0.0.0/8": "FI"})
+	os.WriteFile(filepath.Join(d.geoStore.Dir, "old.json"), []byte("{}"), 0o600)
+	d.pruneGeo([]model.GeoIPDatabase{{ID: "mine", File: d.geoStore.Path("old"), Enabled: true}})
+	if _, err := os.Stat(d.geoStore.Path("old")); err != nil {
+		t.Fatal("referenced managed file was pruned")
+	}
+}
+
+// A download reloads databases enabled by an Apply that ran meanwhile, and
+// rule-set failures after an update reach the caller.
+func TestGeoUpdateUsesCurrentConfig(t *testing.T) {
+	ruleSets := filepath.Join(t.TempDir(), "rule-sets")
+	d := New(Options{RuleSetDir: ruleSets})
+	remote := filepath.Join(t.TempDir(), "remote.mmdb")
+	writeGeo(t, remote, map[string]string{"10.0.0.0/8": "DE"})
+	raw, _ := os.ReadFile(remote)
+	off, err := model.Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	on := *off
+	off.GeoIP.Databases = []model.GeoIPDatabase{{ID: "remote"}}
+	on.GeoIP.Databases = []model.GeoIPDatabase{{ID: "remote", Enabled: true}}
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		d.mu.Lock()
+		d.cfg = &on
+		d.mu.Unlock()
+		w.Write(raw)
+	}))
+	defer srv.Close()
+	off.GeoIP.Databases[0].URL = srv.URL + "/r.mmdb"
+	on.GeoIP.Databases[0].URL = off.GeoIP.Databases[0].URL
+	d.geoStore.Client = srv.Client()
+	d.mu.Lock()
+	d.cfg = off
+	d.mu.Unlock()
+	// A file in place of the rule-set directory makes compilation fail.
+	os.WriteFile(ruleSets, nil, 0o644)
+
+	err = d.UpdateGeo(context.Background(), "remote")
+	if err == nil || !strings.Contains(err.Error(), "routing rule sets") {
+		t.Fatalf("want rule-set error, got %v", err)
+	}
+	if cc, id := d.geo.set.Country(netip.MustParseAddr("10.1.1.1")); cc != "DE" || id != "remote" {
+		t.Fatalf("database enabled during download is not loaded: %q %q", cc, id)
+	}
+}

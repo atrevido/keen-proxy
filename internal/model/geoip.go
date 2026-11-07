@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"unicode/utf8"
 
 	"github.com/ordo-systems/keen-proxy/internal/geoip"
 )
@@ -104,7 +105,7 @@ func (g GeoIP) validate(add func(string, ...any)) {
 			add("%s: duplicate id", where)
 		}
 		seen[d.ID] = true
-		if len(d.Name) > 64 {
+		if utf8.RuneCountInString(d.Name) > 64 {
 			add("%s: name is longer than 64 characters", where)
 		}
 		if d.IsBuiltin() {

@@ -144,6 +144,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.stats.Run(ctx)
 	d.mu.Lock()
 	d.started = time.Now()
+	d.adoptLegacyGeo(cfg)
 	d.reloadGeoLocked(cfg)
 	d.neighbors = d.readNeighbors(cfg)
 	err = d.applyLocked(ctx, cfg)

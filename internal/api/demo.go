@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"math"
 	"net/netip"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -80,7 +81,7 @@ func (d *Demo) Status(context.Context) daemon.Status {
 	for _, g := range d.cfg.Groups {
 		st.Entries += len(g.Entries)
 	}
-	st.GeoIP = daemon.GeoInfo{Loaded: true, Built: time.Now().Format("2006-01") + "-01", Type: "Synthetic demo"}
+	st.GeoIP = daemon.GeoInfo{}
 	for _, db := range d.cfg.GeoIP.Databases {
 		if db.Enabled && db.IsCategory() {
 			st.GeoIP.Categories++
@@ -90,6 +91,11 @@ func (d *Demo) Status(context.Context) daemon.Status {
 				st.GeoIP.Attributions = append(st.GeoIP.Attributions, daemon.GeoAttribution{Text: b.Attribution, URL: b.AttributionURL})
 			}
 		}
+	}
+	if st.GeoIP.Active > 0 {
+		st.GeoIP.Loaded, st.GeoIP.Built, st.GeoIP.Type = true, time.Now().Format("2006-01")+"-01", "Synthetic demo"
+	} else {
+		st.GeoIP.Error = "no enabled country databases"
 	}
 	st.ConnCountries = map[string]string{}
 	st.Health = map[string]daemon.ConnHealth{}
@@ -333,7 +339,9 @@ func (d *Demo) LookupGeo(ip netip.Addr, id string) (daemon.GeoLookup, error) {
 		switch {
 		case r.Country == "":
 		case db.IsCategory():
-			out.Categories = append(out.Categories, r.Country)
+			if !slices.Contains(out.Categories, r.Country) {
+				out.Categories = append(out.Categories, r.Country)
+			}
 		case out.Country == "":
 			out.Country, out.Database = r.Country, db.ID
 		}

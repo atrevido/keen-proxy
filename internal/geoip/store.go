@@ -24,13 +24,17 @@ const (
 	userAgent = "keenProxy-geoip"
 	// CheckInterval is the time between successful freshness checks of one database.
 	CheckInterval = 24 * time.Hour
-	// maxDownload bounds the HTTP body; maxDatabase bounds the decompressed MMDB.
+	// maxDownload bounds the HTTP body.
 	maxDownload = 200 << 20
-	maxDatabase = 512 << 20
 )
+
+// maxDatabase bounds the decompressed bytes of one download; tests lower it.
+var maxDatabase int64 = 512 << 20
 
 // ErrBusy reports that another update holds the database files.
 var ErrBusy = errors.New("IP database update already in progress")
+
+var errTooLarge = errors.New("unpacked database exceeds the size limit")
 
 // State is persisted beside each managed database as <id>.json.
 type State struct {
@@ -129,8 +133,10 @@ func (s *Store) saveState(id string, st State) error {
 	if err != nil {
 		return err
 	}
+	// State holds custom source URLs, which may embed access tokens.
 	tmp := s.statePath(id) + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
+	os.Remove(tmp)
+	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
 		return err
 	}
 	return os.Rename(tmp, s.statePath(id))
@@ -294,7 +300,8 @@ func unpack(src, dst string) error {
 			return err
 		}
 		defer gz.Close()
-		r = bufio.NewReader(gz)
+		// Bound all decompressed bytes, including tar entries skipped below.
+		r = bufio.NewReader(&capReader{r: gz, n: maxDatabase})
 	}
 	if head, _ := r.(*bufio.Reader).Peek(262); len(head) == 262 && string(head[257:262]) == "ustar" {
 		tr := tar.NewReader(r)
@@ -321,9 +328,25 @@ func unpack(src, dst string) error {
 		err = cerr
 	}
 	if err == nil && n > maxDatabase {
-		err = fmt.Errorf("unpacked database exceeds %d MiB", maxDatabase>>20)
+		err = errTooLarge
 	}
 	return err
+}
+
+// capReader fails with errTooLarge once more than n bytes are requested.
+type capReader struct {
+	r io.Reader
+	n int64
+}
+
+func (c *capReader) Read(p []byte) (int, error) {
+	if c.n <= 0 {
+		return 0, errTooLarge
+	}
+	p = p[:min(int64(len(p)), c.n)]
+	n, err := c.r.Read(p)
+	c.n -= int64(n)
+	return n, err
 }
 
 // valid reports whether path holds a readable MMDB.

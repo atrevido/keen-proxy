@@ -259,6 +259,7 @@ func (d *Daemon) updateGeo(ctx context.Context, id string, manual bool) error {
 	d.pruneGeo(dbs)
 
 	var errs []error
+	var installed []string // downloaded files that may now need loading
 	reload, found := false, id == ""
 	for _, db := range dbs {
 		if id != "" && db.ID != id {
@@ -287,36 +288,85 @@ func (d *Daemon) updateGeo(ctx context.Context, id string, manual bool) error {
 			}
 		case changed:
 			d.audit("system", "IP database updated", "geoip", "ok", name)
+			installed = append(installed, db.ID)
 		}
-		reload = reload || changed && db.Enabled
 	}
 	if !found {
 		return fmt.Errorf("unknown database %q", id)
 	}
-	if reload {
-		d.mu.Lock()
-		if d.cfg != nil {
-			d.reloadGeoLocked(d.cfg)
-			if out, err := d.compileLocked(); err != nil {
-				d.log.Error("IP rule sets after database update", "err", err)
-			} else {
-				d.log.Info("IP rule sets updated", "countries", out.Countries)
-			}
+	d.mu.Lock()
+	// Check enablement in the current configuration: Apply may have enabled a
+	// database while its download was running.
+	if d.cfg != nil && (reload || geoEnabled(d.cfg, installed)) {
+		d.reloadGeoLocked(d.cfg)
+		if out, err := d.compileLocked(); err != nil {
+			errs = append(errs, fmt.Errorf("routing rule sets: %w", err))
+			d.log.Error("IP rule sets after database update", "err", err)
+		} else {
+			d.log.Info("IP rule sets updated", "countries", out.Countries)
 		}
-		d.mu.Unlock()
 	}
+	d.mu.Unlock()
 	return errors.Join(errs...)
 }
 
+// geoEnabled reports whether any of ids names an enabled database in cfg.
+func geoEnabled(cfg *model.Config, ids []string) bool {
+	for _, db := range cfg.GeoIP.Databases {
+		if db.Enabled && slices.Contains(ids, db.ID) {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *Daemon) legacyGeoPath() string { return filepath.Join(d.geoStore.Dir, "country.mmdb") }
+
+// adoptLegacyGeo moves the single-database layout's country.mmdb to the
+// first enabled downloadable country database that has no file yet, so an
+// upgraded router keeps country routing until the first download succeeds.
+// Without state the adopted file is still checked for updates right away.
+func (d *Daemon) adoptLegacyGeo(cfg *model.Config) {
+	legacy := d.legacyGeoPath()
+	g, err := geoip.Open(legacy)
+	if err != nil {
+		return
+	}
+	g.Close()
+	for _, db := range cfg.GeoIP.Databases {
+		if !db.Enabled || db.IsCategory() || db.File != "" || geoSource(db) == nil {
+			continue
+		}
+		if path := d.geoStore.Path(db.ID); !fileExists(path) {
+			if err := os.Rename(legacy, path); err != nil {
+				d.log.Warn("IP database migration failed", "id", db.ID, "err", err)
+			} else {
+				d.log.Info("IP database migrated", "id", db.ID)
+			}
+		}
+		return
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // pruneGeo removes downloads of deleted databases and the single-database
-// layout's country.mmdb unless a local database still points at it.
+// layout's country.mmdb unless a local database still points at a file.
 func (d *Daemon) pruneGeo(dbs []model.GeoIPDatabase) {
 	keep := map[string]bool{}
-	legacy := filepath.Join(d.geoStore.Dir, "country.mmdb")
+	legacy := d.legacyGeoPath()
 	inUse := false
 	for _, db := range dbs {
 		keep[db.ID] = true
-		inUse = inUse || filepath.Clean(db.File) == legacy
+		file := filepath.Clean(db.File)
+		inUse = inUse || file == legacy
+		// A local entry may point at a file downloaded under another ID.
+		if id, ok := strings.CutSuffix(file, ".mmdb"); ok && db.File != "" && filepath.Dir(file) == filepath.Clean(d.geoStore.Dir) {
+			keep[filepath.Base(id)] = true
+		}
 	}
 	if len(dbs) == 0 {
 		return

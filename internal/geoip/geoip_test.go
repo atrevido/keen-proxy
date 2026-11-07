@@ -353,3 +353,40 @@ func TestFlag(t *testing.T) {
 		t.Errorf("Flag: %q", Flag("ru"))
 	}
 }
+
+// Skipped tar entries count against the decompression limit too.
+func TestUnpackBoundsSkippedEntries(t *testing.T) {
+	defer SetMaxDatabase(1 << 20)()
+	raw, _ := os.ReadFile(testDB(t))
+	var b bytes.Buffer
+	tw := tar.NewWriter(&b)
+	filler := make([]byte, 2<<20)
+	tw.WriteHeader(&tar.Header{Name: "filler.bin", Mode: 0o644, Size: int64(len(filler)), Typeflag: tar.TypeReg})
+	tw.Write(filler)
+	tw.WriteHeader(&tar.Header{Name: "db.mmdb", Mode: 0o644, Size: int64(len(raw)), Typeflag: tar.TypeReg})
+	tw.Write(raw)
+	tw.Close()
+	srv := newServer(t)
+	srv.files["/db.tar.gz"] = gzipped(b.Bytes())
+	store := newStore(t, srv, time.Now())
+	if _, err := store.Update(context.Background(), "big", URLSource{URL: srv.URL + "/db.tar.gz"}); err == nil || !strings.Contains(err.Error(), "size limit") {
+		t.Fatalf("want size limit error, got %v", err)
+	}
+}
+
+// State may contain tokens from custom URLs, so only the owner can read it.
+func TestStateIsOwnerOnly(t *testing.T) {
+	raw, _ := os.ReadFile(testDB(t))
+	srv := newServer(t)
+	srv.files["/a.mmdb"] = raw
+	store := newStore(t, srv, time.Now())
+	os.MkdirAll(store.Dir, 0o755)
+	os.WriteFile(filepath.Join(store.Dir, "a.json.tmp"), nil, 0o644) // left by an interrupted write
+	if _, err := store.Update(context.Background(), "a", URLSource{URL: srv.URL + "/a.mmdb?token=secret"}); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Stat(filepath.Join(store.Dir, "a.json"))
+	if err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("state mode %v %v", fi.Mode().Perm(), err)
+	}
+}
