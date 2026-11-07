@@ -9,7 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-class BootstrapTest(unittest.TestCase):
+class BootstrapFixture(unittest.TestCase):
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -72,10 +72,13 @@ case "$1" in
     stop) {stop} ;;
     *) exit 2 ;;
 esac''')
+        self.write_checksums(folder)
+        return folder / asset
+
+    def write_checksums(self, folder):
         (folder / 'SHA256SUMS').write_text(''.join(
             f'{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n'
-            for p in sorted(folder.iterdir())))
-        return folder / asset
+            for p in sorted(folder.iterdir()) if p.name != 'SHA256SUMS'))
 
     def install(self, *args):
         return self.bootstrap('--without-trusttunnel', *args)
@@ -98,6 +101,8 @@ esac''')
     def service(self):
         return self.prefix / 'etc/init.d/S99keenproxy'
 
+
+class BootstrapTest(BootstrapFixture):
     def test_uninstall_stops_service_and_preserves_settings_without_network(self):
         self.release('v1.2.3')
         self.assertEqual(self.install().returncode, 0)

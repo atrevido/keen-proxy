@@ -48,6 +48,8 @@ CGO_ENABLED=0 make vet
 cd web && npm test && npm run build
 ```
 
+The Entware service tests use a C compiler (`cc`) on Linux to build a small test daemon. They run as part of `make test-install` and use a temporary prefix without accessing a router.
+
 For routing, DNS, or firewall behavior, also run `make integration` with Docker. This uses a privileged disposable container; review the Makefile and test script before running it. Changes to separate tools should be tested from their own Go modules as appropriate.
 
 For a comment-only change, executable-token comparison plus normal build/test checks can establish that behavior was preserved. Do not invent tests that only assert comment wording. Report unavailable checks and remaining failures explicitly.
