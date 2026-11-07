@@ -1,4 +1,4 @@
-module keenetic-proxy/tools/bench
+module github.com/ordo-systems/keen-proxy/tools/bench
 
 go 1.26.1
 

@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/compile"
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
-	"github.com/atrevido/keenetic-proxy/internal/domaincache"
-	"github.com/atrevido/keenetic-proxy/internal/journal"
-	"github.com/atrevido/keenetic-proxy/internal/model"
-	"github.com/atrevido/keenetic-proxy/internal/stats"
+	"github.com/ordo-systems/keen-proxy/internal/compile"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/domaincache"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/stats"
 )
 
 // Demo implements the daemon API for offline UI development (-ui-demo).

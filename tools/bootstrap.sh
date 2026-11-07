@@ -14,8 +14,8 @@ prefix=${KEENPROXY_PREFIX:-/opt}
 export KEENPROXY_PREFIX="$prefix"
 PATH="$prefix/bin:$prefix/sbin:$PATH"
 export PATH
-main=https://raw.githubusercontent.com/atrevido/keen-proxy/main
-releases=https://github.com/atrevido/keen-proxy/releases/download
+main=https://raw.githubusercontent.com/ordo-systems/keen-proxy/main
+releases=https://github.com/ordo-systems/keen-proxy/releases/download
 version=
 variant=
 trusttunnel=1

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 func testPlan(mode model.InterceptMode) Plan {

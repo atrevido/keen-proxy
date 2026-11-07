@@ -49,7 +49,7 @@ opkg update && opkg install curl ca-bundle ca-certificates
 Stop competing traffic or DNS interception services before installation. KeenProxy begins intercepting LAN DNS when the daemon starts, including with the starter configuration. Run the bootstrap from `main`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
 ```
 
 The installer reads `version.txt` from `main`, detects the CPU, and verifies the release files against `SHA256SUMS`. It installs missing Entware `iptables` tools, creates a starter configuration if needed, and registers and starts `S99keenproxy` through the Entware init mechanism. TrustTunnel is installed by default as an optional client launched by KeenProxy when configured. With the starter configuration, open the router's LAN address on port `8086`. Read the token on the router from `/opt/etc/keenproxy/token`.
@@ -59,10 +59,10 @@ Run the same command to update. Your configuration and token are preserved. The 
 To choose a release, replace `vX.Y.Z` with a published tag. The optional `--lite` flag selects the smaller build. `--without-trusttunnel` skips installation of the external client.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z
 ```
 
-The tag must have installer assets and checksums attached. If publication is still in progress, wait for the assets and rerun the command. Service commands are `status`, `start`, `stop`, and `restart` on `/opt/etc/init.d/S99keenproxy`. See the root README for manual installation. [Installation reference](https://github.com/atrevido/keen-proxy#configuration-and-router-installation)
+The tag must have installer assets and checksums attached. If publication is still in progress, wait for the assets and rerun the command. Service commands are `status`, `start`, `stop`, and `restart` on `/opt/etc/init.d/S99keenproxy`. See the root README for manual installation. [Installation reference](https://github.com/ordo-systems/keen-proxy#configuration-and-router-installation)
 
 ## First configuration
 
@@ -77,7 +77,7 @@ Back up the current configuration and keep the old binary before updating. Read 
 Run from the Entware root shell:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
 ```
 
 The command stops the managed service and removes `/opt/bin/keenproxy` and `/opt/etc/init.d/S99keenproxy`. It preserves `/opt/etc/keenproxy/` (including configuration and token), `/opt/var/lib/keenproxy/` (logs and derived state), and the optional TrustTunnel client. Run the regular installer again to reuse your settings.

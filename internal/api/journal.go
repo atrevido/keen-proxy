@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
 )
 
 func clientIP(r *http.Request) string {

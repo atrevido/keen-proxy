@@ -5,7 +5,7 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // Matcher looks up domain suffixes or IP prefixes. Duplicate entries retain

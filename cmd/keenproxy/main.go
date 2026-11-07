@@ -14,15 +14,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/api"
-	"github.com/atrevido/keenetic-proxy/internal/compile"
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
-	"github.com/atrevido/keenetic-proxy/internal/devices"
-	"github.com/atrevido/keenetic-proxy/internal/engine"
-	"github.com/atrevido/keenetic-proxy/internal/journal"
-	"github.com/atrevido/keenetic-proxy/internal/model"
-	"github.com/atrevido/keenetic-proxy/internal/netfilter"
-	"github.com/atrevido/keenetic-proxy/web"
+	"github.com/ordo-systems/keen-proxy/internal/api"
+	"github.com/ordo-systems/keen-proxy/internal/compile"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/devices"
+	"github.com/ordo-systems/keen-proxy/internal/engine"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/netfilter"
+	"github.com/ordo-systems/keen-proxy/web"
 )
 
 // main selects dry-run, synthetic demo, or the live router lifecycle.

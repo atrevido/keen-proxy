@@ -2,7 +2,7 @@ package api
 
 import (
 	"context"
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
 	"net/http"
 	"testing"
 )

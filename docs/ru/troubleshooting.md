@@ -18,7 +18,7 @@
 
 ## Что приложить к сообщению об ошибке?
 
-Ожидаемое и фактическое поведение, точную версию и build tags, архитектуру/прошивку, шаги воспроизведения и минимальную синтетическую конфигурацию. Удалите токены, ссылки подключений, приватные ключи, личную историю посещений и рабочие экспорты. Прочитайте [CONTRIBUTING](https://github.com/atrevido/keen-proxy/blob/main/CONTRIBUTING.md) и [SECURITY](https://github.com/atrevido/keen-proxy/blob/main/SECURITY.md).
+Ожидаемое и фактическое поведение, точную версию и build tags, архитектуру/прошивку, шаги воспроизведения и минимальную синтетическую конфигурацию. Удалите токены, ссылки подключений, приватные ключи, личную историю посещений и рабочие экспорты. Прочитайте [CONTRIBUTING](https://github.com/ordo-systems/keen-proxy/blob/main/CONTRIBUTING.md) и [SECURITY](https://github.com/ordo-systems/keen-proxy/blob/main/SECURITY.md).
 
 ## Что ещё остаётся заготовкой?
 

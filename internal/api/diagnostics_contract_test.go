@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // diagnosticContextProbe observes the RPC boundary without opening network connections.

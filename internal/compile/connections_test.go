@@ -14,8 +14,8 @@ import (
 	"github.com/sagernet/sing-box/option"
 	sjson "github.com/sagernet/sing/common/json"
 
-	"github.com/atrevido/keenetic-proxy/internal/engine"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/engine"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 const (

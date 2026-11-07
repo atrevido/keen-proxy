@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 	"net/http"
 	"testing"
 )

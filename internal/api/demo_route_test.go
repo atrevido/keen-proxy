@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/atrevido/keenetic-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
 	"testing"
 	"time"
 )

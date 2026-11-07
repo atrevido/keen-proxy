@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 //go:embed presets.json

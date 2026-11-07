@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // decodeFeatureRequest accepts one JSON value up to 2 MiB and rejects unknown fields.

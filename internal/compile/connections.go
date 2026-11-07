@@ -7,9 +7,9 @@ import (
 	"net/netip"
 	"strconv"
 
-	"github.com/atrevido/keenetic-proxy/internal/links"
-	"github.com/atrevido/keenetic-proxy/internal/model"
-	"github.com/atrevido/keenetic-proxy/internal/trusttunnel"
+	"github.com/ordo-systems/keen-proxy/internal/links"
+	"github.com/ordo-systems/keen-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/trusttunnel"
 )
 
 // TrustTunnelClient describes an external trusttunnel_client process owned by the daemon.

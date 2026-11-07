@@ -26,12 +26,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
-	"github.com/atrevido/keenetic-proxy/internal/journal"
-	"github.com/atrevido/keenetic-proxy/internal/links"
-	"github.com/atrevido/keenetic-proxy/internal/model"
-	"github.com/atrevido/keenetic-proxy/internal/stats"
-	"github.com/atrevido/keenetic-proxy/internal/trusttunnel"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/links"
+	"github.com/ordo-systems/keen-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/stats"
+	"github.com/ordo-systems/keen-proxy/internal/trusttunnel"
 )
 
 const cookieName = "keenproxy_token"

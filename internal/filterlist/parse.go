@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // MaxBytes bounds the downloaded text accepted by Parse.
