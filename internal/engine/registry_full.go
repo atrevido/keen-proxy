@@ -14,6 +14,9 @@ import (
 	"github.com/sagernet/sing-box/protocol/redirect"
 )
 
+// BuildVariant identifies the protocol registry compiled into this executable.
+const BuildVariant = "full"
+
 // Context registers the protocols available to sing-box.
 //
 // Outbounds, endpoints, and DNS transports use the full sing-box include set.

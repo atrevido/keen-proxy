@@ -18,6 +18,7 @@ import { api, setUnauthorizedHandler } from '../api'
 import { authed, session, store } from '../store'
 import { LOCALES, locale, setLocale, type Locale } from '../i18n'
 import { themeName, themePreference, type ThemePreference } from '../theme'
+import { formatBuild } from '../buildIdentity'
 import mark from '../assets/keenproxy-mark.png'
 const route = useRoute(),
   router = useRouter(),
@@ -27,6 +28,7 @@ const drawer = ref(false)
 const bare = computed(() => route.meta.bare === true)
 // Credits required by the licenses of the country databases in use.
 const attributions = computed(() => store.state.status?.geoip.attributions ?? [])
+const build = computed(() => store.state.status?.build)
 const nav = computed(() => [
   { to: '/', label: t('ui.overview'), active: route.path === '/' },
   {
@@ -225,23 +227,79 @@ async function logout() {
         <div v-else class="empty-state">{{ t('ui.unknown') }}</div></NSpin
       >
     </main>
-    <footer v-if="attributions.length" class="attribution">
-      <template v-for="(a, i) in attributions" :key="a.url + a.text"
-        ><span v-if="i"> · </span
-        ><a :href="a.url" target="_blank" rel="noreferrer">{{ a.text }}</a></template
-      >
+    <footer v-if="build || attributions.length" class="panel-footer">
+      <div class="footer-content">
+        <div v-if="build" class="footer-identity">
+          <span class="footer-product">
+            <img :src="mark" alt="" width="16" height="16" />
+            <b>KeenProxy</b>
+            <code v-if="build.version" class="footer-version">{{ build.version }}</code>
+          </span>
+          <code class="footer-build">{{ formatBuild(build) }}</code>
+        </div>
+        <div v-if="attributions.length" class="attribution">
+          <template v-for="(a, i) in attributions" :key="a.url + a.text">
+            <span v-if="i"> · </span><a :href="a.url" target="_blank" rel="noreferrer">{{ a.text }}</a>
+          </template>
+        </div>
+      </div>
     </footer>
   </div>
 </template>
 <style scoped>
 .shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100dvh;
 }
-.attribution {
+.panel-footer {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+.footer-content,
+.footer-identity,
+.footer-product {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.footer-content {
   max-width: 1600px;
   margin: auto;
-  padding: 0 clamp(16px, 4vw, 42px) 24px;
-  font-size: 12px;
+  padding: 14px clamp(16px, 4vw, 42px);
+  justify-content: space-between;
+  gap: 12px;
+}
+.footer-identity {
+  gap: 6px 12px;
+}
+.footer-product {
+  gap: 8px;
+}
+.footer-product img {
+  object-fit: contain;
+}
+.footer-version {
+  color: var(--accent);
+}
+.footer-build {
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+}
+.footer-build,
+.footer-version {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .footer-identity {
+    flex-basis: 100%;
+  }
+  .footer-build {
+    flex-basis: 100%;
+    border-left: 0;
+    padding-left: 24px;
+  }
 }
 .attribution a {
   color: var(--muted);
@@ -303,6 +361,8 @@ async function logout() {
   border: 0;
 }
 .content {
+  flex: 1;
+  width: 100%;
   max-width: 1600px;
   padding: 28px 42px 48px;
   margin: auto;

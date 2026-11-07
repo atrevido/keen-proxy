@@ -241,7 +241,10 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, s.D.Status(r.Context()))
+	writeJSON(w, http.StatusOK, struct {
+		daemon.Status
+		Build buildIdentity `json:"build"`
+	}{s.D.Status(r.Context()), runningBuild})
 }
 
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {

@@ -3,9 +3,10 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/ordo-systems/keen-proxy/internal/model"
 	"net/http"
 	"testing"
+
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 func TestWireGuardKeyValidation(t *testing.T) {
@@ -53,7 +54,7 @@ func TestConfigValidationRejectsInvalidEngineProfiles(t *testing.T) {
 	}
 }
 
-func TestConfigValidationAcceptsWizardProtocols(t *testing.T) {
+func TestConfigValidationWizardProtocols(t *testing.T) {
 	for _, o := range []map[string]any{
 		{"type": "vless", "server": "vpn.example.test", "server_port": 443, "uuid": "00000000-0000-4000-8000-000000000000", "tls": map[string]any{"enabled": true, "server_name": "cover.example.test", "utls": map[string]any{"enabled": true, "fingerprint": "chrome"}, "reality": map[string]any{"enabled": true, "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "short_id": "ab12"}}},
 		{"type": "trojan", "server": "vpn.example.test", "server_port": 443, "password": "example", "tls": map[string]any{"enabled": true}},
@@ -61,12 +62,22 @@ func TestConfigValidationAcceptsWizardProtocols(t *testing.T) {
 		{"type": "shadowsocks", "server": "vpn.example.test", "server_port": 443, "method": "aes-128-gcm", "password": "example"},
 		{"type": "socks", "server": "vpn.example.test", "server_port": 1080, "version": "5"},
 	} {
-		s, d := newServer()
-		d.cfg.Connections = []model.Connection{{ID: "one", Name: "One", Type: model.ConnSingBox, Outbound: o}}
-		raw, _ := json.Marshal(d.cfg)
-		w := do(t, s.Handler(), "POST", "/api/config/validate", string(raw), "secret", lan)
-		if w.Code != http.StatusOK {
-			t.Fatalf("%s: %d %s", o["type"], w.Code, w.Body.String())
-		}
+		protocol := o["type"].(string)
+		t.Run(protocol, func(t *testing.T) {
+			want := http.StatusOK
+			if protocol == "hysteria2" && !testHasHysteria2 {
+				want = http.StatusUnprocessableEntity
+			}
+			s, d := newServer()
+			d.cfg.Connections = []model.Connection{{ID: "one", Name: "One", Type: model.ConnSingBox, Outbound: o}}
+			raw, err := json.Marshal(d.cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			w := do(t, s.Handler(), "POST", "/api/config/validate", string(raw), "secret", lan)
+			if w.Code != want {
+				t.Fatalf("expected HTTP %d, got %d: %s", want, w.Code, w.Body)
+			}
+		})
 	}
 }

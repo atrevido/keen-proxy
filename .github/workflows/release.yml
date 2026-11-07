@@ -84,7 +84,7 @@ jobs:
       - name: Build router binaries from tagged source
         run: |
           test "$(cat version.txt)" = "${RELEASE_TAG#v}"
-          make build-router build-router-lite
+          make build-router build-router-lite RELEASE_VERSION="$RELEASE_TAG" RELEASE_REVISION="$(git rev-parse HEAD)"
       - name: Package source, notices, and build identity
         run: |
           source_manifest_dir=$(mktemp -d)

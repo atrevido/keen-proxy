@@ -160,7 +160,7 @@ func supportStatus(st daemon.Status, alias supportAlias) map[string]any {
 		active[alias("connection", id)] = alias("connection", f.Active)
 	}
 	return map[string]any{
-		"os": runtime.GOOS, "arch": runtime.GOARCH,
+		"os": runtime.GOOS, "arch": runtime.GOARCH, "build": runningBuild,
 		"started": st.Started.UTC().Truncate(time.Second), "mode": known(st.Mode, "redirect", "tproxy"),
 		"firewall": st.Firewall, "firewall_restorations": st.Restored, "dns_listening": st.DNS != "",
 		"online_devices": st.OnlineDevices, "intercept_sources": st.Sources,

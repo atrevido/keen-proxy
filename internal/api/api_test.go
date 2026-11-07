@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -137,6 +138,25 @@ func TestLoginSetsCookie(t *testing.T) {
 	s.Handler().ServeHTTP(rec, r)
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "aa:bb:cc:dd:ee:ff") {
 		t.Errorf("using cookie: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestStatusIncludesRunningBuild(t *testing.T) {
+	s, _ := newServer()
+	w := do(t, s.Handler(), "GET", "/api/status", "", "secret", lan)
+	var got struct {
+		Mode  string `json:"mode"`
+		Build struct {
+			Variant string `json:"variant"`
+			Arch    string `json:"arch"`
+		} `json:"build"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if w.Code != http.StatusOK || got.Mode != "redirect" || got.Build.Arch != runtime.GOARCH ||
+		(got.Build.Variant != "full" && got.Build.Variant != "lite") {
+		t.Fatalf("status did not include the running build: %d %s", w.Code, w.Body)
 	}
 }
 
