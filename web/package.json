@@ -7,6 +7,7 @@
     "dev": "vite",
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "build": "vue-tsc --noEmit && vite build",
+    "build:demo": "vue-tsc --noEmit && vite build --mode demo",
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {

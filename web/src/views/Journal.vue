@@ -160,7 +160,7 @@ function matches(e: JournalEntry) {
   )
 }
 
-let source: EventSource | null = null
+let source: ReturnType<typeof api.journalStream> | null = null
 // Replace the stream for the selected journal; unmount closes the active connection.
 function connect() {
   source?.close()
@@ -264,6 +264,7 @@ const exportOptions = computed(() => [
 function download(since: string) {
   const a = document.createElement('a')
   a.href = api.journalExportURL(kind.value, since)
+  a.download = `keenproxy-${kind.value}.txt`
   a.click()
 }
 

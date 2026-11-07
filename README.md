@@ -62,6 +62,8 @@ The full build enables QUIC, uTLS, WireGuard, and gVisor. The lite registry excl
 
 ## Configuration and router installation
 
+The bilingual documentation source is in [docs/en/index.md](docs/en/index.md) and [docs/ru/index.md](docs/ru/index.md), including an illustrated user guide. A separate browser demo is built from the same Vue interface with an in-memory API adapter; see [documentation build instructions](docs/en/development.md).
+
 Start with [examples/config.yaml](examples/config.yaml) and [examples/connections.yaml](examples/connections.yaml). Example keys, addresses, and credentials are placeholders and must be replaced. Keep real configuration files and support exports out of Git.
 
 The default paths are:

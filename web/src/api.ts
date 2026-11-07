@@ -66,6 +66,7 @@ export const api = {
     for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') qs.set(k, String(v))
     return request<JournalPage>('GET', `/api/journal/${kind}?${qs}`)
   },
-  journalStream: (kind: JournalKind) => new EventSource(`/api/journal/${kind}/stream`),
+  journalStream: (kind: JournalKind): Pick<EventSource, 'onmessage' | 'close'> => new EventSource(`/api/journal/${kind}/stream`),
   journalExportURL: (kind: JournalKind, since: string) => `/api/journal/${kind}/export?since=${since}`,
+  configExportURL: (redacted = false) => `/api/config/yaml${redacted ? '?redacted=1' : ''}`,
 }

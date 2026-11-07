@@ -1,5 +1,5 @@
 import { watch } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 import { locale, t } from './i18n'
 
 export const routes = [
@@ -16,7 +16,7 @@ export const routes = [
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
-export const router = createRouter({ history: createWebHistory(), routes })
+export const router = createRouter({ history: import.meta.env.MODE === 'demo' ? createWebHashHistory() : createWebHistory(), routes })
 
 // meta.title is a translation key; update the tab title when the locale changes.
 const title = () => {

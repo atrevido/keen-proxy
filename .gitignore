@@ -9,6 +9,9 @@ tools/*/dist/
 *.test
 coverage.out
 /web/dist/
+/web/dist-demo/
+/site/
+/.venv-docs/
 /web/node_modules/
 /.idea/
 
@@ -21,3 +24,6 @@ coverage.out
 # Local agent memory and reports
 /.serena/
 /docs-reports/
+
+# Local JavaScript coverage reports
+/web/coverage/

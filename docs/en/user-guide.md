@@ -1,0 +1,59 @@
+# User guide
+
+These screenshots show the same Vue screens shipped by KeenProxy, running in the independent browser demo. Addresses, counters, profiles, and results are synthetic. The guide covers the implemented interface, rather than promising every feature shown in historical mockups.
+
+## 1. Read the overview
+
+Open **Overview**. Inspect connection health, recent traffic, and the shortcuts to rules, clients, and diagnostics. Traffic graphs describe observed activity; a healthy-looking graph is not a privacy or leak test.
+
+![Overview with synthetic traffic and connection cards](../assets/screenshots/en-overview.png)
+
+## 2. Configure a connection
+
+Open **Connections**. Select a profile to inspect its settings and status. Choose **Add** to use the wizard: import a supported connection link/file or enter a supported protocol manually. Use a descriptive name and inspect the proposed protocol and endpoint before accepting.
+
+Changes enter the shared draft. Real credentials belong only in your local management session. In the browser demo, use synthetic values.
+
+![Connection profiles and routing targets](../assets/screenshots/en-connections.png)
+
+![Connection creation wizard](../assets/screenshots/en-wizard.png)
+
+## 3. Add a routing group
+
+Open **Rules → Whitelist**. Create a group, name it, select its target connection (or **Direct**/**Block**), and add domains or addresses. For example, direct `work.example.com` to the Netherlands profile. Review imported entries before confirming; country selectors express broader policies.
+
+Expand an entry to see its current DNS observations and expiration. A resolved address alone does not prove that application traffic followed the intended tunnel.
+
+![Domain groups, targets, and address observations](../assets/screenshots/en-rules.png)
+
+## 4. Try a preset
+
+Open **Rules → Presets**, select a target, then preview a collection. Inspect the added/removed entries and accept it into the draft. Presets can be enabled, disabled, or removed. The static demo includes one original example collection; it does not redistribute the full community catalog.
+
+## 5. Choose devices and networks
+
+Open **Connections → Clients**. Network defaults apply to matching subnets; per-device entries let you select a policy for individual clients. **Split** uses selective rules, **Full** selects a default connection, and **Off** bypasses KeenProxy interception for that policy. Review both the device and network settings before Apply.
+
+![Networks and individual client policies](../assets/screenshots/en-clients.png)
+
+## 6. Review and Apply
+
+The change bar appears whenever the draft differs from the saved configuration. Review changes across screens, then choose **Apply** once. Wait for success. If validation/application fails, read the error and correct the draft. **Discard** restores the last saved snapshot.
+
+![A pending change with shared Apply and Discard controls](../assets/screenshots/en-apply.png)
+
+## 7. Verify the result
+
+Open **Diagnostics**, select the applied connection, and run its checks. Read HTTP, verified HTTPS, and transfer results separately. An edited connection must be applied before it can be meaningfully checked against the running engine. Demo checks are always labelled as simulated.
+
+![Separate HTTP, HTTPS, and transfer diagnostics](../assets/screenshots/en-diagnostics.png)
+
+Open **Logs** to inspect routing decisions, configuration/audit events, or system errors. Search and available filters narrow the view in the router application. Routing decisions explain the selected outbound; they do not prove a successful handshake or transfer. The static demo supplies sample records without a live event stream.
+
+![Routing journal with synthetic records](../assets/screenshots/en-journal.png)
+
+## 8. DNS and backups
+
+Open **Settings** for DNS providers, routing/failure policy, general options, language, and configuration backup/preview controls. Importing or restoring configuration prepares a draft; review it and Apply. Keep unredacted backups private. The browser demo exports only its synthetic JSON-compatible configuration and intentionally disables YAML import.
+
+![Settings and DNS configuration](../assets/screenshots/en-settings.png)

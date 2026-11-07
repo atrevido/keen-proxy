@@ -1,0 +1,63 @@
+site_name: KeenProxy
+site_description: Selective routing for your network
+site_url: !ENV [DOCS_SITE_URL, 'https://atrevido.github.io/keen-proxy/']
+repo_url: https://github.com/atrevido/keen-proxy
+repo_name: atrevido/keen-proxy
+docs_dir: docs
+site_dir: site
+strict: true
+theme:
+  name: material
+  font: false
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Dark theme
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Light theme
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+        - locale: ru
+          name: Русский
+          nav_translations:
+            Overview: Обзор
+            Getting started: Начало работы
+            User guide: Руководство пользователя
+            Routing and DNS: Маршрутизация и DNS
+            Troubleshooting: Диагностика и вопросы
+            Browser demo: Демо в браузере
+            Documentation development: Разработка документации
+nav:
+  - Overview: index.md
+  - Getting started: getting-started.md
+  - User guide: user-guide.md
+  - Routing and DNS: routing.md
+  - Troubleshooting: troubleshooting.md
+  - Browser demo: browser-demo.md
+  - Documentation development: development.md
+markdown_extensions:
+  - admonition
+  - attr_list
+  - toc:
+      permalink: true
+  - pymdownx.superfences

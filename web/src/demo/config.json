@@ -1,0 +1,151 @@
+{
+  "api": {
+    "listen": "127.0.0.1:8086",
+    "token_file": "demo-only",
+    "no_token_from": []
+  },
+  "lan": {
+    "interface": "br0",
+    "wan": "eth3"
+  },
+  "dns": {
+    "upstreams": [
+      "https://1.1.1.1/dns-query",
+      "https://77.88.8.8/dns-query"
+    ],
+    "listen": "127.0.0.1:5353",
+    "fallback": "",
+    "route": "direct"
+  },
+  "intercept": {
+    "mode": "tproxy",
+    "tcp_port": 15001,
+    "udp_port": 15002,
+    "fwmark": 100,
+    "route_table": 100
+  },
+  "connections": [
+    {
+      "id": "fi",
+      "name": "Finland WG",
+      "type": "wireguard",
+      "fallback": "nl",
+      "wireguard": {
+        "private_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+        "address": [
+          "10.13.13.2/32"
+        ],
+        "peer": {
+          "endpoint": "203.0.113.10:51820",
+          "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "keepalive": 25
+        }
+      }
+    },
+    {
+      "id": "nl",
+      "name": "Netherlands Reality",
+      "fallback": "de",
+      "type": "link",
+      "link": "vless://11111111-2222-3333-4444-555555555555@203.0.113.20:443?security=reality&sni=www.microsoft.com&fp=chrome&pbk=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&sid=ab12#NL"
+    },
+    {
+      "id": "de",
+      "name": "Germany Shadowsocks",
+      "type": "link",
+      "link": "ss://YWVzLTEyOC1nY206ZGVtby1wYXNz@203.0.113.30:8388#DE"
+    }
+  ],
+  "groups": [
+    {
+      "name": "Video and social media",
+      "target": "nl",
+      "entries": [
+        "youtube.com",
+        "googlevideo.com",
+        "instagram.com",
+        "x.com"
+      ]
+    },
+    {
+      "name": "AI services",
+      "target": "fi",
+      "entries": [
+        "chatgpt.com",
+        "openai.com",
+        "claude.ai",
+        "anthropic.com"
+      ]
+    },
+    {
+      "name": "Banks direct",
+      "target": "direct",
+      "entries": [
+        "sberbank.ru",
+        "tbank.ru"
+      ]
+    },
+    {
+      "name": "Advertising",
+      "target": "block",
+      "entries": [
+        "ads.example.com"
+      ]
+    },
+    {
+      "name": "Steam direct",
+      "target": "direct",
+      "entries": [
+        "steampowered.com",
+        "steamcommunity.com",
+        "steamcontent.com",
+        "steamstatic.com"
+      ]
+    },
+    {
+      "name": "All except Russia",
+      "target": "fi",
+      "countries": [
+        "RU"
+      ],
+      "except": true,
+      "entries": []
+    }
+  ],
+  "networks": [
+    {
+      "name": "Main LAN",
+      "cidr": "192.168.7.0/24",
+      "mode": "split"
+    },
+    {
+      "name": "Guest LAN",
+      "cidr": "10.1.30.0/24",
+      "mode": "off"
+    }
+  ],
+  "clients": [
+    {
+      "name": "Phone",
+      "mac": "02:00:00:00:00:10",
+      "mode": "full",
+      "target": "fi"
+    },
+    {
+      "name": "TV",
+      "mac": "aa:bb:cc:dd:ee:01",
+      "mode": "split"
+    },
+    {
+      "name": "Work laptop",
+      "mac": "aa:bb:cc:dd:ee:02",
+      "mode": "off"
+    }
+  ],
+  "schema_version": 1,
+  "geoip": {},
+  "filters": {
+    "sources": [],
+    "exceptions": []
+  }
+}

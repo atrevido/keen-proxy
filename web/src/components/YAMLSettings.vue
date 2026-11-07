@@ -15,7 +15,7 @@ function accept(){if(preview.value){store.setDraft(preview.value);preview.value=
 </script>
 <template>
  <NAlert type="warning">{{t('features.yamlSecrets')}}</NAlert><p>{{t('features.yamlHint')}}</p>
- <div class="actions"><a href="/api/config/yaml" download="keenproxy-backup.yaml">{{t('features.exportYAML')}}</a><a href="/api/config/yaml?redacted=1" download="keenproxy-support-redacted.yaml">{{t('features.exportSupport')}}</a><NButton @click="previous">{{t('features.previous')}}</NButton><NButton @click="file?.click()">{{t('features.importFile')}}</NButton><input ref="file" type="file" accept=".yaml,.yml" style="display:none" @change="read"/></div>
+ <div class="actions"><a :href="api.configExportURL()" download="keenproxy-backup.yaml">{{t('features.exportYAML')}}</a><a :href="api.configExportURL(true)" download="keenproxy-support-redacted.yaml">{{t('features.exportSupport')}}</a><NButton @click="previous">{{t('features.previous')}}</NButton><NButton @click="file?.click()">{{t('features.importFile')}}</NButton><input ref="file" type="file" accept=".yaml,.yml" style="display:none" @change="read"/></div>
  <NInput v-model:value="text" type="textarea" :placeholder="t('features.pasteYAML')" :rows="5" @update:value="preview=undefined"/>
  <div class="actions"><NButton :disabled="!text.trim()" @click="validate">{{t('features.validate')}}</NButton><NButton v-if="preview" type="primary" @click="accept">{{t('features.toDraft')}}</NButton></div>
  <NAlert v-if="preview" type="info">{{t('features.yamlPreview',{groups:preview.groups?.length??0,connections:preview.connections?.length??0})}}</NAlert><NAlert v-if="error" type="error">{{error}}</NAlert>
