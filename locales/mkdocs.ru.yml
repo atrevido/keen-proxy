@@ -14,6 +14,7 @@ plugins:
             demo_label: Демо
             demo_title: Открыть интерактивное демо в браузере
           nav_translations:
+            Home: Главная
             Overview: Обзор
             Getting started: Начало работы
             User guide: Руководство пользователя
