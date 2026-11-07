@@ -36,7 +36,8 @@ extra:
 extra_css:
   - assets/keenproxy.css
 nav:
-  - Overview: index.md
+  - Home: index.md
+  - Overview: overview.md
   - Getting started: getting-started.md
   - User guide: user-guide.md
   - Routing and DNS: routing.md
@@ -47,6 +48,10 @@ nav:
 markdown_extensions:
   - admonition
   - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
   - pymdownx.superfences

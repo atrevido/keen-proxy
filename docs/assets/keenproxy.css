@@ -117,3 +117,276 @@ body[data-md-color-scheme][data-md-color-primary] {
     padding: 0.25rem 0.55rem;
   }
 }
+
+/* Landing page (docs/<lang>/index.md): the same flat surfaces, borders, and
+   radii as the panel, built only from the palette tokens above. */
+.kp-landing {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.md-typeset .kp-landing h1 {
+  margin: 0 0 0.6em;
+  font-size: 2.4rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.md-typeset .kp-landing h2 {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+}
+
+.md-typeset .kp-landing h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.kp-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 2.5rem;
+  align-items: center;
+  padding: 1.5rem 0 2.5rem;
+}
+
+.md-typeset .kp-hero__text > p:not(:has(.kp-hero__logo)) {
+  color: var(--kp-muted);
+  font-size: 0.95rem;
+}
+
+.md-typeset .kp-hero__logo {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.md-typeset .kp-hero__shot {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--kp-line);
+  border-radius: 10px;
+}
+
+.md-typeset .kp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.md-typeset .kp-actions .md-button {
+  margin: 0;
+  padding: 0.55em 1.3em;
+  border: 1px solid var(--kp-line);
+  border-radius: 6px;
+  color: var(--kp-text);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.md-typeset .kp-actions .md-button:hover,
+.md-typeset .kp-actions .md-button:focus-visible {
+  border-color: var(--kp-accent);
+  background: var(--kp-tint);
+  color: var(--kp-text);
+}
+
+.md-typeset .kp-actions .md-button--primary {
+  border-color: var(--kp-accent);
+  background: var(--kp-accent);
+  color: var(--kp-page);
+}
+
+.md-typeset .kp-actions .md-button--primary:hover,
+.md-typeset .kp-actions .md-button--primary:focus-visible {
+  border-color: var(--kp-hover);
+  background: var(--kp-hover);
+  color: var(--kp-page);
+}
+
+.md-typeset .kp-actions .md-button .twemoji {
+  margin-right: 0.3em;
+}
+
+.kp-section {
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--kp-line);
+}
+
+.kp-grid,
+.kp-steps,
+.kp-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kp-card,
+.kp-step {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--kp-line);
+  border-radius: 10px;
+  background: var(--kp-surface);
+}
+
+.md-typeset .kp-card p,
+.md-typeset .kp-step p {
+  margin: 0;
+  color: var(--kp-muted);
+  font-size: 0.75rem;
+}
+
+.md-typeset .kp-card > p:first-child {
+  margin-bottom: 0.6rem;
+}
+
+.md-typeset .kp-card__icon {
+  display: inline-flex;
+  height: auto;
+  padding: 0.45rem;
+  border-radius: 6px;
+  background: var(--kp-tint);
+  color: var(--kp-accent);
+}
+
+.md-typeset .kp-card__icon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  max-height: none;
+}
+
+.kp-steps {
+  counter-reset: kp-step;
+}
+
+.md-typeset .kp-step h3::before {
+  counter-increment: kp-step;
+  content: counter(kp-step);
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.55rem;
+  border-radius: 999px;
+  background: var(--kp-accent);
+  color: var(--kp-page);
+  font-size: 0.7rem;
+}
+
+.md-typeset .kp-gallery figure {
+  margin: 0;
+}
+
+.md-typeset .kp-gallery img {
+  display: block;
+  border: 1px solid var(--kp-line);
+  border-radius: 10px;
+}
+
+.md-typeset .kp-gallery figcaption {
+  max-width: none;
+  margin: 0.5rem 0 0;
+  color: var(--kp-muted);
+  font-size: 0.75rem;
+  font-style: normal;
+  text-align: left;
+}
+
+.kp-cta {
+  margin: 1rem 0 2rem;
+  padding: 2rem;
+  border: 1px solid var(--kp-line);
+  border-radius: 10px;
+  background: var(--kp-tint);
+  text-align: center;
+}
+
+.md-typeset .kp-cta .kp-actions {
+  justify-content: center;
+}
+
+.md-typeset .kp-note {
+  margin: 1.2rem 0 0;
+  color: var(--kp-muted);
+  font-size: 0.7rem;
+}
+
+@media screen and (max-width: 59.984375em) {
+  .kp-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .kp-grid,
+  .kp-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kp-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media screen and (max-width: 37.484375em) {
+  .md-typeset .kp-landing h1 {
+    font-size: 1.8rem;
+  }
+
+  .kp-grid,
+  .kp-gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kp-cta {
+    padding: 1.4rem 1rem;
+  }
+}
+
+/* Landing header: blends into the page instead of the green bar. A border
+   appears once Material marks the title active, i.e. after the hero heading
+   scrolls away. Browsers without :has() keep the regular header. */
+body:has(.kp-landing) .md-header {
+  --md-primary-fg-color: var(--kp-page);
+  --md-primary-bg-color: var(--kp-text);
+  --md-primary-bg-color--light: var(--kp-muted);
+  border-bottom-color: transparent;
+  transition: border-color 0.25s;
+}
+
+body:has(.kp-landing) .md-header:has(.md-header__title--active) {
+  border-bottom-color: color-mix(in srgb, var(--kp-line) 60%, transparent);
+}
+
+/* Frosted glass: the sticky header shows the page scrolling beneath it. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  body:has(.kp-landing) .md-header {
+    background-color: color-mix(in srgb, var(--kp-page) 62%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.6);
+    backdrop-filter: blur(14px) saturate(1.6);
+  }
+}
+
+body:has(.kp-landing) .md-header :focus-visible {
+  outline-color: var(--kp-accent);
+}
+
+body:has(.kp-landing) .md-header .kp-demo {
+  background: var(--kp-accent);
+  color: var(--kp-page);
+}
+
+body:has(.kp-landing) .md-header .kp-demo:hover,
+body:has(.kp-landing) .md-header .kp-demo:focus-visible {
+  background: var(--kp-hover);
+  color: var(--kp-page);
+}
+
+@media screen and (min-width: 60em) {
+  body:has(.kp-landing) .md-search__input,
+  body:has(.kp-landing) .md-search__input:hover {
+    border: 1px solid color-mix(in srgb, var(--kp-line) 70%, transparent);
+    background-color: color-mix(in srgb, var(--kp-surface) 55%, transparent);
+    color: var(--kp-text);
+  }
+}

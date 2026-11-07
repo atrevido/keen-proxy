@@ -1,22 +1,156 @@
+---
+title: KeenProxy
+hide:
+  - navigation
+  - toc
+---
+
+<div class="kp-landing" markdown>
+
+<section class="kp-hero" markdown>
+<div class="kp-hero__text" markdown>
+
+![KeenProxy logo](../assets/logo.png){ .kp-hero__logo width="72" }
+
 # Your network, your routes
 
-![KeenProxy logo](../assets/logo.png){ width="128" style="vertical-align: middle" } &nbsp; ![Ordo Systems](../assets/ordo-systems-logo.png){ width="160" style="vertical-align: middle" }
+Selective traffic routing for Keenetic and Netcraze routers running Entware. Choose which devices, domains, addresses, and countries use a tunnel, connect directly, or are blocked — from one web panel.
 
-KeenProxy is an experimental routing application for compatible Keenetic/Entware environments. It lets you send selected domains, addresses, countries, networks, or devices through a connection, connect directly, or block them. The web interface is the control panel; the router daemon applies the configuration and owns network effects.
+<div class="kp-actions" markdown>
+[:material-play: Try the demo](demo/){ .md-button .md-button--primary }
+[Get started](getting-started.md){ .md-button }
+</div>
 
-## Start here
+</div>
 
-- **Explore first:** open the [browser demo](browser-demo.md). No router or credentials are required.
-- **Prepare a router:** read [Getting started](getting-started.md) before installing anything.
-- **Learn the workflow:** follow the [illustrated user guide](user-guide.md).
-- **Understand policy:** read [Routing and DNS](routing.md).
-- **Manage releases:** see [updates and rollback from the panel](getting-started.md#update-from-the-panel).
+[![KeenProxy web panel overview with synthetic traffic](../assets/screenshots/readme-overview.png){ .kp-hero__shot }](demo/)
 
-## The core idea
+</section>
 
-A **connection** is a named WireGuard, link-based, sing-box, or TrustTunnel profile. A **group** connects domains, addresses, or country selectors to a routing target. **Networks and clients** choose which devices use those rules. The **Overview, Journal, and Diagnostics** screens help explain the applied state.
+<section class="kp-section" markdown>
 
-Routing settings share one draft. Review changes to connections or rules and choose **Apply**. **Discard** returns to the last saved configuration. Release installation and scheduling use their own controls under **Settings**.
+## What it does
 
-!!! warning "Experimental software"
-    Compatibility depends on architecture, firmware, kernel capabilities, and build features. Synthetic demo results do not prove connectivity, DNS protection, or compatibility with your router.
+<div class="kp-grid" markdown>
+
+<div class="kp-card" markdown>
+:material-devices:{ .kp-card__icon }
+
+### Device and network policies
+
+Split routing, full tunneling, or direct access per network, with per-device overrides by MAC address.
+</div>
+
+<div class="kp-card" markdown>
+:material-earth:{ .kp-card__icon }
+
+### Domain, IP, and country groups
+
+Route by domain, CIDR, or country — including exclusions such as “everything except Russia”.
+</div>
+
+<div class="kp-card" markdown>
+:material-vpn:{ .kp-card__icon }
+
+### Many connection types
+
+WireGuard, sing-box connection links, raw sing-box outbounds, and an optional TrustTunnel client.
+</div>
+
+<div class="kp-card" markdown>
+:material-shield-sync:{ .kp-card__icon }
+
+### Failover
+
+Fall back to another connection when one goes down, and return after it has recovered.
+</div>
+
+<div class="kp-card" markdown>
+:material-dns:{ .kp-card__icon }
+
+### DNS and blocklists
+
+A local DNS frontend with DoH/DoT resolvers, selectable DNS routing, and DNS-only blocklists.
+</div>
+
+<div class="kp-card" markdown>
+:material-file-document-check-outline:{ .kp-card__icon }
+
+### Review before Apply
+
+Every change goes into one shared draft. Apply it when ready, or discard it; journals explain the result.
+</div>
+
+</div>
+
+</section>
+
+<section class="kp-section" markdown>
+
+## How it works
+
+<div class="kp-steps" markdown>
+
+<div class="kp-step" markdown>
+### Add a connection
+
+Import a WireGuard file or a connection link, or use the wizard.
+</div>
+
+<div class="kp-step" markdown>
+### Define groups
+
+Collect domains, addresses, or countries and pick where they go.
+</div>
+
+<div class="kp-step" markdown>
+### Choose devices and Apply
+
+Select which networks and clients follow the rules, then apply the draft.
+</div>
+
+</div>
+
+</section>
+
+<section class="kp-section" markdown>
+
+## A look at the panel
+
+<div class="kp-gallery" markdown>
+
+<figure markdown>
+[![Domain groups, targets, and address observations](../assets/screenshots/en-rules.png)](user-guide.md#3-add-a-routing-group)
+<figcaption>Rules</figcaption>
+</figure>
+
+<figure markdown>
+[![Connection profiles and routing targets](../assets/screenshots/en-connections.png)](user-guide.md#2-configure-a-connection)
+<figcaption>Connections</figcaption>
+</figure>
+
+<figure markdown>
+[![Diagnostics for a selected connection](../assets/screenshots/en-diagnostics.png)](user-guide.md#7-verify-the-result)
+<figcaption>Diagnostics</figcaption>
+</figure>
+
+</div>
+
+</section>
+
+<section class="kp-cta" markdown>
+
+## Try it in your browser
+
+The demo runs the real web panel with synthetic data. No router or credentials are required.
+
+<div class="kp-actions" markdown>
+[:material-play: Open the demo](demo/){ .md-button .md-button--primary }
+[Read the overview](overview.md){ .md-button }
+</div>
+
+<p class="kp-note">KeenProxy is experimental. Compatibility depends on the router architecture, firmware, kernel capabilities, and build features.</p>
+
+</section>
+
+</div>
