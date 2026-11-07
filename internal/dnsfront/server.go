@@ -16,7 +16,7 @@ import (
 
 	"github.com/miekg/dns"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 const (

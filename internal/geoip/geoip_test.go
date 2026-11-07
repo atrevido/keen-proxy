@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/atrevido/keenetic-proxy/internal/geoip"
-	"github.com/atrevido/keenetic-proxy/internal/geoip/geoiptest"
+	. "github.com/ordo-systems/keen-proxy/internal/geoip"
+	"github.com/ordo-systems/keen-proxy/internal/geoip/geoiptest"
 )
 
 var testNets = map[string]string{

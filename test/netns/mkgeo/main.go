@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/atrevido/keenetic-proxy/internal/geoip/geoiptest"
+	"github.com/ordo-systems/keen-proxy/internal/geoip/geoiptest"
 )
 
 // main maps CIDR=country arguments into the requested MMDB fixture.

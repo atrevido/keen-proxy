@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/journal"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // startJournals seeds synthetic history and adds one route per second

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
 	"io"
 	"net/http"
 	"time"

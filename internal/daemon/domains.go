@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/compile"
-	"github.com/atrevido/keenetic-proxy/internal/dnsfront"
-	"github.com/atrevido/keenetic-proxy/internal/domaincache"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/compile"
+	"github.com/ordo-systems/keen-proxy/internal/dnsfront"
+	"github.com/ordo-systems/keen-proxy/internal/domaincache"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/miekg/dns"
 )
 

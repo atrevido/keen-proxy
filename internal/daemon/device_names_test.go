@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/devices"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/devices"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 func TestDiscoveredNameDoesNotOverwriteClientOrBlockAPI(t *testing.T) {

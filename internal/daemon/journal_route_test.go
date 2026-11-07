@@ -2,8 +2,8 @@ package daemon
 
 import (
 	"encoding/json"
-	"github.com/atrevido/keenetic-proxy/internal/journal"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/sagernet/sing-box/adapter"
 	M "github.com/sagernet/sing/common/metadata"
 	"net/netip"

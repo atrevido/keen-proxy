@@ -3,7 +3,7 @@ package compile
 import (
 	"bytes"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/route/rule"
 	"testing"

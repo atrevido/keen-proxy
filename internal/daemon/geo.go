@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/compile"
-	"github.com/atrevido/keenetic-proxy/internal/geoip"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/compile"
+	"github.com/ordo-systems/keen-proxy/internal/geoip"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // GeoInfo reports country database status for monitoring and diagnostics.

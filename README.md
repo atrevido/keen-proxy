@@ -6,8 +6,8 @@ KeenProxy lets you choose which devices, domains, IP ranges, and countries use a
 
 ## Documentation and live demo
 
-- [English documentation](https://atrevido.github.io/keen-proxy/) · [Russian documentation](https://atrevido.github.io/keen-proxy/ru/)
-- [Interactive browser demo](https://atrevido.github.io/keen-proxy/demo/) — the same interface with synthetic data and an in-memory API; no router required. Changes reset on reload.
+- [English documentation](https://ordo-systems.github.io/keen-proxy/) · [Russian documentation](https://ordo-systems.github.io/keen-proxy/ru/)
+- [Interactive browser demo](https://ordo-systems.github.io/keen-proxy/demo/) — the same interface with synthetic data and an in-memory API; no router required. Changes reset on reload.
 
 ## What works today
 
@@ -84,7 +84,7 @@ On a prepared Entware router, install `curl` and a CA bundle if needed. Run thes
 
 ```sh
 opkg update && opkg install curl ca-bundle ca-certificates
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
 ```
 
 The bootstrap reads `version.txt` from `main`, selects the ARM64 or MIPSLE asset, and verifies the binary and installer files against the tagged release's `SHA256SUMS`. It installs missing Entware `iptables` tools, installs the pinned TrustTunnel client by default, and registers and starts `/opt/etc/init.d/S99keenproxy`. Entware runs the init script on boot. The first start enables LAN DNS interception even with an empty routing policy. Stop any competing interceptor first.
@@ -92,7 +92,7 @@ The bootstrap reads `version.txt` from `main`, selects the ARM64 or MIPSLE asset
 Run the same command again to update. Existing configuration and tokens are preserved. Select a specific published release with `--version`, choose the smaller build with `--lite`, or skip the optional client with `--without-trusttunnel`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z --lite --without-trusttunnel
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z --lite --without-trusttunnel
 ```
 
 Replace `vX.Y.Z` with a real release tag. The release must contain the binary, `install.sh`, `S99keenproxy`, and `SHA256SUMS`. If assets are still publishing, retry when they are available. Check or stop the service with `/opt/etc/init.d/S99keenproxy status` or `/opt/etc/init.d/S99keenproxy stop`.
@@ -100,7 +100,7 @@ Replace `vX.Y.Z` with a real release tag. The release must contain the binary, `
 To remove an installation managed by the bootstrap:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
 ```
 
 This stops KeenProxy and removes its binary and Entware init script. It keeps the configuration, API token, logs, rule sets, and optional TrustTunnel client. Reinstall with the regular install command to reuse the saved settings.

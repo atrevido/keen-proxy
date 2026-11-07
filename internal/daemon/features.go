@@ -8,12 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/compile"
-	"github.com/atrevido/keenetic-proxy/internal/dnsfront"
-	"github.com/atrevido/keenetic-proxy/internal/filterlist"
-	"github.com/atrevido/keenetic-proxy/internal/journal"
-	"github.com/atrevido/keenetic-proxy/internal/model"
-	"github.com/atrevido/keenetic-proxy/internal/stats"
+	"github.com/ordo-systems/keen-proxy/internal/compile"
+	"github.com/ordo-systems/keen-proxy/internal/dnsfront"
+	"github.com/ordo-systems/keen-proxy/internal/filterlist"
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/stats"
 	"github.com/miekg/dns"
 	M "github.com/sagernet/sing/common/metadata"
 )

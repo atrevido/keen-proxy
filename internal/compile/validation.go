@@ -2,7 +2,7 @@ package compile
 
 import (
 	"encoding/json"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // ConnectionValidationConfig contains only profiles and a local resolver: no

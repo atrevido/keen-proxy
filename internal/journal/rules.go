@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/atrevido/keenetic-proxy/internal/compile"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/compile"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // Rule-set tags emitted by internal/compile.

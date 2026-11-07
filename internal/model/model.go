@@ -14,8 +14,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/atrevido/keenetic-proxy/internal/links"
-	"github.com/atrevido/keenetic-proxy/internal/trusttunnel"
+	"github.com/ordo-systems/keen-proxy/internal/links"
+	"github.com/ordo-systems/keen-proxy/internal/trusttunnel"
 )
 
 // Built-in route targets may be used instead of a connection ID.

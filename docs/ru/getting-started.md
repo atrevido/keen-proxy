@@ -49,7 +49,7 @@ opkg update && opkg install curl ca-bundle ca-certificates
 Перед установкой остановите другие службы, которые перехватывают трафик или DNS. При запуске KeenProxy начинает перехватывать DNS локальной сети даже с начальной конфигурацией. Запустите скрипт из `main`:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh
 ```
 
 Установщик читает `version.txt` из `main`, определяет архитектуру и сверяет файлы релиза с `SHA256SUMS`. Он устанавливает недостающие утилиты `iptables` из Entware, создаёт начальную конфигурацию при её отсутствии и регистрирует и запускает `S99keenproxy` через механизм служб Entware. Клиент TrustTunnel устанавливается по умолчанию. KeenProxy запускает его при наличии настроенного профиля. С начальной конфигурацией откройте LAN-адрес роутера на порту `8086`. Токен находится на роутере в `/opt/etc/keenproxy/token`.
@@ -59,10 +59,10 @@ curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/boot
 Чтобы выбрать версию, замените `vX.Y.Z` на опубликованный тег. Флаг `--lite` выбирает облегчённую сборку, а `--without-trusttunnel` пропускает установку внешнего клиента.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --version vX.Y.Z
 ```
 
-Дождитесь появления файлов установщика и контрольных сумм в релизе. Если они ещё публикуются, повторите команду позже. Для управления службой используйте `/opt/etc/init.d/S99keenproxy` с командой `status`, `start`, `stop` или `restart`. Инструкции для ручной установки есть в корневом README. [Справка по установке](https://github.com/atrevido/keen-proxy#configuration-and-router-installation)
+Дождитесь появления файлов установщика и контрольных сумм в релизе. Если они ещё публикуются, повторите команду позже. Для управления службой используйте `/opt/etc/init.d/S99keenproxy` с командой `status`, `start`, `stop` или `restart`. Инструкции для ручной установки есть в корневом README. [Справка по установке](https://github.com/ordo-systems/keen-proxy#configuration-and-router-installation)
 
 ## Первая настройка
 
@@ -77,7 +77,7 @@ curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/boot
 Выполните в оболочке Entware от имени root:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
 ```
 
 Команда остановит службу KeenProxy, созданную установщиком, и удалит `/opt/bin/keenproxy` и `/opt/etc/init.d/S99keenproxy`. Настройки и токен в `/opt/etc/keenproxy/`, журналы и рабочие данные в `/opt/var/lib/keenproxy/` и клиент TrustTunnel сохранятся. При повторной установке KeenProxy подхватит сохранённые настройки.

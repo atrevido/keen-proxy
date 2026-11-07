@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/catalog"
-	"github.com/atrevido/keenetic-proxy/internal/daemon"
-	"github.com/atrevido/keenetic-proxy/internal/filterlist"
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/catalog"
+	"github.com/ordo-systems/keen-proxy/internal/daemon"
+	"github.com/ordo-systems/keen-proxy/internal/filterlist"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 func (s *Server) catalog(w http.ResponseWriter, r *http.Request) {

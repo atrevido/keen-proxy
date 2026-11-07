@@ -1,4 +1,4 @@
-module github.com/atrevido/keenetic-proxy
+module github.com/ordo-systems/keen-proxy
 
 go 1.26.1
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // fakeRunner records calls and fails -C checks for jumps listed in missing.

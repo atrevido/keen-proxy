@@ -1,6 +1,6 @@
 package catalog
 
-import "github.com/atrevido/keenetic-proxy/internal/model"
+import "github.com/ordo-systems/keen-proxy/internal/model"
 
 // DNSProfile describes provider endpoints and their bootstrap address.
 type DNSProfile struct {

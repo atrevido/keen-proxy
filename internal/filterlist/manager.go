@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // State exposes one source's loaded counts, version, and latest refresh error.

@@ -9,12 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/atrevido/keenetic-proxy/internal/engine"
+	"github.com/ordo-systems/keen-proxy/internal/engine"
 	box "github.com/sagernet/sing-box"
 	"github.com/sagernet/sing-box/option"
 	sjson "github.com/sagernet/sing/common/json"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // Keys are valid base64 encodings of 32 zero bytes; no real keys are needed.

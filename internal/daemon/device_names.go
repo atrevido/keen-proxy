@@ -6,7 +6,7 @@ import (
 	"net/netip"
 	"time"
 
-	"github.com/atrevido/keenetic-proxy/internal/devices"
+	"github.com/ordo-systems/keen-proxy/internal/devices"
 )
 
 // cachedDeviceName expires observations and prevents reuse after an address change.

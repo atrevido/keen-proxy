@@ -18,7 +18,7 @@ Check whether the group is enabled and applied. Review its DNS route, resolver a
 
 ## What should a bug report include?
 
-Expected and actual behavior, exact version/build tags, architecture/firmware, reproducible steps, and a minimal synthetic configuration. Remove tokens, connection URLs, private keys, personal browsing histories, and production exports. Read [CONTRIBUTING](https://github.com/atrevido/keen-proxy/blob/main/CONTRIBUTING.md) and [SECURITY](https://github.com/atrevido/keen-proxy/blob/main/SECURITY.md).
+Expected and actual behavior, exact version/build tags, architecture/firmware, reproducible steps, and a minimal synthetic configuration. Remove tokens, connection URLs, private keys, personal browsing histories, and production exports. Read [CONTRIBUTING](https://github.com/ordo-systems/keen-proxy/blob/main/CONTRIBUTING.md) and [SECURITY](https://github.com/ordo-systems/keen-proxy/blob/main/SECURITY.md).
 
 ## What is still a documentation draft?
 

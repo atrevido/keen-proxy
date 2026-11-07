@@ -14,7 +14,7 @@ import (
 
 	M "github.com/sagernet/sing/common/metadata"
 
-	"github.com/atrevido/keenetic-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 // health tracks probe results and consecutive status duration for one connection.

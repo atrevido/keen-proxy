@@ -1,4 +1,4 @@
-module keenetic-proxy/tools/nlprobe
+module github.com/ordo-systems/keen-proxy/tools/nlprobe
 
 go 1.26.1
 
