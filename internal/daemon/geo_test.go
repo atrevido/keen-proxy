@@ -221,3 +221,49 @@ func TestGeoUpdateUsesCurrentConfig(t *testing.T) {
 		t.Fatalf("database enabled during download is not loaded: %q %q", cc, id)
 	}
 }
+
+// A local database pointing at the legacy file keeps it in place.
+func TestGeoLegacyFileUsedLocally(t *testing.T) {
+	d := New(Options{RuleSetDir: filepath.Join(t.TempDir(), "rule-sets")})
+	legacy := filepath.Join(d.geoStore.Dir, "country.mmdb")
+	writeGeo(t, legacy, map[string]string{"10.0.0.0/8": "RU"})
+	cfg := &model.Config{GeoIP: model.GeoIP{Databases: []model.GeoIPDatabase{
+		{ID: "dbip", Enabled: true},
+		{ID: "local", File: legacy, Enabled: true},
+	}}}
+	d.adoptLegacyGeo(cfg)
+	if _, err := os.Stat(legacy); err != nil {
+		t.Fatal("legacy file used by a local database was moved")
+	}
+	if _, err := os.Stat(d.geoStore.Path("dbip")); err == nil {
+		t.Fatal("legacy file was adopted by dbip")
+	}
+}
+
+// A database installed before its state save failed is still loaded.
+func TestGeoUpdateLoadsFileDespiteStateError(t *testing.T) {
+	d := New(Options{RuleSetDir: filepath.Join(t.TempDir(), "rule-sets")})
+	remote := filepath.Join(t.TempDir(), "remote.mmdb")
+	writeGeo(t, remote, map[string]string{"10.0.0.0/8": "DE"})
+	raw, _ := os.ReadFile(remote)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write(raw) }))
+	defer srv.Close()
+	d.geoStore.Client = srv.Client()
+	cfg, err := model.Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.GeoIP.Databases = []model.GeoIPDatabase{{ID: "remote", URL: srv.URL + "/r.mmdb", Enabled: true}}
+	d.mu.Lock()
+	d.cfg = cfg
+	d.mu.Unlock()
+	// A directory in place of the state file makes saving it fail.
+	os.MkdirAll(filepath.Join(d.geoStore.Dir, "remote.json"), 0o755)
+
+	if err := d.UpdateGeo(context.Background(), "remote"); err == nil {
+		t.Fatal("want state save error")
+	}
+	if cc, id := d.geo.set.Country(netip.MustParseAddr("10.1.1.1")); cc != "DE" || id != "remote" {
+		t.Fatalf("installed database is not loaded: %q %q", cc, id)
+	}
+}

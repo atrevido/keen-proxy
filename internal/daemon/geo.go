@@ -288,6 +288,9 @@ func (d *Daemon) updateGeo(ctx context.Context, id string, manual bool) error {
 			}
 		case changed:
 			d.audit("system", "IP database updated", "geoip", "ok", name)
+		}
+		// A file can be installed even when saving its state fails.
+		if changed {
 			installed = append(installed, db.ID)
 		}
 	}
@@ -326,6 +329,7 @@ func (d *Daemon) legacyGeoPath() string { return filepath.Join(d.geoStore.Dir, "
 // first enabled downloadable country database that has no file yet, so an
 // upgraded router keeps country routing until the first download succeeds.
 // Without state the adopted file is still checked for updates right away.
+// A local database that points at the file keeps it.
 func (d *Daemon) adoptLegacyGeo(cfg *model.Config) {
 	legacy := d.legacyGeoPath()
 	g, err := geoip.Open(legacy)
@@ -333,6 +337,11 @@ func (d *Daemon) adoptLegacyGeo(cfg *model.Config) {
 		return
 	}
 	g.Close()
+	for _, db := range cfg.GeoIP.Databases {
+		if db.File != "" && filepath.Clean(db.File) == legacy {
+			return // a local database still uses the file in place
+		}
+	}
 	for _, db := range cfg.GeoIP.Databases {
 		if !db.Enabled || db.IsCategory() || db.File != "" || geoSource(db) == nil {
 			continue

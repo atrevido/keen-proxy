@@ -123,6 +123,7 @@ watch(
 )
 // Apply starts downloads in the background, so keep the status current.
 let timer: ReturnType<typeof setInterval> | undefined
+let disposed = false // the page may close while the first requests are pending
 onMounted(async () => {
   try {
     builtins.value = (await api.catalog()).geoip ?? []
@@ -130,9 +131,12 @@ onMounted(async () => {
     error.value = (e as Error).message
   }
   await reload()
-  timer = setInterval(() => busy.value || reload(), 5000)
+  if (!disposed) timer = setInterval(() => busy.value || reload(), 5000)
 })
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  disposed = true
+  clearInterval(timer)
+})
 </script>
 
 <template>
