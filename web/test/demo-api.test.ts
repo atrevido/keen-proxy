@@ -25,7 +25,7 @@ test('demo API drives the UI without HTTP or EventSource operations', async () =
     assert.equal((await api.diagnosticCheck('fi')).demo, true)
     assert.equal((await api.domains()).demo, true)
     assert.equal((await api.resolveDomains(['example.com'])).records.length, 1)
-    assert.equal((await api.journal('routes', {})).entries.length, 1)
+    assert.ok((await api.journal('routes', {})).entries.length > 1)
     const stream = api.journalStream('routes')
     assert.equal(stream.onmessage, null)
     stream.close()
@@ -51,4 +51,19 @@ test('demo API drives the UI without HTTP or EventSource operations', async () =
       URL.revokeObjectURL(url)
     }
   } finally { globalThis.fetch = original }
+})
+
+test('demo journal streams new records and stops after close', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval', 'Date'], now: Date.now() })
+  const previous = (await api.journal('routes', {})).entries[0]!
+  const stream = api.journalStream('routes')
+  t.after(() => stream.close())
+  const seen: number[] = []
+  stream.onmessage = (event) => seen.push(JSON.parse(event.data).id)
+  t.mock.timers.tick(3000)
+  assert.equal(seen.length, 1)
+  assert.ok(seen[0]! > previous.id)
+  stream.close()
+  t.mock.timers.tick(6000)
+  assert.equal(seen.length, 1)
 })

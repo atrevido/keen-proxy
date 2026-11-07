@@ -9,7 +9,7 @@ Try editing a group, inspecting a connection, previewing a sample preset, select
 - Configuration is kept in this page's memory and resets on reload.
 - The demo does not contact a router or proxy server, query DNS, fetch filter lists, or perform connectivity checks.
 - Never enter actual credentials. Use the supplied placeholders.
-- Statistics and journals are illustrative snapshots. There is no live journal stream; the catalog contains one synthetic preset.
+- The monitor simulates traffic every three seconds. The routing journal receives new synthetic events and supports live pause, filters, and pagination. Apply adds an audit entry. The catalog contains one synthetic preset.
 - YAML import is unavailable. Synthetic exports are JSON, which is compatible with YAML 1.2, rather than a production backup format.
 
 The production build continues using the authenticated HTTP API. [Build instructions](development.md) explain how both outputs are created.
