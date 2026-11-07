@@ -5,6 +5,12 @@
 Потребуются Python 3.12+ и Node 22.12+:
 
 ```sh
+make docs-preview
+```
+
+Команда создаёт `.venv-docs`, собирает документацию в строгом режиме вместе с демо в `site/` и запускает сервер на порту 8097. Другой порт задаётся через `DOCS_PORT`. `make docs` только собирает сайт. Те же шаги вручную:
+
+```sh
 python3 -m venv .venv-docs
 .venv-docs/bin/pip install -r requirements-docs.txt
 DOCS_SITE_URL=http://localhost:8097/ .venv-docs/bin/mkdocs build --strict

@@ -89,3 +89,31 @@ body[data-md-color-scheme][data-md-color-primary] {
   outline: 2px solid var(--kp-header-text);
   outline-offset: 3px;
 }
+
+/* Demo button before the theme toggle (overrides/partials/palette.html).
+   Uses the panel's primary button colors in both schemes. */
+.kp-demo {
+  flex: none;
+  margin: 0 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 0.4rem;
+  background: #b2eb82;
+  color: #16260f;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.kp-demo:hover,
+.kp-demo:focus-visible {
+  background: #d4f8bb;
+  color: #16260f;
+}
+
+/* Leave room for the site title on phones. */
+@media screen and (max-width: 29.984375em) {
+  .kp-demo {
+    margin: 0 0.1rem;
+    padding: 0.25rem 0.55rem;
+  }
+}
