@@ -2,6 +2,7 @@
 
 ## Language and documentation
 
+- Whenever a new feature or behavior change requires documentation, add or update the affected documentation and user guides in the same change. Keep the English and Russian versions in sync.
 - Write developer documentation, code comments, and shared Serena memories in concise English.
 - Keep runtime errors, logs, generated comments, and code text in English. Literal Cyrillic belongs only in `docs/ru/` and Russian localization resources. Use Unicode escapes for essential Cyrillic test fixtures without changing their runtime values. Run `make check-language` to verify this boundary.
 - Explain the purpose, contract, ownership, or important constraint of significant types and functions. Avoid comments that merely repeat their names.

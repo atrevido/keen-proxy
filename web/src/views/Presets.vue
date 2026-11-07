@@ -28,8 +28,10 @@ onMounted(async()=>{try{catalog.value=(await api.catalog()).presets}catch(e){err
   <p>{{p.description}}</p><div class="muted">{{t('features.categories.'+p.category)}} · {{p.domains.length}} {{t('features.domains')}}</div>
   <details><summary>{{t('features.composition')}}</summary><pre>{{p.domains.join('\n')}}</pre></details>
   <template v-if="installed(p)">
-   <NCheckbox :checked="!installed(p)!.disabled" @update:checked="v=>{installed(p)!.disabled=!v}">{{t('features.enabled')}}</NCheckbox>
-   <NCheckbox :checked="installed(p)!.preset!.auto_update" @update:checked="v=>{installed(p)!.preset!.auto_update=v}">{{t('features.presetAuto')}}</NCheckbox>
+   <div class="preset-options">
+    <NCheckbox :checked="!installed(p)!.disabled" @update:checked="v=>{installed(p)!.disabled=!v}">{{t('features.enabled')}}</NCheckbox>
+    <NCheckbox :checked="installed(p)!.preset!.auto_update" @update:checked="v=>{installed(p)!.preset!.auto_update=v}">{{t('features.presetAuto')}}</NCheckbox>
+   </div>
    <NSelect v-model:value="installed(p)!.target" :options="targets" style="margin-top:8px"/>
   </template>
   <div class="actions"><NButton :loading="busy" @click="prepare(p)">{{installed(p)?t('features.previewUpdate'):t('features.install')}}</NButton><NButton v-if="installed(p)" @click="remove(p)">{{t('common.delete')}}</NButton></div>
@@ -41,5 +43,20 @@ onMounted(async()=>{try{catalog.value=(await api.catalog()).presets}catch(e){err
  </NModal>
 </template>
 <style scoped>
-.tools{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}p{margin:0 0 8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:230px;overflow:auto;font-size:12px}.n-checkbox{display:block;margin-top:8px}summary{cursor:pointer;margin:8px 0}@media(max-width:600px){.tools{grid-template-columns:1fr}}
+.tools{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}p{margin:0 0 8px}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:230px;overflow:auto;font-size:12px}summary{cursor:pointer;margin:8px 0}
+.preset-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+@media (max-width: 600px) {
+  .tools { grid-template-columns: 1fr; }
+  .preset-options { gap: 0; }
+  .preset-options > .n-checkbox {
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 10px 0;
+  }
+}
 </style>
