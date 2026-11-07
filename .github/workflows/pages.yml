@@ -2,10 +2,10 @@ name: Documentation
 
 on:
   pull_request:
-    paths: ['docs/**', 'locales/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
+    paths: ['docs/**', 'locales/**', 'overrides/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
   push:
     branches: [main]
-    paths: ['docs/**', 'locales/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
+    paths: ['docs/**', 'locales/**', 'overrides/**', 'web/**', 'mkdocs.yml', 'requirements-docs.txt', '.github/workflows/pages.yml']
   workflow_dispatch:
     inputs:
       deploy:

@@ -7,7 +7,7 @@ LDFLAGS := -s -w -buildid=
 NODE_BIN ?= $(shell ls -d $(HOME)/.nvm/versions/node/v22.*/bin 2>/dev/null | tail -1)
 NPM := PATH="$(NODE_BIN):$$PATH" npm
 
-.PHONY: test vet web build ui-demo build-router build-router-lite clean integration test-install check-language
+.PHONY: test vet web build ui-demo build-router build-router-lite clean integration test-install check-language docs docs-preview
 
 check-language:
 	python3 -B -m unittest discover -s test/language -v
@@ -46,7 +46,25 @@ build-router-lite: web
 	CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -tags $(LITE_TAGS) -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-lite-linux-mipsle ./cmd/keenproxy
 
 clean:
-	rm -rf bin dist web/dist
+	rm -rf bin dist web/dist web/dist-demo site
+
+# Build the documentation site with the browser demo, as the Pages workflow does.
+DOCS_VENV := .venv-docs
+DOCS_PORT ?= 8097
+$(DOCS_VENV)/bin/mkdocs: requirements-docs.txt
+	python3 -m venv $(DOCS_VENV)
+	$(DOCS_VENV)/bin/pip install -q -r requirements-docs.txt
+	touch $@
+
+docs: $(DOCS_VENV)/bin/mkdocs
+	DOCS_SITE_URL=http://localhost:$(DOCS_PORT)/ $(DOCS_VENV)/bin/mkdocs build --strict
+	cd web && $(NPM) ci --no-audit --no-fund && $(NPM) run build:demo
+	mkdir -p site/demo
+	cp -R web/dist-demo/. site/demo/
+
+# Serve the built site at http://localhost:$(DOCS_PORT)/ (Russian at /ru/, demo at /demo/).
+docs-preview: docs
+	python3 -m http.server $(DOCS_PORT) --bind 127.0.0.1 --directory site
 
 # Exercise real interception inside disposable Docker network namespaces.
 integration:

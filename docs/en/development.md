@@ -5,6 +5,12 @@
 Use Python 3.12+ and Node 22.12+:
 
 ```sh
+make docs-preview
+```
+
+This creates `.venv-docs`, builds the documentation in strict mode with the browser demo in `site/`, and serves it on port 8097. Set `DOCS_PORT` to use another port. `make docs` builds without serving. The equivalent manual steps are:
+
+```sh
 python3 -m venv .venv-docs
 .venv-docs/bin/pip install -r requirements-docs.txt
 DOCS_SITE_URL=http://localhost:8097/ .venv-docs/bin/mkdocs build --strict

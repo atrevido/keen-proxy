@@ -10,6 +10,9 @@ plugins:
           name: English
         - locale: ru
           name: Русский
+          extra:
+            demo_label: Демо
+            demo_title: Открыть интерактивное демо в браузере
           nav_translations:
             Overview: Обзор
             Getting started: Начало работы

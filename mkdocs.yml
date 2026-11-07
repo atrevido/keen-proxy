@@ -9,6 +9,7 @@ site_dir: site
 strict: true
 theme:
   name: material
+  custom_dir: overrides
   font: false
   logo: assets/logo.png
   favicon: assets/logo.png
@@ -29,6 +30,9 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Light theme
+extra:
+  demo_label: Demo
+  demo_title: Open the interactive browser demo
 extra_css:
   - assets/keenproxy.css
 nav:
