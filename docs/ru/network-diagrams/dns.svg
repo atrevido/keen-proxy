@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 292" role="img" aria-labelledby="title">
+  <title id="title">Запрос DNS, ответ и связь имени с адресом</title>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#4d6c58"/></marker></defs>
+  <rect width="720" height="292" rx="18" fill="#f2f7f2"/>
+  <rect x="20" y="25" width="195" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="117.5" y="56" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Устройство в LAN</text>
+  <rect x="263" y="25" width="194" height="50" rx="10" fill="#e3f2d5" stroke="#85a490"/>
+  <text x="360.0" y="56" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">DNS KeenProxy</text>
+  <rect x="505" y="25" width="195" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="602.5" y="56" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Внешний DNS-сервер</text>
+  <path d="M215 42H262" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M263 61H216" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M457 42H504" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M505 61H458" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="117" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">UDP / TCP 53</text>
+  <text x="603" y="100" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">UDP / DoT / DoH</text>
+  <path d="M360 75V134" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="460" y="117" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#19392a" stroke="#f2f7f2" stroke-width="5" stroke-linejoin="round" paint-order="stroke">Успешный A-ответ</text>
+  <rect x="220" y="135" width="280" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="360.0" y="166" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Временная связь имени с IP</text>
+  <path d="M360 185V220" fill="none" stroke="#4d6c58" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="5 5"/>
+  <rect x="220" y="221" width="280" height="50" rx="10" fill="#ffffff" stroke="#85a490"/>
+  <text x="360.0" y="252" text-anchor="middle" font-family="system-ui, sans-serif" font-size="17" fill="#19392a" font-weight="700">Новое соединение без имени</text>
+</svg>
