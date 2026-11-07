@@ -117,6 +117,8 @@ groups:
   - {name: Video, target: fi, entries: [youtube.com]}
   - {name: Steam direct, target: direct, entries: [steampowered.com]}
   - {name: All except Russia, target: fi, countries: [RU], except: true}
+  - {name: Blocked, target: fi, categories: [ru-blocked]}
+geoip: {databases: [{id: runetfreedom-ru, enabled: true}]}
 networks:
   - {name: Home, cidr: 192.168.7.0/24, mode: split}
   - {name: Guests, cidr: 10.1.30.0/24, mode: "off"}
@@ -132,6 +134,7 @@ func TestDescribeRule(t *testing.T) {
 		"ip_is_private=true": "private address — always direct",
 		"source_ip_cidr=192.168.7.0/24 rule_set=group-1":                "network «Home»: group «Steam direct»",
 		"source_ip_cidr=192.168.7.0/24 && !(rule_set=geoip-ru)":         "network «Home»: group «All except Russia» (all except RU)",
+		"source_ip_cidr=192.168.7.0/24 rule_set=geocat-ru-blocked":      "network «Home»: group «Blocked» (categories RU-BLOCKED)",
 		"rule_set=clients-split && rule_set=group-0":                    "device: group «Video»",
 		"rule_set=clients-split":                                        "device: no group matched — direct",
 		"rule_set=clients-off":                                          "device excluded",

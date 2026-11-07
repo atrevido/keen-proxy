@@ -304,7 +304,7 @@ func domainConflicts(cfg *model.Config, records []domaincache.Record) map[string
 		if g.Disabled {
 			continue
 		}
-		if g.IsCountry() {
+		if g.IsGeo() {
 			continue
 		}
 		m := compile.NewDomainMatcher(&model.Config{Groups: []model.Group{g}})

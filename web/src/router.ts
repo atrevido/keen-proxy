@@ -6,6 +6,7 @@ export const routes = [
   { path: '/', name: 'monitor', component: () => import('./views/Monitor.vue'), meta: { title: 'nav.monitor' } },
   { path: '/lists/presets', name:'presets', component:()=>import('./views/Presets.vue'),meta:{title:'nav.presets'} },
   { path: '/lists/filters', name:'filters', component:()=>import('./views/Filters.vue'),meta:{title:'nav.filters'} },
+  { path: '/lists/geoip', name: 'geoip', component: () => import('./views/GeoIP.vue'), meta: { title: 'nav.geoip' } },
   { path: '/lists/groups', name: 'groups', component: () => import('./views/Groups.vue'), meta: { title: 'nav.whitelist' } },
   { path: '/network/connections', name: 'connections', component: () => import('./views/Connections.vue'), meta: { title: 'nav.connections' } },
   { path: '/network/clients', name: 'clients', component: () => import('./views/Clients.vue'), meta: { title: 'nav.clients' } },

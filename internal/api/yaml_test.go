@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 func TestYAMLPreviewAndExport(t *testing.T) {
@@ -43,7 +45,7 @@ func TestYAMLPreviewAndExport(t *testing.T) {
 func TestSupportExportRemovesURLSecrets(t *testing.T) {
 	s, d := newServer()
 	d.cfg.DNS.Upstreams = []string{"https://dns.example/private-token"}
-	d.cfg.GeoIP.URL = "https://geo.example/geo-token"
+	d.cfg.GeoIP.Databases = []model.GeoIPDatabase{{ID: "custom-1", URL: "https://geo.example/geo-token", Enabled: true}}
 	d.cfg.Failover.URL = "https://health.example/health-token"
 	w := do(t, s.Handler(), "GET", "/api/config/yaml?redacted=1", "", "secret", lan)
 	if w.Code != 200 {

@@ -81,18 +81,11 @@ const langOptions = LOCALES.map((l) => ({ label: l.label, value: l.value }))
         <template #header><span class="hdr"><MapPin :size="16" /> {{ t('settings.geo') }}</span></template>
         <div class="kv">
           <span class="muted">{{ t('settings.state') }}</span>
-          <span :class="['pill', geo?.loaded ? 'ok' : 'warn']">{{ geo?.loaded ? t('settings.geoLoaded', { built: geo.built }) : t('settings.geoMissing') }}</span>
+          <span :class="['pill', geo?.loaded ? 'ok' : 'warn']">{{ geo?.loaded ? t('settings.geoActive', { built: geo.built, n: geo.active ?? 1 }) : t('settings.geoMissing') }}</span>
         </div>
         <p v-if="geo?.error" class="hint bad">{{ geo.error }}</p>
         <p class="hint">{{ t('settings.geoHint') }}</p>
-        <NForm label-placement="left" label-width="160">
-          <NFormItem :label="t('settings.geoFile')">
-            <NInput v-model:value="cfg.geoip.file" class="mono" :placeholder="t('settings.geoFilePlaceholder')" clearable />
-          </NFormItem>
-        </NForm>
-        <p class="hint">
-          <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a> — {{ t('settings.geoLicense') }}
-        </p>
+        <router-link to="/lists/geoip"><NButton size="small">{{ t('settings.geoManage') }}</NButton></router-link>
       </NCard>
 
       <NCard size="small">

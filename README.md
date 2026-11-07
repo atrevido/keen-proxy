@@ -157,4 +157,4 @@ Internal work reports and local agent memories are intentionally excluded from t
 
 KeenProxy's original source code is licensed under the **GNU General Public License, version 3 only** (`GPL-3.0-only`). See [LICENSE](LICENSE) for the complete terms. You may use, study, modify, and redistribute it under those terms; distributions must preserve applicable notices and satisfy the license's corresponding-source requirements. The software comes without warranty.
 
-Third-party software and data retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). In particular, sing-box is GPL-3.0-or-later, and the optional DB-IP Lite database requires attribution: [IP Geolocation by DB-IP](https://db-ip.com/).
+Third-party software and data retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). In particular, sing-box is GPL-3.0-or-later, and the default DB-IP Lite country database requires attribution: [IP Geolocation by DB-IP](https://db-ip.com/). Other built-in country databases are listed with their terms in the notices.

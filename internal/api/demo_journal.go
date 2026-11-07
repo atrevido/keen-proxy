@@ -93,7 +93,7 @@ func (d *Demo) addDemoRoute(t time.Time) {
 		e.Outbound = "direct"
 		e.RuleRaw = source
 		for _, g := range cfg.Groups {
-			if g.IsCountry() && g.Except {
+			if g.IsGeo() && g.Except {
 				e.RuleRaw = "" // A Russian address misses the inverted country rule and uses final.
 			}
 		}
@@ -101,7 +101,7 @@ func (d *Demo) addDemoRoute(t time.Time) {
 		e.Host = []string{"api.github.com", "cdn.jsdelivr.net", "fonts.gstatic.com", "discord.com", "www.figma.com"}[rand.IntN(5)]
 		e.Outbound, e.RuleRaw = "direct", source
 		for _, g := range cfg.Groups {
-			if g.IsCountry() && g.Except {
+			if g.IsGeo() && g.Except {
 				e.Outbound = outboundOf(g.Target)
 				e.RuleRaw = source + " && !(rule_set=" + tagsOf(g.Countries) + ")"
 				break

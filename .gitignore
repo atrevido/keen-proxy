@@ -30,3 +30,7 @@ coverage.out
 
 # Local JavaScript coverage reports
 /web/coverage/
+
+# Local binary build artifacts
+keenproxy
+!cmd/keenproxy

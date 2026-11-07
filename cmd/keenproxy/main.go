@@ -23,6 +23,10 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/ordo-systems/keen-proxy/internal/netfilter"
 	"github.com/ordo-systems/keen-proxy/web"
+
+	// Routers often lack a CA bundle. The Mozilla roots are used only when the
+	// system has none, so HTTPS downloads (country databases, filter lists) work.
+	_ "golang.org/x/crypto/x509roots/fallback"
 )
 
 // main selects dry-run, synthetic demo, or the live router lifecycle.

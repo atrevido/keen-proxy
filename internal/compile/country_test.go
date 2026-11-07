@@ -145,3 +145,40 @@ clients:
 		t.Errorf("Steam rules %d, country rules %d", steam, country)
 	}
 }
+
+// Category groups reference geocat-<label> sets and may combine labels with countries.
+func TestCategoryGroups(t *testing.T) {
+	cfg, err := model.Parse([]byte(`
+lan: {interface: br0}
+dns: {upstreams: ["https://1.1.1.1/dns-query"]}
+geoip: {databases: [{id: runetfreedom-ru, enabled: true}]}
+connections:
+  - {id: fi, type: link, link: "socks5://203.0.113.9:1080"}
+groups:
+  - {name: Blocked, target: fi, categories: [ru-blocked, RE-FILTER]}
+  - {name: All except Russia, target: fi, countries: [RU], categories: [RU-WHITELIST], except: true}
+networks:
+  - {name: Home, cidr: 192.168.7.0/24, mode: split}
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := Compile(Input{Config: cfg, RuleSetDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(out.Categories, ",") != "RE-FILTER,RU-BLOCKED,RU-WHITELIST" || strings.Join(out.Countries, ",") != "RU" {
+		t.Fatalf("Categories=%v Countries=%v", out.Categories, out.Countries)
+	}
+	sb := string(out.SingBox)
+	for _, want := range []string{`"geocat-ru-blocked"`, `"geocat-re-filter"`, `"geocat-ru-whitelist"`, `geocat-ru-whitelist.json`} {
+		if !strings.Contains(sb, want) {
+			t.Errorf("missing %s in sing-box config", want)
+		}
+	}
+	// Categories need an enabled category database; a country database is not enough.
+	cfg.GeoIP.Databases = []model.GeoIPDatabase{{ID: "dbip", Enabled: true}}
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "category database") {
+		t.Fatalf("want error without category database: %v", err)
+	}
+}

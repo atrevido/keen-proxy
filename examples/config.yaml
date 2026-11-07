@@ -1,6 +1,15 @@
 lan: {interface: br0, wan: eth3}
 dns: {upstreams: ["https://1.1.1.1/dns-query"]}
 intercept: {mode: tproxy}
+# IP databases: country databases in priority order plus category databases;
+# omitted built-ins are added automatically (disabled).
+geoip:
+  databases:
+    - {id: dbip, enabled: true}
+    - {id: loyalsoldier, enabled: false}
+    # Category database: labels such as RU-BLOCKED for groups with categories.
+    - {id: runetfreedom-ru, enabled: true}
+    - {id: custom-mirror, name: Mirror, url: "https://geo.example.com/country-{month}.mmdb.gz", enabled: false}
 connections:
   - id: fi
     type: wireguard
@@ -16,6 +25,7 @@ groups:
   - {name: International, target: fi, entries: ["youtube.com", "149.154.160.0/20"]}
   - {name: Advertising, target: block, entries: ["ads.example.com"]}
   - {name: Bank, target: direct, entries: ["bank.ru"]}
+  - {name: Blocked in Russia, target: fi, categories: [RU-BLOCKED, RU-BLOCKED-COMMUNITY, RE-FILTER]}
 networks:
   - {name: Home, cidr: 192.168.7.0/24, mode: split, target: fi}
 clients:

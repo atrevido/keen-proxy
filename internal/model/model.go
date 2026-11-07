@@ -101,14 +101,32 @@ type DNS struct {
 	Fallback string `yaml:"fallback" json:"fallback"`
 }
 
-// GeoIP configures the country database used by country groups and connection flags.
+// GeoIP configures the country databases used by country groups and connection flags.
 type GeoIP struct {
-	// URL supplies monthly database updates; {month} expands to YYYY-MM.
-	// The default source is DB-IP IP to Country Lite (CC BY 4.0).
-	URL string `yaml:"url,omitempty" json:"url,omitempty"`
-	// File selects a local MMDB with country.iso_code (such as GeoLite2 Country)
-	// and disables database downloads.
+	// Databases lists country databases in lookup priority order: the first
+	// enabled database that knows an address decides its country. Defaults
+	// adds missing built-ins, which can be reordered and disabled but not removed.
+	Databases []GeoIPDatabase `yaml:"databases" json:"databases"`
+	// URL and File are the single-database settings of earlier versions.
+	// Defaults migrates them into Databases.
+	URL  string `yaml:"url,omitempty" json:"url,omitempty"`
 	File string `yaml:"file,omitempty" json:"file,omitempty"`
+}
+
+// GeoIPDatabase references a built-in source by ID, or defines a custom
+// database with either an HTTPS URL or a local MMDB file.
+type GeoIPDatabase struct {
+	ID   string `yaml:"id" json:"id"`
+	Name string `yaml:"name,omitempty" json:"name,omitempty"` // custom databases only
+	// URL is downloaded daily; {month} expands to YYYY-MM with a fallback to
+	// the previous month. gzip and tar.gz archives are unpacked.
+	URL string `yaml:"url,omitempty" json:"url,omitempty"`
+	// File is a local MMDB with country.iso_code that is never downloaded.
+	File string `yaml:"file,omitempty" json:"file,omitempty"`
+	// Kind is empty for a country database or "category" for a database of
+	// labels used by Group.Categories. Built-ins take their kind from the catalog.
+	Kind    string `yaml:"kind,omitempty" json:"kind,omitempty"`
+	Enabled bool   `yaml:"enabled" json:"enabled"`
 }
 
 // Failover configures health probes for connections with Connection.Fallback.
@@ -202,20 +220,22 @@ type WGPeer struct {
 	Keepalive    uint16   `yaml:"keepalive,omitempty" json:"keepalive,omitempty"` // seconds; zero omits persistent keepalive
 }
 
-// Group routes either domain/address entries or countries to one target.
-// Country matching uses GeoIP prefixes; Except negates the country union.
+// Group routes either domain/address entries or IP-database selectors to one
+// target. Countries come from country databases and Categories from category
+// databases (labels such as RU-BLOCKED); Except negates their union.
 type Group struct {
-	Disabled  bool     `yaml:"disabled,omitempty" json:"disabled,omitempty"`
-	Preset    *Preset  `yaml:"preset,omitempty" json:"preset,omitempty"`
-	Name      string   `yaml:"name" json:"name"`
-	Target    string   `yaml:"target" json:"target"` // connection ID, direct, or block
-	Entries   []string `yaml:"entries,omitempty" json:"entries"`
-	Countries []string `yaml:"countries,omitempty" json:"countries,omitempty"` // uppercase ISO country codes
-	Except    bool     `yaml:"except,omitempty" json:"except,omitempty"`
+	Disabled   bool     `yaml:"disabled,omitempty" json:"disabled,omitempty"`
+	Preset     *Preset  `yaml:"preset,omitempty" json:"preset,omitempty"`
+	Name       string   `yaml:"name" json:"name"`
+	Target     string   `yaml:"target" json:"target"` // connection ID, direct, or block
+	Entries    []string `yaml:"entries,omitempty" json:"entries"`
+	Countries  []string `yaml:"countries,omitempty" json:"countries,omitempty"`   // uppercase ISO country codes
+	Categories []string `yaml:"categories,omitempty" json:"categories,omitempty"` // uppercase category labels
+	Except     bool     `yaml:"except,omitempty" json:"except,omitempty"`
 }
 
-// IsCountry reports whether the group matches countries rather than entries.
-func (g Group) IsCountry() bool { return len(g.Countries) > 0 }
+// IsGeo reports whether the group matches IP-database selectors rather than entries.
+func (g Group) IsGeo() bool { return len(g.Countries) > 0 || len(g.Categories) > 0 }
 
 // Network applies a routing policy to a CIDR unless a client overrides it.
 type Network struct {
@@ -239,9 +259,13 @@ func (c *Config) Defaults() {
 	if c.SchemaVersion == 0 {
 		c.SchemaVersion = 1
 	}
+	c.GeoIP.defaults()
 	for i := range c.Groups {
 		for j, cc := range c.Groups[i].Countries {
 			c.Groups[i].Countries[j] = strings.ToUpper(strings.TrimSpace(cc))
+		}
+		for j, cat := range c.Groups[i].Categories {
+			c.Groups[i].Categories[j] = strings.ToUpper(strings.TrimSpace(cat))
 		}
 	}
 	if c.API.Listen == "" {
@@ -309,6 +333,7 @@ func (c *Config) Validate() error {
 	var errs []string
 	add := func(format string, a ...any) { errs = append(errs, fmt.Sprintf(format, a...)) }
 	c.validateFeatures(add)
+	c.GeoIP.validate(add)
 
 	switch c.Intercept.Mode {
 	case InterceptRedirect, InterceptTProxy:
@@ -385,11 +410,19 @@ func (c *Config) Validate() error {
 	for i, g := range c.Groups {
 		where := fmt.Sprintf("groups[%d] %q", i, g.Name)
 		target(where, g.Target, false)
-		if g.IsCountry() && len(g.Entries) > 0 {
-			add("%s: entries and countries must be in separate groups", where)
+		if g.IsGeo() && len(g.Entries) > 0 {
+			add("%s: entries and countries or categories must be in separate groups", where)
 		}
-		if g.Except && !g.IsCountry() {
-			add("%s: except requires at least one country", where)
+		if g.Except && !g.IsGeo() {
+			add("%s: except requires at least one country or category", where)
+		}
+		for j, cat := range g.Categories {
+			if !geoCategory.MatchString(cat) {
+				add("%s categories[%d]: %q requires a label of Latin letters, digits and hyphens, such as RU-BLOCKED", where, j, cat)
+			}
+		}
+		if len(g.Categories) > 0 && !g.Disabled && !c.GeoIP.hasCategories() {
+			add("%s: categories require an enabled category database in geoip.databases", where)
 		}
 		for j, cc := range g.Countries {
 			if len(cc) != 2 || cc[0] < 'A' || cc[0] > 'Z' || cc[1] < 'A' || cc[1] > 'Z' {

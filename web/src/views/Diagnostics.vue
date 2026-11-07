@@ -119,12 +119,12 @@ const rows = computed(() => [
     icon: Database,
     label: t('ui.geoip'),
     value: st.value?.geoip.loaded
-      ? `${st.value.geoip.type} · ${st.value.geoip.built}`
+      ? `${st.value.geoip.type} · ${st.value.geoip.built}${(st.value.geoip.active ?? 1) > 1 ? ` · +${(st.value.geoip.active ?? 1) - 1}` : ''}`
       : st.value?.geoip.error
         ? t('ui.unavailable')
         : t('ui.notChecked'),
-    tone: st.value?.geoip.loaded ? 'ok' : 'warn',
-    to: '/settings',
+    tone: st.value?.geoip.loaded && !st.value.geoip.error ? 'ok' : 'warn',
+    to: '/lists/geoip',
   },
   {
     key: 'watchdog',

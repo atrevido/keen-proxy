@@ -52,6 +52,16 @@ On a real installation, confirm that the country database is loaded in **Diagnos
 
 The demo reports a synthetic loaded database and sample journal records. It demonstrates editing and Apply, but does not perform GeoIP lookups or verify real network traffic.
 
+## Country databases
+
+Country selectors use MMDB country databases, managed in **Rules → Country databases**. The list order is priority: the first enabled database that knows an address decides its country, and country rules follow the same precedence. Built-in sources can be enabled, disabled, and reordered. You can also add a custom database: an HTTPS link to `.mmdb`, `.mmdb.gz`, or `.tar.gz` (`{month}` expands to `YYYY-MM` and falls back to the previous month), or an absolute file path on the router.
+
+The router checks enabled databases daily. Files are downloaded over HTTPS only, checked against a published SHA-256 digest when the source has one, validated as a country MMDB, and then swapped in atomically. A failed download keeps the previous file and is retried after 10 minutes, with the delay doubling up to 6 hours. Changing the database list triggers a check right after **Apply**.
+
+Category databases are a second kind of IP database. Instead of countries, they label networks, for example `RU-BLOCKED`, `RE-FILTER`, or `TELEGRAM`. They never take part in country lookups. Groups select labels under **Categories**, alone or together with countries and **All except these**. Enabled category databases are combined, so a label matches if any of them reports it. The built-in runetfreedom sources publish each network under a single label, so a network that appears in several upstream lists matches only one of them. Category groups require at least one enabled category database.
+
+Use **Check an address** to see which country each database reports. A disabled database can be downloaded and checked on its own without affecting routing. A check covers database contents only; it does not show which routing rule won for a real connection.
+
 ## Fallback chains
 
 A connection can point to another connection or Direct as its immediate fallback. The interface displays the resulting chain. Edit the selected profile's immediate fallback; downstream inherited edges belong to their own profiles. Avoid cycles. Choosing Direct as a fallback intentionally allows a direct path when the primary connection fails.

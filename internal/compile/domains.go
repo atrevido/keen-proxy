@@ -75,7 +75,7 @@ func DNSRuleSets(c *model.Config, records map[string][]string) map[string][]byte
 		if g.Disabled {
 			continue
 		}
-		if g.IsCountry() {
+		if g.IsGeo() {
 			continue
 		}
 		seen := map[string]bool{}
