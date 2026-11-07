@@ -97,6 +97,14 @@ curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/boot
 
 Replace `vX.Y.Z` with a real release tag. The release must contain the binary, `install.sh`, `S99keenproxy`, and `SHA256SUMS`. If assets are still publishing, retry when they are available. Check or stop the service with `/opt/etc/init.d/S99keenproxy status` or `/opt/etc/init.d/S99keenproxy stop`.
 
+To remove an installation managed by the bootstrap:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+```
+
+This stops KeenProxy and removes its binary and Entware init script. It keeps the configuration, API token, logs, rule sets, and optional TrustTunnel client. Reinstall with the regular install command to reuse the saved settings.
+
 For offline or manual setup, `tools/install.sh` copies a supplied executable and optionally verifies and installs the pinned TrustTunnel client. It preserves configuration and leaves service setup to the operator. After copying the binary and installer to the router, run:
 
 ```sh

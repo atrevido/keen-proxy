@@ -1,11 +1,14 @@
 #!/bin/sh
-# Download and install a KeenProxy release on an Entware router.
+# Manage a KeenProxy release on an Entware router.
 (
 set -eu
 umask 077
 
 fail() { printf 'KeenProxy: %s\n' "$*" >&2; exit 1; }
-usage() { echo 'Usage: sh -s -- [--version vX.Y.Z] [--lite] [--without-trusttunnel]'; }
+usage() {
+    printf '%s\n' 'Usage: sh -s -- [--version vX.Y.Z] [--lite] [--without-trusttunnel]' \
+        '       sh -s -- --uninstall'
+}
 
 prefix=${KEENPROXY_PREFIX:-/opt}
 export KEENPROXY_PREFIX="$prefix"
@@ -16,25 +19,28 @@ releases=https://github.com/atrevido/keen-proxy/releases/download
 version=
 variant=
 trusttunnel=1
+uninstall=0
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --version) [ "$#" -ge 2 ] && [ -n "$2" ] || fail 'missing --version value'; version=$2; shift ;;
         --lite) variant=lite- ;;
         --without-trusttunnel) trusttunnel=0 ;;
+        --uninstall) uninstall=1 ;;
         -h|--help) usage; exit 0 ;;
         *) usage >&2; fail "unknown option: $1" ;;
     esac
     shift
 done
+if [ "$uninstall" = 1 ] && { [ -n "$version$variant" ] || [ "$trusttunnel" = 0 ]; }; then
+    fail '--uninstall cannot be combined with installation options'
+fi
 
 case "$prefix" in /*) ;; *) fail 'Entware prefix must be absolute' ;; esac
 [ -x "$prefix/etc/init.d/rc.unslung" ] || fail 'install Entware before running this script'
 if [ "$prefix" = /opt ] && [ "$(id -u)" != 0 ]; then
     fail 'run this script as root in the Entware shell'
 fi
-for tool in curl sha256sum pidof; do
-    command -v "$tool" >/dev/null 2>&1 || fail "missing dependency: $tool"
-done
+command -v pidof >/dev/null 2>&1 || fail 'missing dependency: pidof'
 
 architecture() {
     case "$(uname -m)" in
@@ -82,10 +88,22 @@ lock_service() {
     printf '%s\n' "$work" > "$service_lock/owner"
 }
 
-# Use the verified controller throughout the transaction, including when the
-# installed init script predates lock delegation. Keep this copy through rollback.
+# Use the transaction's controller copy, even after replacing or removing the
+# installed script. Installation uses the verified release controller.
 service_action() {
     KEENPROXY_SERVICE_LOCK_TOKEN="$work" sh "$work/S99keenproxy" "$1"
+}
+
+managed_service() {
+    [ -f "$service" ] && [ ! -L "$service" ] && grep -Fxq '# KeenProxy Entware service' "$service"
+}
+
+backup_file() {
+    if [ -e "$prefix/$1" ] || [ -L "$prefix/$1" ]; then
+        [ -f "$prefix/$1" ] && [ ! -L "$prefix/$1" ] || fail "unsupported destination: $1"
+        mkdir -p "$work/previous/${1%/*}"
+        cp -p "$prefix/$1" "$work/previous/$1"
+    fi
 }
 
 install_payload() {
@@ -111,7 +129,7 @@ finish() {
     keep_work=0
     if [ "$replacing" = 1 ]; then
         echo 'KeenProxy: restoring the previous installation' >&2
-        if { [ -f "$prefix/etc/init.d/S99keenproxy" ] && ! service_action stop; } || ! restore_payload; then
+        if { [ "$uninstall" = 0 ] && [ -f "$service" ] && ! service_action stop; } || ! restore_payload; then
             echo "KeenProxy: rollback failed; recovery files retained at $work" >&2
             keep_work=1
             result=1
@@ -129,8 +147,32 @@ finish() {
     exit "$result"
 }
 
-arch=$(architecture)
-asset="keenproxy-${variant}linux-$arch"
+uninstall_release() {
+    lock_service
+    if [ ! -e "$service" ] && [ ! -L "$service" ] &&
+        [ ! -e "$prefix/bin/keenproxy" ] && [ ! -L "$prefix/bin/keenproxy" ]; then
+        echo 'KeenProxy: no managed installation found'
+        return
+    fi
+    managed_service || fail 'unmanaged installation; no files removed'
+    grep -Fq 'KEENPROXY_SERVICE_LOCK_TOKEN' "$service" || fail 'init script does not support installer locking; no files removed'
+    for path in $payload; do backup_file "$path"; done
+    cp -p "$work/previous/etc/init.d/S99keenproxy" "$work/S99keenproxy"
+    if service_action check; then
+        restart_previous=1
+        service_action stop || fail 'service did not stop cleanly; no files removed'
+    elif pidof keenproxy >/dev/null 2>&1; then
+        fail 'unmanaged process is running; no files removed'
+    fi
+    replacing=1
+    for path in $payload; do rm -f "$prefix/$path" || fail "could not remove $path"; done
+    replacing=0
+    restart_previous=0
+    printf 'KeenProxy uninstalled. Settings retained in %s/etc/keenproxy\n' "$prefix"
+}
+
+service="$prefix/etc/init.d/S99keenproxy"
+payload='bin/keenproxy etc/init.d/S99keenproxy'
 mkdir -p "$prefix/tmp" "$prefix/var/lock"
 lock="$prefix/var/lock/keenproxy-install.lock"
 mkdir "$lock" 2>/dev/null || fail 'another installer is active or an interrupted run left a lock'
@@ -142,6 +184,16 @@ restart_previous=0
 trap finish EXIT
 trap 'exit 1' HUP INT TERM
 work=$(mktemp -d "$prefix/tmp/keenproxy-release.XXXXXX")
+if [ "$uninstall" = 1 ]; then
+    uninstall_release
+    exit 0
+fi
+
+for tool in curl sha256sum; do
+    command -v "$tool" >/dev/null 2>&1 || fail "missing dependency: $tool"
+done
+arch=$(architecture)
+asset="keenproxy-${variant}linux-$arch"
 if [ -f "$prefix/etc/ssl/certs/ca-certificates.crt" ]; then
     export CURL_CA_BUNDLE="$prefix/etc/ssl/certs/ca-certificates.crt"
 fi
@@ -170,9 +222,8 @@ chmod 755 "$work/$asset"
 # Dry-run output can contain connection credentials. Keep it off the console.
 "$work/$asset" -dry-run -config "$config_source" >/dev/null 2>&1 || fail 'candidate binary or configuration failed validation'
 
-service="$prefix/etc/init.d/S99keenproxy"
 if [ -e "$service" ] || [ -L "$service" ]; then
-    [ -f "$service" ] && [ ! -L "$service" ] && grep -Fxq '# KeenProxy Entware service' "$service" || fail 'existing init script is not managed by this installer'
+    managed_service || fail 'existing init script is not managed by this installer'
 fi
 ensure_firewall_tools
 
@@ -182,7 +233,6 @@ sh "$work/install.sh" "$@" || fail 'could not stage release files'
 mkdir -p "$work/payload/etc/init.d"
 chmod 755 "$work/S99keenproxy"
 cp -p "$work/S99keenproxy" "$work/payload/etc/init.d/S99keenproxy"
-payload='bin/keenproxy etc/init.d/S99keenproxy'
 if [ "$trusttunnel" = 1 ]; then
     payload="$payload bin/trusttunnel_client share/keenproxy/trusttunnel/LICENSE share/keenproxy/trusttunnel/version"
 fi
@@ -194,11 +244,7 @@ if [ "$was_running" = 0 ] && pidof keenproxy >/dev/null 2>&1; then
 fi
 changed=0
 for path in $payload; do
-    if [ -e "$prefix/$path" ] || [ -L "$prefix/$path" ]; then
-        [ -f "$prefix/$path" ] && [ ! -L "$prefix/$path" ] || fail "unsupported destination: $path"
-        mkdir -p "$work/previous/${path%/*}"
-        cp -p "$prefix/$path" "$work/previous/$path"
-    fi
+    backup_file "$path"
     if ! cmp -s "$work/payload/$path" "$prefix/$path"; then changed=1; fi
     case "$path" in
         bin/*|etc/init.d/*) if [ ! -x "$prefix/$path" ]; then changed=1; fi ;;

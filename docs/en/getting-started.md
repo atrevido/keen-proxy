@@ -71,3 +71,13 @@ Follow the [user guide](user-guide.md): inspect a connection, add a domain group
 ## Updates and recovery
 
 Back up the current configuration and keep the old binary before updating. Read release compatibility and migration notes. Settings can preview a previous configuration into the shared draft; applying it still requires **Apply**. Do not assume a successful HTTP probe establishes that all HTTPS traffic works.
+
+## Uninstall
+
+Run from the Entware root shell:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+```
+
+The command stops the managed service and removes `/opt/bin/keenproxy` and `/opt/etc/init.d/S99keenproxy`. It preserves `/opt/etc/keenproxy/` (including configuration and token), `/opt/var/lib/keenproxy/` (logs and derived state), and the optional TrustTunnel client. Run the regular installer again to reuse your settings.

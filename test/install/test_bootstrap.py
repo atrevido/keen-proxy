@@ -55,7 +55,8 @@ cp "$FIXTURES/$path" "$out"
     def command(self, name, script):
         self.executable(self.commands / name, script)
 
-    def release(self, tag, arch='arm64', lite=False, start=True, dry_run='exit 0'):
+    def release(self, tag, arch='arm64', lite=False, start=True, dry_run='exit 0',
+                stop='rm -f "$state"'):
         folder = self.mirror / tag
         folder.mkdir()
         asset = f'keenproxy-{"lite-" if lite else ""}linux-{arch}'
@@ -64,10 +65,11 @@ cp "$FIXTURES/$path" "$out"
         (folder / 'install.sh').write_bytes((ROOT / 'tools/install.sh').read_bytes())
         self.executable(folder / 'S99keenproxy', f'''# KeenProxy Entware service
 state="$KEENPROXY_PREFIX/running"
+test -n "${{KEENPROXY_SERVICE_LOCK_TOKEN:-}}" || exit 1
 case "$1" in
     start) "$KEENPROXY_PREFIX/bin/keenproxy" --fixture-start && touch "$state" ;;
     check) test -f "$state" ;;
-    stop) rm -f "$state" ;;
+    stop) {stop} ;;
     *) exit 2 ;;
 esac''')
         (folder / 'SHA256SUMS').write_text(''.join(
@@ -76,8 +78,11 @@ esac''')
         return folder / asset
 
     def install(self, *args):
+        return self.bootstrap('--without-trusttunnel', *args)
+
+    def bootstrap(self, *args):
         with (ROOT / 'tools/bootstrap.sh').open('rb') as script:
-            return subprocess.run(['sh', '-s', '--', '--without-trusttunnel', *args],
+            return subprocess.run(['sh', '-s', '--', *args],
                                   stdin=script, env=self.env, capture_output=True,
                                   text=True, timeout=20)
 
@@ -88,6 +93,66 @@ esac''')
     @property
     def config(self):
         return self.prefix / 'etc/keenproxy/config.yaml'
+
+    @property
+    def service(self):
+        return self.prefix / 'etc/init.d/S99keenproxy'
+
+    def test_uninstall_stops_service_and_preserves_settings_without_network(self):
+        self.release('v1.2.3')
+        self.assertEqual(self.install().returncode, 0)
+        token = self.config.with_name('token')
+        token.write_text('test token\n')
+        self.config.write_text('schema_version: 1\n# local settings\n')
+        client = self.prefix / 'bin/trusttunnel_client'
+        self.executable(client, 'exit 0')
+        before = self.requests.read_bytes()
+        self.env['CPU'] = 'unsupported'
+        for _ in range(2):
+            result = self.bootstrap('--uninstall')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse((self.prefix / 'running').exists())
+            self.assertFalse(self.binary.exists())
+            self.assertFalse(self.service.exists())
+            self.assertEqual(token.read_text(), 'test token\n')
+            self.assertIn('# local settings', self.config.read_text())
+            self.assertTrue(client.exists())
+        self.assertEqual(self.requests.read_bytes(), before)
+
+    def test_uninstall_refuses_an_unmanaged_binary(self):
+        self.executable(self.binary, 'echo old')
+        result = self.bootstrap('--uninstall')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unmanaged', result.stderr)
+        self.assertIn('echo old', self.binary.read_text())
+        self.assertFalse(self.requests.exists())
+
+    def test_uninstall_preserves_installation_when_stop_fails(self):
+        binary = self.release('v1.2.3', stop='exit 1')
+        self.assertEqual(self.install().returncode, 0)
+        result = self.bootstrap('--uninstall')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('did not stop', result.stderr)
+        self.assertEqual(self.binary.read_bytes(), binary.read_bytes())
+        self.assertTrue(self.service.exists())
+        self.assertTrue((self.prefix / 'running').exists())
+
+    def test_uninstall_rolls_back_a_partial_removal(self):
+        binary = self.release('v1.2.3')
+        self.assertEqual(self.install().returncode, 0)
+        service = self.service.read_bytes()
+        self.command('rm', """
+for path in "$@"; do
+    [ "$path" != "$KEENPROXY_PREFIX/etc/init.d/S99keenproxy" ] || exit 1
+done
+exec /bin/rm "$@"
+""")
+        result = self.bootstrap('--uninstall')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('restoring the previous installation', result.stderr)
+        self.assertEqual(self.binary.read_bytes(), binary.read_bytes())
+        self.assertEqual(self.service.read_bytes(), service)
+        self.assertTrue((self.prefix / 'running').exists())
 
     def test_bootstrap_installs_starts_and_preserves_configuration_on_update(self):
         first = self.release('v1.2.3')

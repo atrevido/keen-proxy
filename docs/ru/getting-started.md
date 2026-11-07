@@ -71,3 +71,13 @@ curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/boot
 ## Обновление и восстановление
 
 Перед обновлением сохраните конфигурацию и старый бинарник. Прочитайте сведения о совместимости и миграции в выпуске. В Настройках можно открыть предыдущую конфигурацию как черновик; для её применения всё равно требуется **Применить**. Успешная HTTP-проверка не означает, что весь HTTPS-трафик работает.
+
+## Удаление
+
+Выполните в оболочке Entware от имени root:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/atrevido/keen-proxy/main/tools/bootstrap.sh | /opt/bin/sh -s -- --uninstall
+```
+
+Команда остановит службу KeenProxy, созданную установщиком, и удалит `/opt/bin/keenproxy` и `/opt/etc/init.d/S99keenproxy`. Настройки и токен в `/opt/etc/keenproxy/`, журналы и рабочие данные в `/opt/var/lib/keenproxy/` и клиент TrustTunnel сохранятся. При повторной установке KeenProxy подхватит сохранённые настройки.
