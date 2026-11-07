@@ -1,4 +1,4 @@
-import type { DiagnosticReport, Catalog, FeatureStatus, DNSCheck, Config, Device, DomainStatus, Session, HostStat, JournalKind, JournalPage, LinkPreview, StatsSnapshot, Status } from './types'
+import type { DiagnosticReport, Catalog, FeatureStatus, DNSCheck, Config, GeoLookup, GeoStatus, Device, DomainStatus, Session, HostStat, JournalKind, JournalPage, LinkPreview, StatsSnapshot, Status } from './types'
 
 // Keeps the HTTP status available to callers alongside the server error.
 export class ApiError extends Error {
@@ -39,6 +39,10 @@ export const api = {
  previewPreset:(config:Config,id:string,target:string,index?:number)=>request<{config:Config;diff:{added:string[];removed:string[]}}>('POST','/api/presets/preview',{config,id,target,index}),
  refreshFilters:()=>request<unknown>('POST','/api/filters/refresh'),
  checkDNS:(cfg:Config)=>request<DNSCheck>('POST','/api/dns/check',cfg),
+ // Country databases of the applied configuration; an id targets one database, even a disabled one.
+ geoip:()=>request<GeoStatus>('GET','/api/geoip'),
+ updateGeo:(id='')=>request<GeoStatus>('POST','/api/geoip/update',{id}),
+ lookupGeo:(ip:string,id='')=>request<GeoLookup>('POST','/api/geoip/lookup',{ip,id}),
  previousConfig:()=>request<Config>('GET','/api/config/previous'),
  importYAML:(yaml:string)=>request<Config>('POST','/api/config/import',{yaml}),
 

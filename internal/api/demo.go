@@ -2,9 +2,11 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"hash/fnv"
 	"math"
 	"net/netip"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -13,6 +15,7 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/compile"
 	"github.com/ordo-systems/keen-proxy/internal/daemon"
 	"github.com/ordo-systems/keen-proxy/internal/domaincache"
+	"github.com/ordo-systems/keen-proxy/internal/geoip"
 	"github.com/ordo-systems/keen-proxy/internal/journal"
 	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/ordo-systems/keen-proxy/internal/stats"
@@ -26,6 +29,7 @@ type Demo struct {
 	cfg         *model.Config
 	started     time.Time
 	journals    journal.Set
+	geoFetched  map[string]bool // databases "downloaded" by a demo update
 }
 
 // NewDemo seeds in-memory configuration, DNS observations, and synthetic journal activity.
@@ -77,7 +81,22 @@ func (d *Demo) Status(context.Context) daemon.Status {
 	for _, g := range d.cfg.Groups {
 		st.Entries += len(g.Entries)
 	}
-	st.GeoIP = daemon.GeoInfo{Loaded: true, Built: time.Now().Format("2006-01") + "-01", Type: "DBIP-Country-Lite"}
+	st.GeoIP = daemon.GeoInfo{}
+	for _, db := range d.cfg.GeoIP.Databases {
+		if db.Enabled && db.IsCategory() {
+			st.GeoIP.Categories++
+		} else if db.Enabled {
+			st.GeoIP.Active++
+			if b, ok := geoip.FindBuiltin(db.ID); ok && b.Attribution != "" {
+				st.GeoIP.Attributions = append(st.GeoIP.Attributions, daemon.GeoAttribution{Text: b.Attribution, URL: b.AttributionURL})
+			}
+		}
+	}
+	if st.GeoIP.Active > 0 {
+		st.GeoIP.Loaded, st.GeoIP.Built, st.GeoIP.Type = true, time.Now().Format("2006-01")+"-01", "Synthetic demo"
+	} else {
+		st.GeoIP.Error = "no enabled country databases"
+	}
 	st.ConnCountries = map[string]string{}
 	st.Health = map[string]daemon.ConnHealth{}
 	demoCountries := []string{"FI", "NL", "DE", "SE", "EE", "LV"}
@@ -240,4 +259,96 @@ func (d *Demo) hostsLocked(tag, query string, limit int, byRequests bool) ([]sta
 		out = out[:limit]
 	}
 	return out, total
+}
+
+// demoGeo is a synthetic address table; the demo never downloads databases.
+var demoGeo = map[string]string{"77.88.0.0/16": "RU", "8.8.8.0/24": "US", "1.1.1.0/24": "AU", "185.199.108.0/22": "NL", "2a02:6b8::/32": "RU"}
+
+// demoCategories labels the same synthetic ranges for category databases.
+var demoCategories = map[string]string{"77.88.0.0/16": "RU-WHITELIST", "8.8.8.0/24": "GOOGLE", "1.1.1.0/24": "CLOUDFLARE", "185.199.108.0/22": "RU-BLOCKED"}
+
+func demoLabel(table map[string]string, ip netip.Addr) string {
+	for cidr, c := range table {
+		if netip.MustParsePrefix(cidr).Contains(ip.Unmap()) {
+			return c
+		}
+	}
+	return ""
+}
+
+func demoKind(db model.GeoIPDatabase) string {
+	if db.IsCategory() {
+		return geoip.KindCategory
+	}
+	return geoip.KindCountry
+}
+
+// GeoDatabases reports configured databases as loaded synthetic data.
+func (d *Demo) GeoDatabases() []daemon.GeoDatabaseInfo {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	out := []daemon.GeoDatabaseInfo{}
+	for _, db := range d.cfg.GeoIP.Databases {
+		info := daemon.GeoDatabaseInfo{ID: db.ID, Name: db.DisplayName(), Builtin: db.IsBuiltin(), Kind: demoKind(db), Enabled: db.Enabled, Local: db.File != "", Loaded: db.Enabled}
+		if db.Enabled || d.geoFetched[db.ID] {
+			info.Present, info.Built, info.Type, info.Version = true, time.Now().Format("2006-01")+"-01", "Synthetic demo", "demo"
+			info.Checked, info.Updated = d.started, d.started
+		}
+		out = append(out, info)
+	}
+	return out
+}
+
+// UpdateGeo marks databases as downloaded without network access.
+func (d *Demo) UpdateGeo(_ context.Context, id string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.geoFetched == nil {
+		d.geoFetched = map[string]bool{}
+	}
+	for _, db := range d.cfg.GeoIP.Databases {
+		if db.ID == id || id == "" && db.Enabled {
+			d.geoFetched[db.ID] = true
+			if id != "" {
+				return nil
+			}
+		}
+	}
+	if id != "" {
+		return fmt.Errorf("unknown database %q", id)
+	}
+	return nil
+}
+
+// LookupGeo answers from the synthetic table for every selected database.
+func (d *Demo) LookupGeo(ip netip.Addr, id string) (daemon.GeoLookup, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	out := daemon.GeoLookup{IP: ip.Unmap().String(), Results: []daemon.GeoLookupResult{}}
+	for _, db := range d.cfg.GeoIP.Databases {
+		if id == "" && !db.Enabled || id != "" && db.ID != id {
+			continue
+		}
+		r := daemon.GeoLookupResult{ID: db.ID, Name: db.DisplayName(), Enabled: db.Enabled, Kind: demoKind(db), Country: demoLabel(demoGeo, ip)}
+		if db.IsCategory() {
+			r.Country = demoLabel(demoCategories, ip)
+		}
+		if !db.Enabled && !d.geoFetched[db.ID] {
+			r.Country, r.Error = "", "database not downloaded yet"
+		}
+		switch {
+		case r.Country == "":
+		case db.IsCategory():
+			if !slices.Contains(out.Categories, r.Country) {
+				out.Categories = append(out.Categories, r.Country)
+			}
+		case out.Country == "":
+			out.Country, out.Database = r.Country, db.ID
+		}
+		out.Results = append(out.Results, r)
+	}
+	if id != "" && len(out.Results) == 0 {
+		return out, fmt.Errorf("unknown database %q", id)
+	}
+	return out, nil
 }

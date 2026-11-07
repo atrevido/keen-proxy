@@ -28,6 +28,7 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/domaincache"
 	"github.com/ordo-systems/keen-proxy/internal/engine"
 	"github.com/ordo-systems/keen-proxy/internal/filterlist"
+	"github.com/ordo-systems/keen-proxy/internal/geoip"
 	"github.com/ordo-systems/keen-proxy/internal/journal"
 	"github.com/ordo-systems/keen-proxy/internal/lists"
 	"github.com/ordo-systems/keen-proxy/internal/model"
@@ -82,6 +83,9 @@ type Daemon struct {
 	restored    int // number of watchdog firewall restorations
 	stats       *stats.Tracker
 	geo         geoState
+	// geoStore owns downloaded IP databases; geoWake triggers a check.
+	geoStore *geoip.Store
+	geoWake  chan struct{}
 	// serverHosts maps connection IDs to server hosts from the latest compilation.
 	serverHosts map[string]string
 	journals    journal.Set
@@ -120,6 +124,8 @@ func New(opt Options) *Daemon {
 		active: map[string]string{}, health: map[string]*health{}, allDown: map[string]bool{},
 	}
 	d.filters = filterlist.New(filepath.Join(filepath.Dir(opt.RuleSetDir), "filters"), nil)
+	d.geoStore = geoip.NewStore(filepath.Join(filepath.Dir(opt.RuleSetDir), "geoip"))
+	d.geoWake = make(chan struct{}, 1)
 	d.resetDomainGeneration()
 	d.stats.OnRoute = d.onRoute
 	d.eng.Tracker = d.stats
@@ -138,7 +144,8 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.stats.Run(ctx)
 	d.mu.Lock()
 	d.started = time.Now()
-	d.openGeoLocked(cfg)
+	d.adoptLegacyGeo(cfg)
+	d.reloadGeoLocked(cfg)
 	d.neighbors = d.readNeighbors(cfg)
 	err = d.applyLocked(ctx, cfg)
 	d.mu.Unlock()
@@ -226,6 +233,10 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 		core = "core restarted"
 	}
 	d.audit(by, "Apply configuration", "config", "ok", changes+"; "+core+from)
+	if prev == nil || !reflect.DeepEqual(prev.GeoIP, cfg.GeoIP) {
+		// New or re-enabled databases download without waiting for the next check.
+		d.wakeGeo()
+	}
 	go d.refreshConnCountries(context.Background())
 	return nil
 }
@@ -234,6 +245,9 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 func (d *Daemon) applyLocked(ctx context.Context, cfg *model.Config) error {
 	prev := d.cfg
 	d.resetDomainGeneration()
+	if prev != nil && !reflect.DeepEqual(prev.GeoIP, cfg.GeoIP) {
+		d.reloadGeoLocked(cfg)
+	}
 	d.cfg = cfg
 	d.live.Store(cfg)
 	d.coreRestarted = false
@@ -314,6 +328,9 @@ func (d *Daemon) shutdown() {
 	}
 	d.eng.Close()
 	d.stopTrustTunnel()
+	d.geo.set.Close()
+	d.geo.cats.Close()
+	d.geo.set, d.geo.cats = nil, nil
 }
 
 // startDNS installs runtime matchers and opens both DNS transports before interception.
@@ -400,6 +417,9 @@ func (d *Daemon) compileLocked() (compile.Output, error) {
 		}
 	}
 	if err := d.writeCountrySetsLocked(out.Countries); err != nil {
+		return out, err
+	}
+	if err := d.writeCategorySetsLocked(out.Categories); err != nil {
 		return out, err
 	}
 	d.writeDNSLocked()

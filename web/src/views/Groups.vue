@@ -13,10 +13,11 @@ import {
   useDialog,
   type DataTableColumns,
 } from 'naive-ui'
-import { ListChecks, Plus, Trash2, Search, Globe, RefreshCw } from '@lucide/vue'
+import { ListChecks, Plus, Trash2, Search, Globe, RefreshCw, Tags } from '@lucide/vue'
 import { store, targets, targetLabel } from '../store'
-import type { Group, DomainStatus } from '../types'
+import type { Group, DomainStatus, GeoBuiltin } from '../types'
 import { countries, flag } from '../countries'
+import { categoryOptions, hasCategoryDatabase } from '../geoip'
 
 import DomainEntries from '../components/DomainEntries.vue'
 import { api } from '../api'
@@ -35,8 +36,11 @@ async function loadDomains() {
     domainError.value = (e as Error).message
   }
 }
+// Built-in category labels for the category selector; custom labels can be typed.
+const builtins = ref<GeoBuiltin[]>([])
 onMounted(() => {
   void loadDomains()
+  api.catalog().then((c) => (builtins.value = c.geoip ?? [])).catch(() => {})
   timer = setInterval(loadDomains, 3000)
 })
 onUnmounted(() => clearInterval(timer))
@@ -96,7 +100,12 @@ const tabs = computed(() => [
   ...targets.value,
 ])
 
-const isCountry = (g: Group) => g.countries !== undefined
+// Country and category selectors share one table: both match IP databases.
+const isCountry = (g: Group) => g.countries !== undefined || g.categories !== undefined
+const categoryChoices = computed(() => categoryOptions(builtins.value, groups.value))
+const noCategoryDB = computed(
+  () => groups.value.some((g) => g.categories?.length && !g.disabled) && !hasCategoryDatabase(store.state.config!.geoip.databases, builtins.value),
+)
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -108,7 +117,8 @@ const filtered = computed(() => {
         !q ||
         g.name.toLowerCase().includes(q) ||
         g.entries.some((e) => e.toLowerCase().includes(q)) ||
-        (g.countries ?? []).some((c) => c.toLowerCase() === q),
+        (g.countries ?? []).some((c) => c.toLowerCase() === q) ||
+        (g.categories ?? []).some((c) => c.toLowerCase().includes(q)),
     )
 })
 const rows = computed(() => filtered.value.filter(({ g }) => !isCountry(g)))
@@ -196,6 +206,20 @@ function addCountryGroup() {
     entries: [],
     countries: ['RU'],
     except: true,
+  })
+}
+
+// Category routing defaults to the lists of resources blocked in Russia.
+function addCategoryGroup() {
+  const target =
+    (tab.value !== 'all' ? tab.value : undefined) ??
+    targets.value.find((t) => t.value !== 'direct' && t.value !== 'block')?.value ??
+    'direct'
+  groups.value.push({
+    name: t('groups.blockedInRussia'),
+    target,
+    entries: [],
+    categories: ['RU-BLOCKED', 'RU-BLOCKED-COMMUNITY', 'RE-FILTER'],
   })
 }
 
@@ -320,7 +344,7 @@ const countryColumns = computed<DataTableColumns<{ g: Group; key: string }>>(
           filterable: true,
           size: 'small',
           placeholder: t('groups.pickCountries'),
-          status: g.countries?.length ? undefined : 'error',
+          status: g.countries?.length || g.categories?.length ? undefined : 'error',
           renderTag: ({ option, handleClose }) =>
             h('span', { class: ['cchip', { except: g.except }] }, [
               `${flag(String(option.value))} ${option.value}`,
@@ -338,7 +362,27 @@ const countryColumns = computed<DataTableColumns<{ g: Group; key: string }>>(
                 '×',
               ),
             ]),
-          'onUpdate:value': (v: string[]) => (g.countries = v),
+          'onUpdate:value': (v: string[]) => (g.countries = v.length || !g.categories ? v : undefined),
+        }),
+    },
+    {
+      title: t('groups.colCategories'),
+      key: 'categories',
+      minWidth: 220,
+      render: ({ g }) =>
+        h(NSelect, {
+          value: g.categories ?? [],
+          options: categoryChoices.value,
+          multiple: true,
+          filterable: true,
+          tag: true,
+          size: 'small',
+          placeholder: t('groups.pickCategories'),
+          'onUpdate:value': (v: string[]) => {
+            const labels = v.map((x) => x.trim().toUpperCase()).filter(Boolean)
+            g.categories = labels.length ? [...new Set(labels)] : undefined
+            if (!g.categories) g.countries ??= []
+          },
         }),
     },
     {
@@ -425,6 +469,10 @@ const columns = computed<DataTableColumns<{ g: Group; key: string }>>(() => [
         <NButton @click="addCountryGroup">
           <template #icon><Globe :size="16" /></template>
           {{ t('groups.byCountry') }}
+        </NButton>
+        <NButton @click="addCategoryGroup">
+          <template #icon><Tags :size="16" /></template>
+          {{ t('groups.byCategory') }}
         </NButton>
       </div>
     </div>
@@ -517,8 +565,12 @@ const columns = computed<DataTableColumns<{ g: Group; key: string }>>(() => [
           </p>
 
           <section v-if="countryRows.length" class="countries">
-            <h2><Globe :size="16" /> {{ t('groups.byCountry') }}</h2>
+            <h2><Globe :size="16" /> {{ t('groups.byGeo') }}</h2>
             <p class="muted">{{ t('groups.countryIntro') }}</p>
+            <NAlert v-if="noCategoryDB" type="warning" class="cat-warn">
+              {{ t('groups.noCategoryDB') }}
+              <router-link to="/lists/geoip">{{ t('nav.geoip') }}</router-link>
+            </NAlert>
             <NDataTable
               :columns="countryColumns"
               :data="countryRows"
@@ -574,7 +626,20 @@ const columns = computed<DataTableColumns<{ g: Group; key: string }>>(() => [
                     v-model:value="g.countries"
                     multiple
                     filterable
-                    :options="countryOptions"
+                    :options="countryOptions" /><NSelect
+                    :value="g.categories ?? []"
+                    multiple
+                    filterable
+                    tag
+                    :options="categoryChoices"
+                    :placeholder="t('groups.pickCategories')"
+                    @update:value="
+                      (v: string[]) => {
+                        const labels = v.map((x) => x.trim().toUpperCase()).filter(Boolean)
+                        g.categories = labels.length ? [...new Set(labels)] : undefined
+                        if (!g.categories) g.countries ??= []
+                      }
+                    "
                 /></template>
                 <DomainEntries
                   v-else
@@ -673,6 +738,12 @@ const columns = computed<DataTableColumns<{ g: Group; key: string }>>(() => [
 }
 .countries {
   margin-top: 24px;
+}
+.cat-warn {
+  margin-bottom: 10px;
+}
+.cat-warn a {
+  color: var(--accent);
 }
 .countries h2 {
   display: flex;

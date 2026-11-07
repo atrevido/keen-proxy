@@ -9,11 +9,12 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/catalog"
 	"github.com/ordo-systems/keen-proxy/internal/daemon"
 	"github.com/ordo-systems/keen-proxy/internal/filterlist"
+	"github.com/ordo-systems/keen-proxy/internal/geoip"
 	"github.com/ordo-systems/keen-proxy/internal/model"
 )
 
 func (s *Server) catalog(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]any{"presets": catalog.Presets, "dns": catalog.DNS, "filters": catalog.Filters})
+	writeJSON(w, 200, map[string]any{"presets": catalog.Presets, "dns": catalog.DNS, "filters": catalog.Filters, "geoip": geoip.Builtins})
 }
 
 // presetPreview updates a copied draft and returns its entry diff without applying it.

@@ -143,7 +143,15 @@
     }
   ],
   "schema_version": 1,
-  "geoip": {},
+  "geoip": {
+    "databases": [
+      { "id": "dbip", "enabled": true },
+      { "id": "ip-location-db", "enabled": false },
+      { "id": "loyalsoldier", "enabled": false },
+      { "id": "runetfreedom-ru", "enabled": false },
+      { "id": "runetfreedom-services", "enabled": false }
+    ]
+  },
   "filters": {
     "sources": [],
     "exceptions": []

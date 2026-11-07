@@ -42,6 +42,9 @@ type Output struct {
 	// Countries lists ISO codes whose geoip-<code>.json files the daemon must
 	// populate with country prefixes in RuleSetDir.
 	Countries []string
+	// Categories lists labels whose geocat-<label>.json files the daemon must
+	// populate from category databases.
+	Categories []string
 	// TrustTunnel lists external clients the daemon must keep running.
 	TrustTunnel []TrustTunnelClient
 	// ServerHosts maps connection IDs to server addresses or hostnames.
@@ -94,7 +97,7 @@ func Compile(in Input) (Output, error) {
 	if err != nil {
 		return Output{}, err
 	}
-	_, _, _, countries := groupRuleSets(c.Groups, in.RuleSetDir)
+	_, _, _, geo := groupRuleSets(c.Groups, in.RuleSetDir)
 	sets, err := clientRuleSets(c, clients)
 	if err != nil {
 		return Output{}, err
@@ -105,7 +108,8 @@ func Compile(in Input) (Output, error) {
 	return Output{
 		SingBox:     sb,
 		RuleSets:    sets,
-		Countries:   countries,
+		Countries:   geo.countries,
+		Categories:  geo.categories,
 		TrustTunnel: conns.trustTunnel,
 		ServerHosts: conns.hosts,
 		Failover:    chains,
@@ -291,26 +295,42 @@ func (g groupSet) match() obj {
 	return m
 }
 
+// Rule-set tag prefixes of the local sets the daemon fills from IP databases.
+const (
+	CountryTagPrefix  = "geoip-"
+	CategoryTagPrefix = "geocat-"
+)
+
+// geoCodes lists the country codes and category labels whose local rule-set
+// files the daemon must populate.
+type geoCodes struct{ countries, categories []string }
+
 // groupRuleSets shares inline entry sets across sources and references local
-// geoip-<code> sets for countries. Explicit domain and address groups precede
-// country groups regardless of their order in configuration.
-func groupRuleSets(groups []model.Group, dir string) (sets []obj, block, routed []groupSet, countries []string) {
+// geoip-<code> and geocat-<label> sets for IP-database groups. Explicit domain
+// and address groups precede those groups regardless of configuration order.
+func groupRuleSets(groups []model.Group, dir string) (sets []obj, block, routed []groupSet, geo geoCodes) {
 	var countryBlock, countryRouted []groupSet
 	seen := map[string]bool{}
 	for i, g := range groups {
 		if g.Disabled {
 			continue
 		}
-		if g.IsCountry() {
+		if g.IsGeo() {
 			gs := groupSet{target: g.Target, invert: g.Except}
-			for _, cc := range g.Countries {
-				tag := "geoip-" + strings.ToLower(cc)
+			add := func(prefix, code string, list *[]string) {
+				tag := prefix + strings.ToLower(code)
 				gs.tags = append(gs.tags, tag)
 				if !seen[tag] {
 					seen[tag] = true
-					countries = append(countries, cc)
+					*list = append(*list, code)
 					sets = append(sets, obj{"type": "local", "tag": tag, "format": "source", "path": filepath.Join(dir, tag+".json")})
 				}
+			}
+			for _, cc := range g.Countries {
+				add(CountryTagPrefix, cc, &geo.countries)
+			}
+			for _, cat := range g.Categories {
+				add(CategoryTagPrefix, cat, &geo.categories)
 			}
 			if g.Target == model.TargetBlock {
 				countryBlock = append(countryBlock, gs)
@@ -357,7 +377,7 @@ func groupRuleSets(groups []model.Group, dir string) (sets []obj, block, routed 
 		if g.Disabled {
 			continue
 		}
-		if g.IsCountry() {
+		if g.IsGeo() {
 			continue
 		}
 		tag := DomainTag(g)
@@ -372,8 +392,9 @@ func groupRuleSets(groups []model.Group, dir string) (sets []obj, block, routed 
 			dnsRouted = append(dnsRouted, gs)
 		}
 	}
-	sort.Strings(countries)
-	return sets, append(append(block, countryBlock...), dnsBlock...), append(append(routed, dnsRouted...), countryRouted...), countries
+	sort.Strings(geo.countries)
+	sort.Strings(geo.categories)
+	return sets, append(append(block, countryBlock...), dnsBlock...), append(append(routed, dnsRouted...), countryRouted...), geo
 }
 
 // sourceRules preserves policy order while merging adjacent policies with

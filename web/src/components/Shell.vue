@@ -25,11 +25,8 @@ const route = useRoute(),
   { t } = useI18n()
 const drawer = ref(false)
 const bare = computed(() => route.meta.bare === true)
-const dbipAttribution = computed(
-  () =>
-    !!store.state.status?.geoip.loaded &&
-    /^DB-?IP(?:[-_\s]|$)/i.test(store.state.status.geoip.type ?? ''),
-)
+// Credits required by the licenses of the country databases in use.
+const attributions = computed(() => store.state.status?.geoip.attributions ?? [])
 const nav = computed(() => [
   { to: '/', label: t('ui.overview'), active: route.path === '/' },
   {
@@ -59,6 +56,7 @@ const secondary = computed(() =>
         { to: '/lists/groups', label: t('nav.whitelist') },
         { to: '/lists/presets', label: t('nav.presets') },
         { to: '/lists/filters', label: t('nav.filters') },
+        { to: '/lists/geoip', label: t('nav.geoip') },
       ]
     : route.path.startsWith('/network')
       ? [
@@ -227,9 +225,10 @@ async function logout() {
         <div v-else class="empty-state">{{ t('ui.unknown') }}</div></NSpin
       >
     </main>
-    <footer v-if="dbipAttribution" class="attribution">
-      <a href="https://db-ip.com/" target="_blank" rel="noreferrer"
-        >IP Geolocation by DB-IP</a
+    <footer v-if="attributions.length" class="attribution">
+      <template v-for="(a, i) in attributions" :key="a.url + a.text"
+        ><span v-if="i"> · </span
+        ><a :href="a.url" target="_blank" rel="noreferrer">{{ a.text }}</a></template
       >
     </footer>
   </div>

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ordo-systems/keen-proxy/internal/compile"
 	"github.com/ordo-systems/keen-proxy/internal/journal"
 	"github.com/ordo-systems/keen-proxy/internal/model"
 )
@@ -93,7 +94,7 @@ func (d *Demo) addDemoRoute(t time.Time) {
 		e.Outbound = "direct"
 		e.RuleRaw = source
 		for _, g := range cfg.Groups {
-			if g.IsCountry() && g.Except {
+			if g.IsGeo() && g.Except {
 				e.RuleRaw = "" // A Russian address misses the inverted country rule and uses final.
 			}
 		}
@@ -101,9 +102,9 @@ func (d *Demo) addDemoRoute(t time.Time) {
 		e.Host = []string{"api.github.com", "cdn.jsdelivr.net", "fonts.gstatic.com", "discord.com", "www.figma.com"}[rand.IntN(5)]
 		e.Outbound, e.RuleRaw = "direct", source
 		for _, g := range cfg.Groups {
-			if g.IsCountry() && g.Except {
+			if g.IsGeo() && g.Except {
 				e.Outbound = outboundOf(g.Target)
-				e.RuleRaw = source + " && !(rule_set=" + tagsOf(g.Countries) + ")"
+				e.RuleRaw = source + " && !(rule_set=" + tagsOf(g) + ")"
 				break
 			}
 		}
@@ -126,18 +127,18 @@ func outboundOf(target string) string {
 	return target
 }
 
-func tagsOf(codes []string) string {
-	if len(codes) == 1 {
-		return "geoip-" + strings.ToLower(codes[0])
+func tagsOf(g model.Group) string {
+	var tags []string
+	for _, c := range g.Countries {
+		tags = append(tags, "geoip-"+strings.ToLower(c))
 	}
-	s := "["
-	for i, c := range codes {
-		if i > 0 {
-			s += " "
-		}
-		s += "geoip-" + strings.ToLower(c)
+	for _, c := range g.Categories {
+		tags = append(tags, compile.CategoryTagPrefix+strings.ToLower(c))
 	}
-	return s + "]"
+	if len(tags) == 1 {
+		return tags[0]
+	}
+	return "[" + strings.Join(tags, " ") + "]"
 }
 
 // Journal returns the selected in-memory demo journal.

@@ -29,7 +29,8 @@ export function normalize(c: Config): Config {
   c.filters ??= { sources:[],exceptions:[] }
  c.filters.sources ??= []
  c.filters.exceptions ??= []
- c.geoip ??= {}
+ c.geoip ??= { databases: [] }
+ c.geoip.databases ??= []
   return c
 }
 

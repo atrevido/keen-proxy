@@ -53,6 +53,8 @@ export interface Group {
   target: string
   entries: string[]
   countries?: string[]
+  // Labels from category databases, such as RU-BLOCKED; combined with countries.
+  categories?: string[]
   except?: boolean
 }
 
@@ -81,7 +83,7 @@ export interface Config {
   lan: { interface: string; wan: string }
   dns: DNSConfig
   intercept: { mode: InterceptMode; tcp_port: number; udp_port: number; fwmark: number; route_table: number }
-  geoip: { url?: string; file?: string }
+  geoip: GeoIPConfig
   failover?: { url: string; interval: number; down_after: number; up_after: number }
   connections: Connection[] | null
   groups: Group[] | null
@@ -111,7 +113,8 @@ export interface Status {
   firewall: boolean
   restored: number
   trusttunnel: { id: string; running: boolean; starts: number }[] | null
-  geoip: { loaded: boolean; built?: string; type?: string; error?: string }
+  // Primary database build and type; active counts databases answering lookups.
+  geoip: { loaded: boolean; built?: string; type?: string; error?: string; active?: number; categories?: number; attributions?: GeoAttribution[] | null }
   conn_countries: Record<string, string> | null
   // Maps a connection ID to its applied chain and currently active exit.
   failover?: Record<string, { active: string; chain: string[] }> | null
@@ -232,7 +235,7 @@ export interface FilterSource {id:string;name:string;url:string;enabled:boolean;
 // Available blocklist with provenance and license metadata.
 export interface FilterCatalog extends FilterSource {category:string;source:string;license:string}
 // Bundled choices for routing presets, DNS resolvers, and blocklists.
-export interface Catalog {presets:Preset[];dns:DNSProfile[];filters:FilterCatalog[]}
+export interface Catalog {presets:Preset[];dns:DNSProfile[];filters:FilterCatalog[];geoip:GeoBuiltin[]}
 // Applied blocklist counts, version, and latest refresh outcome.
 export interface FilterState {id:string;rules:number;skipped:number;bytes:number;updated:string;error?:string;version?:string;enabled:boolean}
 // Runtime DNS and filter observations, optionally marked as synthetic demo data.
@@ -244,3 +247,38 @@ export interface DNSCheck {rcode:number;latency_ms:number;route:string;error?:st
 export interface DiagnosticResult {kind:'http'|'https'|'transfer';ok:boolean;checked:string;latency_ms:number;bytes?:number;error?:string}
 // Connectivity results for a selected profile, separate from failover health.
 export interface DiagnosticReport {connection:string;results:DiagnosticResult[];demo?:boolean}
+
+// Country database entry: a built-in referenced by ID, or a custom HTTPS URL or local MMDB.
+// List order is lookup priority; the first enabled database that knows an address wins.
+// kind 'category' marks a custom database of labels used by group categories.
+export interface GeoIPDatabase { id: string; name?: string; url?: string; file?: string; kind?: 'category'; enabled: boolean }
+// Country databases; url and file are legacy single-database fields migrated by the backend.
+export interface GeoIPConfig { databases: GeoIPDatabase[]; url?: string; file?: string }
+// License credit shown while a database is in use.
+export interface GeoAttribution { text: string; url: string }
+// Bundled country database source with provenance and license metadata.
+export interface GeoBuiltin { id: string; name: string; kind: 'country' | 'category'; categories?: string[]; homepage: string; license: string; attribution?: string; attribution_url?: string; updates: 'daily' | 'weekly' | 'monthly' | string; enabled: boolean; origin: string }
+// Runtime state of one applied database; next is the next automatic check.
+export interface GeoDatabaseInfo {
+  id: string
+  name: string
+  builtin: boolean
+  kind: 'country' | 'category'
+  enabled: boolean
+  local: boolean
+  loaded: boolean
+  present: boolean
+  built?: string
+  type?: string
+  version?: string
+  checked?: string
+  updated?: string
+  next?: string
+  failures?: number
+  error?: string
+}
+// Applied database states; error carries the latest manual download failure.
+export interface GeoStatus { demo?: boolean; databases: GeoDatabaseInfo[]; error?: string }
+// Per-database answers of a test lookup and the effective (first known) country.
+// Categories are the address labels across category databases; country comes only from country databases.
+export interface GeoLookup { ip: string; country?: string; database?: string; categories?: string[]; results: { id: string; name: string; enabled: boolean; kind: 'country' | 'category'; country?: string; error?: string }[] }

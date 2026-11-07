@@ -15,6 +15,7 @@ import (
 const (
 	tagGroup      = "group-"
 	tagGeoIP      = "geoip-"
+	tagGeoCat     = "geocat-"
 	tagClientOff  = "clients-off"
 	tagClientFull = "clients-full-"
 	tagClientSplt = "clients-split"
@@ -60,7 +61,7 @@ func DescribeRule(cfg *model.Config, rule string) string {
 					}
 				}
 			}
-		case strings.HasPrefix(t, tagGeoIP):
+		case strings.HasPrefix(t, tagGeoIP), strings.HasPrefix(t, tagGeoCat):
 			what = countryGroup(cfg, tags, invert)
 		}
 	}
@@ -90,19 +91,28 @@ func groupByIndex(cfg *model.Config, tag string) string {
 	return "group «" + cfg.Groups[i].Name + "»"
 }
 
-// countryGroup labels country tags and inversion, using a configured group name only for an exact match.
+// countryGroup labels country and category tags and inversion, using a
+// configured group name only for an exact match.
 func countryGroup(cfg *model.Config, tags []string, invert bool) string {
-	var codes []string
+	var codes, cats []string
 	for _, t := range tags {
-		codes = append(codes, strings.ToUpper(strings.TrimPrefix(t, tagGeoIP)))
+		if c, ok := strings.CutPrefix(t, tagGeoCat); ok {
+			cats = append(cats, strings.ToUpper(c))
+		} else {
+			codes = append(codes, strings.ToUpper(strings.TrimPrefix(t, tagGeoIP)))
+		}
 	}
-	desc := "countries " + strings.Join(codes, ", ")
-	if invert {
-		desc = "all except " + strings.Join(codes, ", ")
+	all := strings.Join(append(append([]string{}, codes...), cats...), ", ")
+	desc := "countries " + all
+	switch {
+	case invert:
+		desc = "all except " + all
+	case len(codes) == 0:
+		desc = "categories " + all
 	}
 	if cfg != nil {
 		for _, g := range cfg.Groups {
-			if g.IsCountry() && g.Except == invert && slices.Equal(g.Countries, codes) {
+			if g.IsGeo() && g.Except == invert && slices.Equal(g.Countries, codes) && slices.Equal(g.Categories, cats) {
 				return "group «" + g.Name + "» (" + desc + ")"
 			}
 		}

@@ -36,7 +36,11 @@ func (s *Server) yamlExport(w http.ResponseWriter, r *http.Request) {
 		// including unknown raw outbound fields, instead of guessing secret field names.
 		cp := c.Clone()
 		cp.DNS.Upstreams = []string{"REDACTED"}
-		cp.GeoIP.URL = "REDACTED"
+		for i := range cp.GeoIP.Databases {
+			if cp.GeoIP.Databases[i].URL != "" {
+				cp.GeoIP.Databases[i].URL = "REDACTED"
+			}
+		}
 		cp.Failover.URL = "REDACTED"
 		for i := range cp.Filters.Sources {
 			cp.Filters.Sources[i].URL = "REDACTED"
