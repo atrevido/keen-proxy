@@ -214,7 +214,7 @@ export interface OutboundStats {
 // Outbound traffic and process resource usage captured by the daemon.
 export interface StatsSnapshot {
   outbounds: OutboundStats[] | null
-  system: { cpu: number; mem_pct: number; mem_mb: number }
+  system: { cpu: number; mem_pct: number; mem_mb: number; process?: { cpu?: number; rss_bytes: number } }
 }
 
 // Selects one of the independent route, audit, or system journals.

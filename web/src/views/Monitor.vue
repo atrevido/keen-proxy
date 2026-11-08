@@ -27,7 +27,11 @@ const cfg = computed(() => store.state.config!),
   st = computed(() => store.state.status)
 const { snap, byTag } = useStats(3000, true)
 const system = computed(() => snap.value?.system)
+const processUsage = computed(() => system.value?.process)
 const memoryUsage = computed(() => system.value?.mem_mb ? system.value.mem_pct : undefined)
+const processMemory = computed(() => processUsage.value
+  ? t('shell.processMiB', { value: n(processUsage.value.rss_bytes / 1024 ** 2, { maximumFractionDigits: 1 }) })
+  : t('ui.unknown'))
 
 function formatUsage(value: number | undefined) {
   return value === undefined
@@ -155,6 +159,19 @@ const selectedStats = computed(() => byTag(tab.value))
           <dd>{{ formatUsage(memoryUsage) }}</dd>
         </div>
       </dl>
+      <div class="process-resources">
+        <span class="process-name">KeenProxy</span>
+        <dl class="resources" :aria-label="t('shell.processLoad')">
+          <div>
+            <dt><Cpu :size="16" aria-hidden="true" />CPU</dt>
+            <dd>{{ formatUsage(processUsage?.cpu) }}</dd>
+          </div>
+          <div>
+            <dt><MemoryStick :size="16" aria-hidden="true" />RAM</dt>
+            <dd>{{ processMemory }}</dd>
+          </div>
+        </dl>
+      </div>
     </div>
     <section class="traffic">
       <div class="section-head">
@@ -312,6 +329,16 @@ h2 {
   flex-wrap: wrap;
   gap: 8px 24px;
   margin: 0;
+}
+.process-resources {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.process-name {
+  font-weight: 650;
 }
 .resources > div,
 .resources dt {

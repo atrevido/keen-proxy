@@ -152,6 +152,21 @@ HOSTS=$(curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/ap
 echo "$HOSTS" | grep -q '203.0.113.81\|hidden.test' || { echo "$HOSTS"; fail "host is missing from the VLESS traffic table"; }
 ok "statistics API counted ss/vless/direct bytes and listed the VLESS host"
 
+# --- Read process counters after two procfs samples.
+for attempt in $(seq 1 12); do
+    STATS=$(curl -fsS -m 5 -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8086/api/stats)
+    if echo "$STATS" | python3 -c '
+import json, sys
+process = json.load(sys.stdin)["system"].get("process", {})
+sys.exit(not (process.get("rss_bytes", 0) > 0 and 0 <= process.get("cpu", -1) <= 100))
+'; then
+        break
+    fi
+    [ "$attempt" -lt 12 ] || fail "KeenProxy CPU or RSS is missing from live statistics"
+    sleep 1
+done
+ok "statistics API reported live KeenProxy CPU and RSS"
+
 # --- Verify route explanations, audit events and on-disk journal export
 ROUTES=$(curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086/api/journal/routes?limit=200")
 echo "$ROUTES" | python3 -c '

@@ -196,6 +196,8 @@ const ru = {
     logout: 'Выход',
     menu: 'Меню',
     load: 'Загрузка процессора и занятая память роутера',
+    processLoad: 'Загрузка CPU и резидентная память KeenProxy',
+    processMiB: '{value} МиБ',
     dirty: 'Есть неприменённые изменения',
     language: 'Язык',
     lightTheme: 'Светлая тема',

@@ -222,6 +222,8 @@ func (d *Demo) Stats(withSeries bool) stats.Snapshot {
 	}
 	x := float64(now.Unix()) / 30
 	snap.System = stats.System{CPU: math.Round(8 + 6*math.Sin(x)), MemPct: math.Round(41 + 3*math.Sin(x/3)), MemMB: 991}
+	processCPU := math.Round((2.4+math.Sin(x))*10) / 10
+	snap.System.Process = &stats.ProcessUsage{CPU: &processCPU, RSSBytes: uint64(38+2*math.Sin(x/3)) << 20}
 	return snap
 }
 
