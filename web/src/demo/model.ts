@@ -1,3 +1,4 @@
+import dnsProfiles from '../../../internal/catalog/dns.json' with { type: 'json' }
 import initial from './config.json' with { type: 'json' }
 import { createTelemetry } from './telemetry.ts'
 import type { Catalog, Config, DiagnosticReport, DomainStatus, GeoLookup, GeoStatus, JournalKind, Status } from '../types'
@@ -7,7 +8,7 @@ export const catalog: Catalog = {
   presets: [
     { id: 'sample-work', name: 'Example work sites', category: 'Other', domains: ['work.example.com', 'meet.example.com'], prefixes: [], description: 'Synthetic domains for exploring the preset preview.' },
   ],
-  dns: [{ id: 'example', name: 'Example resolver', filtering: 'none', doh: 'https://dns.example.com/dns-query', dot: 'tls://dns.example.com', ip: '192.0.2.53', source: 'Synthetic demo data' }],
+  dns: dnsProfiles,
   filters: [{ id: 'sample-ads', name: 'Example advertising list', category: 'Other', url: 'https://lists.example.com/ads.txt', enabled: true, auto_update: false, source: 'Synthetic demo data', license: 'GPL-3.0-only' }],
   // Public metadata of the router's built-in sources (internal/geoip/sources.go); the demo downloads nothing.
   geoip: [

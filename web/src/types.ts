@@ -262,7 +262,7 @@ export interface DNSConfig {listen:string;upstreams:string[];fallback:string;rou
 // Versioned catalog entry used to preview and maintain a routing group.
 export interface Preset {id:string;name:string;category:string;domains:string[];prefixes:string[];description:string}
 // Catalog resolver endpoints and bootstrap IP for a selectable DNS provider.
-export interface DNSProfile {id:string;name:string;filtering:string;doh:string;dot:string;ip:string;source:string}
+export interface DNSProfile {id:string;name:string;filtering:string;doh:string;dot:string;ip:string;bootstrap_ip?:string;source:string}
 // Configured downloadable blocklist and its update policy.
 export interface FilterSource {id:string;name:string;url:string;enabled:boolean;auto_update:boolean}
 // Available blocklist with provenance and license metadata.

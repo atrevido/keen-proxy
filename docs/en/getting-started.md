@@ -68,7 +68,7 @@ The tag must have installer assets and checksums attached. If publication is sti
 
 ## Update from the panel
 
-On a managed Entware installation, **Settings → Application updates** shows the installed version, the latest available stable release, and the previous installed version when recorded. Upgrade once with the command-line bootstrap if the current build predates panel updates. To make that older release a rollback target, first rerun the current bootstrap with the exact tag and build variant already installed, then upgrade. Update actions and schedule changes require the panel token, including on trusted networks.
+On a managed Entware installation, **Settings → Updates** shows the installed version, the latest available stable release, and the previous installed version when recorded. Upgrade once with the command-line bootstrap if the current build predates panel updates. To make that older release a rollback target, first rerun the current bootstrap with the exact tag and build variant already installed, then upgrade. Update actions and schedule changes require the panel token, including on trusted networks.
 
 Automatic installation is off by default. The panel still checks for releases. Enable automatic installation and save a time to install available releases during that minute in the router's local time, once per day while the service is running. Installation briefly restarts KeenProxy.
 

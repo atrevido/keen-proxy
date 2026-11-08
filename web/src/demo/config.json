@@ -10,8 +10,8 @@
   },
   "dns": {
     "upstreams": [
-      "https://1.1.1.1/dns-query",
-      "https://77.88.8.8/dns-query"
+      "https://one.one.one.one/dns-query",
+      "https://dns.quad9.net/dns-query"
     ],
     "listen": "127.0.0.1:5353",
     "fallback": "",
