@@ -156,6 +156,7 @@ const (
 	ConnWireGuard   = "wireguard"   // WireGuard through sing-box
 	ConnLink        = "link"        // vless://, vmess://, trojan://, ss://, hysteria2://, tuic://, anytls://, socks5:// link
 	ConnSingBox     = "singbox"     // raw sing-box outbound or endpoint
+	ConnAmneziaWG   = "amneziawg"   // AmneziaWG through a local TCP SOCKS5 client
 	ConnTrustTunnel = "trusttunnel" // TrustTunnel through external trusttunnel_client
 )
 
@@ -171,6 +172,7 @@ type Connection struct {
 	Outbound    map[string]any `yaml:"outbound,omitempty" json:"outbound,omitempty"`
 	Endpoint    map[string]any `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
 	TrustTunnel *TrustTunnel   `yaml:"trusttunnel,omitempty" json:"trusttunnel,omitempty"`
+	AmneziaWG   *AmneziaWG     `yaml:"amneziawg,omitempty" json:"amneziawg,omitempty"`
 	// Fallback names another connection or direct. After Failover.DownAfter of
 	// failure, traffic follows this chain to the next available member.
 	Fallback string `yaml:"fallback,omitempty" json:"fallback,omitempty"`
@@ -326,6 +328,7 @@ func (c *Config) Defaults() {
 		}
 		port++
 	}
+	c.defaultAmneziaWG()
 }
 
 // Validate checks the complete configuration and aggregates errors.
@@ -361,6 +364,7 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	c.validateAmneziaWG(add)
 	conns := map[string]bool{}
 	for i, cn := range c.Connections {
 		switch {
@@ -500,7 +504,7 @@ func validateMode(where string, m Mode, allowInherit bool, add func(string, ...a
 func validateConnection(cn Connection, add func(string, ...any)) {
 	where := fmt.Sprintf("connection %q", cn.ID)
 	set := 0
-	for _, has := range []bool{cn.WireGuard != nil, cn.Link != "", cn.Outbound != nil, cn.Endpoint != nil, cn.TrustTunnel != nil} {
+	for _, has := range []bool{cn.WireGuard != nil, cn.Link != "", cn.Outbound != nil, cn.Endpoint != nil, cn.TrustTunnel != nil, cn.AmneziaWG != nil} {
 		if has {
 			set++
 		}
@@ -536,6 +540,10 @@ func validateConnection(cn Connection, add func(string, ...any)) {
 		if _, ok := obj["tag"]; ok {
 			add("%s: tag must not be set; it is derived from id", where)
 		}
+	case ConnAmneziaWG:
+		if cn.AmneziaWG == nil {
+			add("%s: missing amneziawg section", where)
+		}
 	case ConnTrustTunnel:
 		if cn.TrustTunnel == nil {
 			add("%s: missing trusttunnel section", where)
@@ -543,7 +551,7 @@ func validateConnection(cn Connection, add func(string, ...any)) {
 			add("%s: %v", where, err)
 		}
 	default:
-		add("%s: unknown type %q (wireguard, link, singbox, trusttunnel)", where, cn.Type)
+		add("%s: unknown type %q (wireguard, link, singbox, trusttunnel, amneziawg)", where, cn.Type)
 	}
 }
 

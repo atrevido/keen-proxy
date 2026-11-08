@@ -24,7 +24,9 @@ const (
 
 // Input combines validated configuration with runtime address information.
 type Input struct {
-	Config *model.Config
+	// AWGPassword is an ephemeral daemon credential for supervised loopback SOCKS listeners.
+	AWGPassword string
+	Config      *model.Config
 	// Neighbors maps MAC addresses to ARP/DHCP addresses for clients without static IPs.
 	Neighbors map[string]netip.Addr
 	// RuleSetDir holds local rule-set files referenced by the generated configuration.
@@ -47,6 +49,8 @@ type Output struct {
 	Categories []string
 	// TrustTunnel lists external clients the daemon must keep running.
 	TrustTunnel []TrustTunnelClient
+	// AmneziaWG contains separately supervised local TCP proxies.
+	AmneziaWG []AmneziaWGClient
 	// ServerHosts maps connection IDs to server addresses or hostnames.
 	ServerHosts map[string]string
 	// Failover describes chains the daemon probes and switches through selectors.
@@ -83,7 +87,7 @@ func Compile(in Input) (Output, error) {
 			sources = append(sources, p.source)
 		}
 	}
-	conns, err := connections(c)
+	conns, err := connectionsWithAWGPassword(c, in.AWGPassword)
 	if err != nil {
 		return Output{}, err
 	}
@@ -111,6 +115,7 @@ func Compile(in Input) (Output, error) {
 		Countries:   geo.countries,
 		Categories:  geo.categories,
 		TrustTunnel: conns.trustTunnel,
+		AmneziaWG:   conns.amneziaWG,
 		ServerHosts: conns.hosts,
 		Failover:    chains,
 		Plan: netfilter.Plan{

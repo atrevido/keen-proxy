@@ -5,6 +5,7 @@ KeenProxy's GPL-3.0-only declaration applies to its original code. Dependencies,
 ## Software dependencies
 
 - **sing-box**: embedded engine from [SagerNet](https://github.com/SagerNet/sing-box), licensed under GPL-3.0-or-later by its upstream copyright holders. The pinned upstream file also contains an additional naming/association notice. Its complete notice is preserved in [LICENSES/sing-box.txt](LICENSES/sing-box.txt); retain it and account for the combined distribution when shipping binaries. This description does not certify all compatibility questions.
+- **AmneziaWG client**: the optional ARM64 sidecar uses [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go) under the [MIT license](LICENSES/amneziawg-go.txt) and [gVisor](https://gvisor.dev/) under the [Apache License 2.0](LICENSES/gvisor.txt).
 - **Other Go modules**: versions are recorded in `go.mod` and `go.sum`, including separate modules under `tools/`. Consult each upstream license and preserve required notices in source/binary distributions.
 - **Frontend dependencies**: versions are recorded in `web/package.json` and `web/package-lock.json`. Their upstream licenses and notices still apply to the embedded compiled frontend.
 - **TrustTunnel client**: optional external executable, downloaded from the upstream release selected in `tools/install.sh`. The installer retains the upstream license under the installation prefix. Its license is separate from KeenProxy's; verify the exact release's terms before redistributing it in a bundle.

@@ -70,6 +70,7 @@ export const api = {
   saveUpdatePreferences: async (prefs: UpdatePreferences) => updates.save(prefs),
   installUpdate: async (selection: UpdateSelection) => updates.install(selection),
   config: async () => demo.config(),
+  previewAmneziaWG: async () => { throw new Error('AmneziaWG profiles require the router application.') },
   saveConfig: async (config: Config) => demo.save(config),
   validateConfig: async (config: Config) => { demo.validate(config); return { ok: true } },
   devices: async () => [

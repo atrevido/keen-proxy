@@ -77,6 +77,7 @@ export const api = {
   saveUpdatePreferences: (prefs: UpdatePreferences) => request<UpdateStatus>('PUT', '/api/updates/preferences', prefs),
   installUpdate: (selection: UpdateSelection) => request<UpdateStatus>('POST', '/api/updates/install', selection),
   config: () => request<Config>('GET', '/api/config'),
+  previewAmneziaWG: (profile: string, probe = false) => request<{ profile: string; endpoint: string }>('POST', '/api/connections/amneziawg/preview', { profile, probe }),
   saveConfig: (cfg: Config) => request<Config>('PUT', '/api/config', cfg),
   validateConfig: (cfg: Config) => request<{ ok: boolean }>('POST', '/api/config/validate', cfg),
   devices: () => request<Device[]>('GET', '/api/devices'),

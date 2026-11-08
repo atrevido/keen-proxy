@@ -5,7 +5,7 @@ export type Mode = '' | 'split' | 'full' | 'off'
 // Kernel interception mechanism selected by the backend.
 export type InterceptMode = 'redirect' | 'tproxy'
 // Selects which protocol-specific connection payload is populated.
-export type ConnType = 'wireguard' | 'link' | 'singbox' | 'trusttunnel'
+export type ConnType = 'wireguard' | 'link' | 'singbox' | 'trusttunnel' | 'amneziawg'
 
 // Single WireGuard peer, including optional route and keepalive settings.
 export interface WGPeer {
@@ -41,6 +41,7 @@ export interface Connection {
   outbound?: Record<string, unknown>
   endpoint?: Record<string, unknown>
   trusttunnel?: TrustTunnel
+  amneziawg?: { profile: string; socks_port?: number }
   // Immediate fallback: another connection ID or direct.
   fallback?: string
 }
@@ -145,6 +146,7 @@ export interface Status {
   dns: string
   firewall: boolean
   restored: number
+  amneziawg_pending?: boolean
   trusttunnel: { id: string; running: boolean; starts: number }[] | null
   // Primary database build and type; active counts databases answering lookups.
   geoip: { loaded: boolean; built?: string; type?: string; error?: string; active?: number; categories?: number; attributions?: GeoAttribution[] | null }

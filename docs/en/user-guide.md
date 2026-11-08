@@ -67,3 +67,5 @@ Open **Settings → YAML configuration** to import, export, or restore a configu
 The panel footer shows the running release and build variant, architecture, and short commit hash. A local build may lack a release tag or commit hash. **Settings → Updates** also shows the available update and the previous version when known. **Diagnostics → Build details** lets you copy the running build identity. The diagnostics ZIP includes the same information in `status.json`.
 
 Open **Settings → Updates**. Apply or discard any routing draft before installing or rolling back. Confirm the version and wait for the service to reconnect. You can save a time for automatic installation or leave it off and install releases when ready. See [the update guide](getting-started.md#update-from-the-panel) for first-time setup and rollback requirements.
+
+See [AmneziaWG 3.1 setup](amneziawg.md) for Keenetic, Netcraze and MikroTik RouterOS.

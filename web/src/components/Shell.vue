@@ -193,6 +193,9 @@ async function logout() {
     </nav>
     <DraftActions v-if="route.name !== 'settings'" />
     <main class="content">
+      <div v-if="store.state.status?.amneziawg_pending" class="apply-error" role="status">
+        {{ t('awg.pending') }}
+      </div>
       <div v-if="store.state.error" class="apply-error" role="alert">
         <b>{{ t('shell.applyFailed') }}</b>
         <pre>{{ store.state.error }}</pre>

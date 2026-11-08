@@ -102,7 +102,7 @@ func (p supportProjection) address(host string) string {
 }
 
 func (p supportProjection) connection(c model.Connection) supportFields {
-	kind := supportEnum(c.Type, model.ConnWireGuard, model.ConnLink, model.ConnSingBox, model.ConnTrustTunnel)
+	kind := supportEnum(c.Type, model.ConnWireGuard, model.ConnLink, model.ConnSingBox, model.ConnTrustTunnel, model.ConnAmneziaWG)
 	return supportFields{
 		"id": p.target(c.ID), "type": kind, "fallback": p.target(c.Fallback),
 		"protocol": supportProtocol(c, kind),
@@ -111,7 +111,7 @@ func (p supportProjection) connection(c model.Connection) supportFields {
 
 func supportProtocol(c model.Connection, kind string) string {
 	switch kind {
-	case model.ConnWireGuard, model.ConnTrustTunnel:
+	case model.ConnWireGuard, model.ConnTrustTunnel, model.ConnAmneziaWG:
 		return kind
 	case model.ConnLink:
 		scheme, _, _ := strings.Cut(c.Link, "://")

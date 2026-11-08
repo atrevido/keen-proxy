@@ -5,6 +5,8 @@ export function protocolOf(c: Connection): string {
   switch (c.type) {
     case 'wireguard':
       return 'WireGuard'
+    case 'amneziawg':
+      return 'AmneziaWG'
     case 'trusttunnel':
       return 'TrustTunnel'
     case 'singbox':
@@ -20,6 +22,7 @@ export function protocolOf(c: Connection): string {
 export function serverOf(c: Connection): { host: string; port: string } {
   let hp = ''
   if (c.wireguard) hp = c.wireguard.peer.endpoint
+  else if (c.amneziawg) hp = c.amneziawg.profile.match(/^Endpoint\s*=\s*(.+)$/im)?.[1]?.trim() ?? ''
   else if (c.link) hp = c.link.match(/@([^/?#]+)/)?.[1] ?? ''
   else {
     const o = c.outbound ?? c.endpoint
