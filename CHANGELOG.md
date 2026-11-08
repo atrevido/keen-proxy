@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/ordo-systems/keen-proxy/compare/v0.6.0...v0.7.0) (2026-11-08)
+
+
+### Features
+
+* show KeenProxy process resource usage ([#18](https://github.com/ordo-systems/keen-proxy/issues/18)) ([1f9f46f](https://github.com/ordo-systems/keen-proxy/commit/1f9f46fea1c90b1f8a32f182d6f12aafe84f2018))
+
 ## [0.6.0](https://github.com/ordo-systems/keen-proxy/compare/v0.5.0...v0.6.0) (2026-11-08)
 
 
