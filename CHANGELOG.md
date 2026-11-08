@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/ordo-systems/keen-proxy/compare/v0.5.0...v0.6.0) (2026-11-08)
+
+
+### Features
+
+* expand router release builds for OpenWrt ([#15](https://github.com/ordo-systems/keen-proxy/issues/15)) ([afcb249](https://github.com/ordo-systems/keen-proxy/commit/afcb24932126ee4a60e862dcce6e53978f740f92))
+* organize settings and DNS resolver selection ([#16](https://github.com/ordo-systems/keen-proxy/issues/16)) ([e1ff11a](https://github.com/ordo-systems/keen-proxy/commit/e1ff11ab3eb9c703d58fbf8b9ce29e6c462fd05c))
+
 ## [0.5.0](https://github.com/ordo-systems/keen-proxy/compare/v0.4.0...v0.5.0) (2026-11-07)
 
 
