@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NDropdown, NSpin, useMessage } from 'naive-ui'
+import { NDropdown, NSpin } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import {
   Settings,
@@ -9,8 +9,6 @@ import {
   Moon,
   Menu,
   X,
-  Undo2,
-  Check,
   Languages,
   LogOut,
 } from '@lucide/vue'
@@ -20,9 +18,9 @@ import { LOCALES, locale, setLocale, type Locale } from '../i18n'
 import { themeName, themePreference, type ThemePreference } from '../theme'
 import { formatBuild } from '../buildIdentity'
 import mark from '../assets/keenproxy-mark.png'
+import DraftActions from './DraftActions.vue'
 const route = useRoute(),
   router = useRouter(),
-  message = useMessage(),
   { t } = useI18n()
 const drawer = ref(false)
 const bare = computed(() => route.meta.bare === true)
@@ -108,15 +106,6 @@ onMounted(() => {
   }, 5000)
 })
 onUnmounted(() => clearInterval(timer))
-// Central Apply action persists edits accumulated across every screen.
-async function apply() {
-  try {
-    await store.apply()
-    message.success(t('shell.applied'))
-  } catch (e) {
-    message.error((e as Error).message, { duration: 10000, closable: true })
-  }
-}
 async function logout() {
   await api.logout().catch(() => {})
   authed.value = false
@@ -202,21 +191,7 @@ async function logout() {
         >{{ item.label }}</router-link
       >
     </nav>
-    <div v-if="store.dirty.value" class="draft-strip" role="status">
-      <span>{{ t('ui.draft') }}</span>
-      <div>
-        <NButton
-          quaternary
-          :disabled="store.state.applying"
-          :aria-label="t('common.discard')"
-          @click="store.discard()"
-          ><template #icon><Undo2 :size="16" /></template></NButton
-        ><NButton type="primary" :loading="store.state.applying" @click="apply"
-          ><template #icon><Check :size="16" /></template
-          >{{ t('common.apply') }}</NButton
-        >
-      </div>
-    </div>
+    <DraftActions v-if="route.name !== 'settings'" />
     <main class="content">
       <div v-if="store.state.error" class="apply-error" role="alert">
         <b>{{ t('shell.applyFailed') }}</b>
@@ -226,6 +201,7 @@ async function logout() {
         ><router-view v-if="store.state.config" />
         <div v-else class="empty-state">{{ t('ui.unknown') }}</div></NSpin
       >
+      <DraftActions v-if="route.name === 'settings'" settings />
     </main>
     <footer v-if="build || attributions.length" class="panel-footer">
       <div class="footer-content">
@@ -386,19 +362,6 @@ async function logout() {
   color: var(--accent);
   border-color: var(--accent);
 }
-.draft-strip {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 42px;
-  background: color-mix(in srgb, var(--warn) 12%, var(--page));
-  color: var(--warn);
-}
-.draft-strip > div {
-  display: flex;
-  gap: 10px;
-}
 .apply-error {
   padding: 16px;
   border: 1px solid var(--bad);
@@ -487,13 +450,6 @@ async function logout() {
   .subnav {
     padding: 0 18px;
     gap: 20px;
-  }
-  .draft-strip {
-    padding: 10px 18px;
-    font-size: 13px;
-  }
-  .draft-strip span {
-    max-width: 50%;
   }
 }
 </style>

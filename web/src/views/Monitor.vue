@@ -130,7 +130,7 @@ const selectedStats = computed(() => byTag(tab.value))
       >
     </div>
 
-    <router-link v-if="updateVersion" to="/settings" class="update-notice">
+    <router-link v-if="updateVersion" :to="{ name: 'settings', query: { section: 'updates' } }" class="update-notice">
       {{ t('updates.newRelease', { version: updateVersion }) }} <ChevronRight :size="16" />
     </router-link>
 

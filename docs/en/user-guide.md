@@ -58,12 +58,12 @@ Open **Logs** to inspect routing decisions, configuration/audit events, or syste
 
 ## 8. DNS and backups
 
-Open **Settings** for DNS providers, routing/failure policy, general options, language, and configuration backup/preview controls. Importing or restoring configuration prepares a draft; review it and Apply. Keep unredacted backups private. The browser demo exports only its synthetic JSON-compatible configuration and intentionally disables YAML import.
+Open **Settings → DNS** to choose the primary and secondary DNS servers. Choose a provider and protocol from the list or select **Custom DNS server** and enter an IP address or a DoH, DoT, or UDP URL. The provider list includes Cloudflare, Google Public DNS, Quad9, AdGuard, Yandex DNS, Cisco OpenDNS, CleanBrowsing, and Control D. Each choice shows its filtering policy. KeenProxy tries the primary first and uses the secondary if the primary is unavailable. To change the resolver list, specify two different servers. Existing configurations with fewer servers can still be used and saved when the list is unchanged. **Advanced settings** contains any additional resolvers, bootstrap addresses, and the listening address. The DNS route and tunnel failure policy are configured separately.
 
-![Settings and DNS configuration](../assets/screenshots/en-settings.png)
+Open **Settings → YAML configuration** to import, export, or restore a configuration. Importing or restoring prepares a draft. Review it and Apply. Keep unredacted backups private. The browser demo exports synthetic JSON-compatible data and disables YAML import.
 
 ## 9. Install or roll back a release
 
-The panel footer shows the running release and build variant, architecture, and short commit hash. A local build may lack a release tag or commit hash. **Settings → Application updates** also shows the available update and the previous version when known. **Diagnostics → Build details** lets you copy the running build identity. The diagnostics ZIP includes the same information in `status.json`.
+The panel footer shows the running release and build variant, architecture, and short commit hash. A local build may lack a release tag or commit hash. **Settings → Updates** also shows the available update and the previous version when known. **Diagnostics → Build details** lets you copy the running build identity. The diagnostics ZIP includes the same information in `status.json`.
 
-Open **Settings → Application updates**. Apply or discard any routing draft before installing or rolling back. Confirm the version and wait for the service to reconnect. You can save a time for automatic installation or leave it off and install releases when ready. See [the update guide](getting-started.md#update-from-the-panel) for first-time setup and rollback requirements.
+Open **Settings → Updates**. Apply or discard any routing draft before installing or rolling back. Confirm the version and wait for the service to reconnect. You can save a time for automatic installation or leave it off and install releases when ready. See [the update guide](getting-started.md#update-from-the-panel) for first-time setup and rollback requirements.

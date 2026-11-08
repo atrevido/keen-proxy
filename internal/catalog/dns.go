@@ -1,27 +1,36 @@
 package catalog
 
-import "github.com/ordo-systems/keen-proxy/internal/model"
+import (
+	_ "embed"
+	"encoding/json"
+
+	"github.com/ordo-systems/keen-proxy/internal/model"
+)
 
 // DNSProfile describes provider endpoints and their bootstrap address.
 type DNSProfile struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Filtering string `json:"filtering"`
-	DoH       string `json:"doh"`
-	DoT       string `json:"dot"`
-	IP        string `json:"ip"`
-	Source    string `json:"source"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Filtering   string `json:"filtering"`
+	DoH         string `json:"doh"`
+	DoT         string `json:"dot"`
+	IP          string `json:"ip"`
+	BootstrapIP string `json:"bootstrap_ip,omitempty"`
+	Source      string `json:"source"`
 }
 
 // DNS contains bundled resolver choices with provenance URLs.
-var DNS = []DNSProfile{
-	{"cloudflare", "Cloudflare", "none", "https://one.one.one.one/dns-query", "tls://one.one.one.one", "1.1.1.1", "https://developers.cloudflare.com/1.1.1.1/encryption/"},
-	{"google", "Google Public DNS", "none", "https://dns.google/dns-query", "tls://dns.google", "8.8.8.8", "https://developers.google.com/speed/public-dns/docs/secure-transports"},
-	{"quad9", "Quad9 Secure", "security", "https://dns.quad9.net/dns-query", "tls://dns.quad9.net", "9.9.9.9", "https://docs.quad9.net/services/"},
-	{"quad9-unfiltered", "Quad9 Unfiltered", "none", "https://dns10.quad9.net/dns-query", "tls://dns10.quad9.net", "9.9.9.10", "https://docs.quad9.net/services/"},
-	{"adguard", "AdGuard DNS", "ads", "https://dns.adguard-dns.com/dns-query", "tls://dns.adguard-dns.com", "94.140.14.14", "https://adguard-dns.io/en/public-dns.html"},
-	{"adguard-unfiltered", "AdGuard Unfiltered", "none", "https://unfiltered.adguard-dns.com/dns-query", "tls://unfiltered.adguard-dns.com", "94.140.14.140", "https://adguard-dns.io/en/public-dns.html"},
-	{"adguard-family", "AdGuard Family", "family", "https://family.adguard-dns.com/dns-query", "tls://family.adguard-dns.com", "94.140.14.15", "https://adguard-dns.io/en/public-dns.html"},
+var DNS = loadDNS()
+
+//go:embed dns.json
+var dnsData []byte
+
+func loadDNS() []DNSProfile {
+	var profiles []DNSProfile
+	if err := json.Unmarshal(dnsData, &profiles); err != nil {
+		panic(err)
+	}
+	return profiles
 }
 
 // Filter adds catalog category, provenance, and license metadata to a blocklist source.
