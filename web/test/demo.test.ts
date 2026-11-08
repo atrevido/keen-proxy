@@ -126,6 +126,9 @@ test('simulated samples stay in range and counters grow across traffic peaks', (
     const after = demo.stats(false)
     assert.ok(after.system.cpu >= 0 && after.system.cpu <= 100)
     assert.ok(after.system.mem_pct > 0 && after.system.mem_pct < 100)
+    const process = after.system.process
+    assert.ok(process && process.cpu !== undefined && process.cpu >= 0 && process.cpu <= after.system.cpu)
+    assert.ok(process.rss_bytes > 0 && process.rss_bytes <= after.system.mem_mb * 1024 ** 2)
     for (const [index, outbound] of after.outbounds!.entries()) {
       assert.ok(outbound.down > outbound.up && outbound.up > 0)
       assert.ok(outbound.peak_down >= outbound.down && outbound.peak_unique >= outbound.unique)

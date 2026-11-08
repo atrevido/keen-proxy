@@ -267,7 +267,7 @@ func (t *Tracker) Run(ctx context.Context) {
 func (t *Tracker) sample(now time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.sys.sample()
+	t.sys.sample("/proc")
 	unique := map[*outbound]map[string]struct{}{}
 	for c := range t.active {
 		u := unique[c.out]

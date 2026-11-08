@@ -53,7 +53,11 @@ function snapshot(config: Config, frame: number, epoch: number, series: boolean)
   })
   const cpu = Math.round(16 + 7 * Math.sin(frame / 4))
   const memory = Math.round(72 + 4 * Math.sin(frame / 12))
-  return { system: { cpu, mem_pct: Math.round(memory / 256 * 100), mem_mb: memory }, outbounds }
+  const process = {
+    cpu: Math.round((2.4 + Math.sin(frame / 4)) * 10) / 10,
+    rss_bytes: Math.round(38 + 2 * Math.sin(frame / 12)) * 1024 ** 2,
+  }
+  return { system: { cpu, mem_pct: Math.round(memory / 256 * 100), mem_mb: 256, process }, outbounds }
 }
 
 function routeEntry(frame: number, epoch: number, outbounds: string[]): JournalEntry {

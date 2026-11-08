@@ -4,7 +4,7 @@ These screenshots show the same Vue screens shipped by KeenProxy, running in the
 
 ## 1. Read the overview
 
-Open **Overview** to see connection health, recent traffic, and the router's CPU and memory usage. The usage figures cover the whole router. When a new release is available, follow its notice to **Settings**. Traffic graphs describe observed activity and cannot establish whether traffic leaks.
+Open **Overview** to see connection health, recent traffic, and the router's CPU and memory usage. The first resource row covers the whole router. The **KeenProxy** row shows its share of total router CPU time and its resident memory (RSS). This includes embedded sing-box. An external TrustTunnel client is measured by the router totals. When a new release is available, follow its notice to **Settings**. Traffic graphs describe observed activity and cannot establish whether traffic leaks.
 
 ![Overview with synthetic traffic and connection cards](../assets/screenshots/en-overview.png)
 

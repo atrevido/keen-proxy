@@ -197,6 +197,8 @@ const en: Messages = {
     logout: 'Sign out',
     menu: 'Menu',
     load: 'Router CPU load and used memory',
+    processLoad: 'KeenProxy CPU and resident memory',
+    processMiB: '{value} MiB',
     dirty: 'Unapplied changes',
     language: 'Language',
     lightTheme: 'Light theme',
