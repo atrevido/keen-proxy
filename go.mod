@@ -1,6 +1,6 @@
 module github.com/ordo-systems/keen-proxy
 
-go 1.26.1
+go 1.27.3
 
 require (
 	github.com/maxmind/mmdbwriter v1.2.0

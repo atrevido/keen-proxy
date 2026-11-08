@@ -37,17 +37,21 @@ build: web
 ui-demo: build
 	mkdir -p bin/demo && ./bin/keenproxy -ui-demo -config examples/demo.yaml
 
-# Cross-compile router binaries for ARM64 and MIPS little-endian.
+# Cross-compile Linux router binaries for ARM32, ARM64 and both MIPS byte orders.
 build-router: web
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=5,softfloat go build -tags $(TAGS),ui -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-linux-armv5 ./cmd/keenproxy
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags $(TAGS),ui -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-linux-arm64 ./cmd/keenproxy
 	CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -tags $(TAGS),ui -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-linux-mipsle ./cmd/keenproxy
+	CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat go build -tags $(TAGS),ui -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-linux-mipsbe ./cmd/keenproxy
 
 # Use the reduced protocol registry for memory-constrained routers.
 # See internal/engine/registry_lite.go for supported protocols.
 LITE_TAGS := keenproxy_lite,with_utls,with_wireguard,with_gvisor,ui
 build-router-lite: web
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=5,softfloat go build -tags $(LITE_TAGS) -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-lite-linux-armv5 ./cmd/keenproxy
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -tags $(LITE_TAGS) -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-lite-linux-arm64 ./cmd/keenproxy
 	CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -tags $(LITE_TAGS) -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-lite-linux-mipsle ./cmd/keenproxy
+	CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat go build -tags $(LITE_TAGS) -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-lite-linux-mipsbe ./cmd/keenproxy
 
 clean:
 	rm -rf bin dist web/dist web/dist-demo site
