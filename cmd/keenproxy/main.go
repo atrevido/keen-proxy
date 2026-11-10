@@ -21,6 +21,7 @@ import (
 	"github.com/ordo-systems/keen-proxy/internal/engine"
 	"github.com/ordo-systems/keen-proxy/internal/journal"
 	"github.com/ordo-systems/keen-proxy/internal/model"
+	"github.com/ordo-systems/keen-proxy/internal/ndmhook"
 	"github.com/ordo-systems/keen-proxy/internal/netfilter"
 	"github.com/ordo-systems/keen-proxy/internal/update"
 	"github.com/ordo-systems/keen-proxy/web"
@@ -85,6 +86,13 @@ func main() {
 		ConfigPath: *configPath, ARPPath: *arpPath, RuleSetDir: *ruleSetDir, WatchInterval: *watch,
 		Firewall: fw, Log: log, Journals: journals, SingBoxLog: singBoxLog(journals[journal.System], log),
 	})
+	hook, err := ndmhook.Start(*configPath, d.NotifyFirewallChange, log)
+	if err != nil {
+		log.Warn("netfilter event hook unavailable; polling remains active", "err", err)
+	} else if hook != nil {
+		log.Info("netfilter event hook enabled; polling remains active")
+	}
+	defer hook.Close()
 	updates := update.NewManaged(*configPath, log)
 	go updates.Run(ctx)
 	// A management API failure must not stop the independent routing daemon.
@@ -95,6 +103,7 @@ func main() {
 	}()
 	if err := d.Run(ctx); err != nil {
 		log.Error("keenProxy stopped with an error", "err", err)
+		hook.Close()
 		os.Exit(1)
 	}
 }

@@ -32,6 +32,7 @@ import {
 } from '@lucide/vue'
 import { api } from '../api'
 import { clientIP, groupRoutes, type RouteGroup } from '../journal'
+import { firewallJournalEntry } from '../firewallJournal'
 import { store, targetLabel } from '../store'
 import type { JournalEntry, JournalKind } from '../types'
 
@@ -84,6 +85,7 @@ const resultLabels = computed<Record<string, [string, string]>>(() => ({
   error: [t('journal.rError'), 'bad'],
 }))
 const actorLabel = (a?: string) => actorLabels.value[a ?? ''] ?? a
+const firewallView = (e: JournalEntry) => firewallJournalEntry(e, t)
 const resultLabel = (r?: string) => resultLabels.value[r ?? '']?.[0] ?? r
 const levelClass: Record<string, string> = {
   INFO: 'dim',
@@ -237,10 +239,14 @@ function filterColumn(key: string, label: (v: string) => string) {
 
 function line(e: JournalEntry) {
   const ts = dateTime(e.time)
+  const view = firewallView(e)
   switch (kind.value) {
     case 'routes':
       return `${ts}  ${deviceLabel(e.client)} (${e.client}) → ${e.host}${e.ip && e.ip !== e.host ? ` (${e.ip})` : ''}  ${outLabel(e.outbound)}  ${e.rule}`
     case 'audit':
+      if (view) {
+        return `${ts}  ${view.source}  ${view.title}  ${view.summary}\n${e.details ?? view.details.map(([key, value]) => `${key}: ${value}`).join('\n')}`
+      }
       return `${ts}  ${actorLabel(e.actor)}  ${e.action} [${e.target}]  ${resultLabel(e.result)}  ${e.details ?? ''}`
     default:
       return `${ts}  ${e.level}  ${e.source}  ${e.message}${(e.count ?? 0) > 1 ? ` (×${e.count})` : ''}`
@@ -445,12 +451,15 @@ const columns = computed<DataTableColumns<JournalEntry>>(() => {
         {
           type: 'expand',
           renderExpand: (e) =>
-            details([
+            h('div', [details([
               [t('journal.time'), dateTime(e.time)],
               [t('journal.who'), actorLabel(e.actor)],
               [t('journal.object'), e.target],
-              [t('journal.details'), e.details],
-            ]),
+              ...(firewallView(e)?.details ?? [[t('journal.details'), e.details]] as [string, string | undefined][]),
+            ]), e.firewall && e.details ? h('details', { class: 'raw-evidence' }, [
+              h('summary', t('journal.firewallRaw')),
+              h('pre', e.details),
+            ]) : null]),
         },
         timeCol(),
         {
@@ -458,16 +467,16 @@ const columns = computed<DataTableColumns<JournalEntry>>(() => {
           key: 'action',
           render: (e) =>
             h('div', [
-              h('div', e.action),
-              e.details ? h('div', { class: 'sub' }, e.details) : null,
+              h('div', firewallView(e)?.title ?? e.action),
+              h('div', { class: 'sub' }, firewallView(e)?.summary ?? e.details),
             ]),
         },
         {
-          title: t('journal.who'),
+          title: t('journal.source'),
           key: 'actor',
-          width: 140,
+          width: 170,
           ...filterColumn('actor', (v) => actorLabel(v) ?? v),
-          render: (e) => actorLabel(e.actor),
+          render: (e) => firewallView(e)?.source ?? actorLabel(e.actor),
         },
         {
           title: t('journal.object'),
@@ -750,6 +759,9 @@ const emptyText = computed(() =>
   margin-left: 8px;
   padding: 0 6px;
 }
+.raw-evidence { margin-top: 16px; }
+.raw-evidence summary { cursor: pointer; color: var(--muted); }
+.raw-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 :deep(.details) {
   display: grid;
   grid-template-columns: max-content 1fr;

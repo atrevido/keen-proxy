@@ -86,6 +86,8 @@ type Daemon struct {
 	// geoStore owns downloaded IP databases; geoWake triggers a check.
 	geoStore *geoip.Store
 	geoWake  chan struct{}
+	// firewallWake coalesces external checks; the watchdog remains the sole consumer.
+	firewallWake chan struct{}
 	// serverHosts maps connection IDs to server hosts from the latest compilation.
 	serverHosts map[string]string
 	journals    journal.Set
@@ -126,6 +128,7 @@ func New(opt Options) *Daemon {
 	d.filters = filterlist.New(filepath.Join(filepath.Dir(opt.RuleSetDir), "filters"), nil)
 	d.geoStore = geoip.NewStore(filepath.Join(filepath.Dir(opt.RuleSetDir), "geoip"))
 	d.geoWake = make(chan struct{}, 1)
+	d.firewallWake = make(chan struct{}, 1)
 	d.resetDomainGeneration()
 	d.stats.OnRoute = d.onRoute
 	d.eng.Tracker = d.stats
@@ -163,18 +166,10 @@ func (d *Daemon) Run(ctx context.Context) error {
 	go d.runFilterUpdates(ctx)
 	go d.runDeviceNames(ctx)
 
-	tick := time.NewTicker(d.opt.WatchInterval)
-	defer tick.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			d.log.Info("stopping keenProxy")
-			d.audit("system", "Stop keenProxy", "core", "info", "interception rules removed, network uses direct routing")
-			return nil
-		case <-tick.C:
-			d.watch(ctx)
-		}
-	}
+	d.runWatchdog(ctx)
+	d.log.Info("stopping keenProxy")
+	d.audit("system", "Stop keenProxy", "core", "info", "interception rules removed, network uses direct routing")
+	return nil
 }
 
 // Apply validates, applies, and persists configuration. Application failures
@@ -385,17 +380,7 @@ func (d *Daemon) watch(ctx context.Context) {
 		}
 		return
 	}
-	if !d.opt.Firewall.Healthy(ctx, d.plan) {
-		if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
-			d.log.Error("rule restoration", "err", err)
-			d.audit("watchdog", "Interception rules not restored", "firewall", "error", err.Error())
-			return
-		}
-		d.restored++
-		d.log.Warn("interception rules disappeared (NDM likely rebuilt firewall) — restored")
-		d.audit("watchdog", "Interception rules restored", "firewall", "warn",
-			fmt.Sprintf("firewall rules were missing — NDM likely rebuilt it; restorations since start: %d", d.restored))
-	}
+	d.checkFirewall(ctx, "watchdog")
 }
 
 // compileLocked compiles configuration and writes local rule-sets while d.mu

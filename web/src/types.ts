@@ -220,6 +220,27 @@ export interface StatsSnapshot {
 // Selects one of the independent route, audit, or system journals.
 export type JournalKind = 'routes' | 'audit' | 'system'
 
+// Failed entry-jump probe. A nonzero exit alone does not identify its cause.
+export interface FirewallCheckFailure {
+  table: string
+  chain: string
+  target: string
+  exit_code: number
+  reason: string
+  error?: string
+}
+
+// Evidence for one watchdog repair. A restored outcome includes verification.
+export interface FirewallEvent {
+  trigger?: 'netfilter_hook' | 'watchdog'
+  // Time spent checking and repairing; absent in historical entries.
+  duration_ms?: number
+  before: FirewallCheckFailure | null
+  after?: FirewallCheckFailure
+  outcome: 'restored' | 'apply_failed' | 'verify_failed'
+  apply_error?: string
+}
+
 // Sparse journal wire record; available fields depend on journal kind.
 export interface JournalEntry {
   destination_port?: number
@@ -237,6 +258,7 @@ export interface JournalEntry {
   target?: string
   result?: string
   details?: string
+  firewall?: FirewallEvent
   level?: string
   source?: string
   message?: string

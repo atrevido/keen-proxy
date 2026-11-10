@@ -52,6 +52,8 @@ Open **Diagnostics**, select the applied connection, and run its checks. Read HT
 
 For a support request, choose **Diagnostics → Diagnostics archive → Download ZIP** in the router panel. The archive contains the retained routing, audit, and system journals, a sanitized summary of the applied configuration, and KeenProxy status. It omits secrets and raw message text. Identifiers such as addresses and names are removed or replaced with aliases that are consistent within one export. Event times and network metadata remain, so review the ZIP before sharing. For the individual connection checks, use **Download report**.
 
+Watchdog recovery events include the failed firewall check and the verification result. The ZIP retains safe structured evidence. See [watchdog diagnostics](troubleshooting.md#why-does-the-watchdog-restore-interception-rules).
+
 Open **Logs** to inspect routing decisions, configuration/audit events, or system errors. Search and available filters narrow the view in the router application. Routing decisions explain the selected outbound; they do not prove a successful handshake or transfer. In the browser demo, new routing records come from the local simulation.
 
 ![Routing journal with synthetic records](../assets/screenshots/en-journal.png)

@@ -42,6 +42,7 @@ func supportEntry(kind journal.Kind, e journal.Entry, alias supportAlias) journa
 		safe.Result = known(e.Result, "ok", "info", "warn", "error")
 		safe.Target = supportAuditTarget(e.Target, alias)
 		safe.Details = failureClass(e.Details)
+		safe.Firewall = supportFirewall(e)
 	case journal.System:
 		safe.Level = known(e.Level, "INFO", "WARN", "ERROR")
 		safe.Source = known(e.Source, "keenproxy", "sing-box", "trusttunnel")
@@ -89,7 +90,8 @@ func systemEvent(message string) string {
 	for _, prefix := range []string{
 		"keenProxy started", "stopping keenProxy", "configuration applied and saved",
 		"new configuration failed to apply", "rollback also failed", "sing-box core restarted",
-		"interception rules disappeared", "rule restoration", "rule update", "remove rules",
+		"interception rules disappeared", "interception rule check failed", "interception rules restored", "rule restoration", "rule update", "remove rules",
+		"netfilter event hook enabled", "netfilter event hook unavailable", "netfilter event watcher error", "checking firewall after netfilter event",
 		"TrustTunnel started", "TrustTunnel configuration", "trusttunnel_client not found",
 		"ARP unavailable", "IP database loaded", "IP database download failed",
 		"upstream DNS did not respond", "system resolver did not respond",

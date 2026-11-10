@@ -20,6 +20,25 @@ A network policy matches the source subnet. A device override is configured by M
 
 On startup, KeenProxy brings up the engine and DNS listeners before installing interception. On a normal shutdown it removes interception first. While running, it checks whether the router has removed its firewall rules and attempts to restore them. An intentional shutdown returns traffic to the router's usual forwarding rules, so it is distinct from a tunnel failing while KeenProxy is still running.
 
+## How firewall rules recover after a firmware change
+
+Router firmware may rebuild its firewall when port mappings, interfaces, or other network settings change. This can remove KeenProxy's entry jumps or chains. KeenProxy does not prevent that rebuild; it checks the resulting rules and repairs its interception when needed.
+
+There are two ways to start that check:
+
+| Trigger | Where it is available | What happens |
+| --- | --- | --- |
+| **Netfilter hook** | Compatible Keenetic/Netcraze NDM firmware on a managed installation | After an IPv4 `nat`, `filter`, or `mangle` table change, NDM runs KeenProxy's small callback. It notifies the running daemon, which checks its current entry jumps and repairs them if a check fails. The engine does not restart. |
+| **Watchdog timer** | Every supported runtime, including experimental OpenWrt installations | The periodic check runs every 30 seconds by default. It remains enabled even when the NDM callback is active or could not be installed. |
+
+The optional callback is enabled only for a root Linux process using the managed executable and configuration, with the NDM core socket and OPKG hook infrastructure present. Ordinary OpenWrt installations do not provide NDM, so no NDM hook is installed; recovery continues through the timer. This does not add native firewall4/nftables support or change the existing [OpenWrt requirements](getting-started.md#experimental-openwrt-support).
+
+Checks and repairs run sequentially. Bursts of callbacks are coalesced, but a single firmware action may rebuild several tables at different times and therefore produce more than one repair. After applying its rules, KeenProxy checks the entry jumps again and increments the restoration counter only when verification passes. A present jump does not prove every rule, policy route, or application connection is healthy.
+
+In **Logs → Audit**, each repair attempt shows its trigger, affected rule, outcome and check-and-recovery time. Expand the entry for raw command errors. Older records without source metadata show **Not recorded**. Successful recovery is not duplicated in the system journal; hook errors and failed recovery remain there. The recorded duration measures the check and repair, not a network outage. Callback queues and rule application still take time, so this mechanism does not promise zero packet loss.
+
+Try the synthetic hook, timer and failure examples in the [browser demo](browser-demo.md). See [Troubleshooting](troubleshooting.md#why-does-the-watchdog-restore-interception-rules) for diagnostic evidence and export limits.
+
 ## DNS and the application connection are separate
 
 [![A LAN device exchanges DNS messages with KeenProxy, which can query an upstream resolver and remember successful IPv4 answers](network-diagrams/dns.svg)](network-diagrams/dns.svg)

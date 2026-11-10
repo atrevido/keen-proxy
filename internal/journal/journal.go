@@ -44,11 +44,12 @@ type Entry struct {
 	RuleRaw  string `json:"rule_raw,omitempty"` // Original sing-box rule string.
 
 	// Audit.
-	Actor   string `json:"actor,omitempty"`  // user, system, watchdog
-	Action  string `json:"action,omitempty"` // Short action description.
-	Target  string `json:"target,omitempty"` // Affected object: config, firewall, geoip, etc.
-	Result  string `json:"result,omitempty"` // ok, info, warn, error
-	Details string `json:"details,omitempty"`
+	Actor    string         `json:"actor,omitempty"`  // user, system, watchdog
+	Action   string         `json:"action,omitempty"` // Short action description.
+	Target   string         `json:"target,omitempty"` // Affected object: config, firewall, geoip, etc.
+	Result   string         `json:"result,omitempty"` // ok, info, warn, error
+	Details  string         `json:"details,omitempty"`
+	Firewall *FirewallEvent `json:"firewall,omitempty"`
 
 	// System.
 	Level   string `json:"level,omitempty"`  // INFO, WARN, ERROR

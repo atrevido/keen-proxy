@@ -22,7 +22,6 @@ func (d *Demo) startJournals() {
 		{Actor: "system", Action: "Start keenProxy", Target: "core", Result: "ok", Details: "interception tproxy, sources 3, DNS 0.0.0.0:5354"},
 		{Actor: "system", Action: "Country database updated", Target: "geoip", Result: "ok", Details: now.Format("2006-01") + "-01"},
 		{Actor: "watchdog", Action: "Device addresses updated", Target: "clients", Result: "info", Details: "added: 192.168.7.35 (f0:18:98:44:55:66); online: 6"},
-		{Actor: "watchdog", Action: "Interception rules restored", Target: "firewall", Result: "warn", Details: "firewall rules were missing — NDM likely rebuilt it; restorations since start: 1"},
 		{Actor: "user", Action: "Panel login", Target: "auth", Result: "ok", Details: "token login, 192.168.7.50"},
 		{Actor: "user", Action: "Configuration rejected", Target: "config", Result: "error", Details: "invalid configuration: groups[5] \"Steam\": unknown target \"nl2\" (from 192.168.7.50)"},
 		{Actor: "user", Action: "Apply configuration", Target: "config", Result: "ok", Details: "groups: 5 → 6; core not restarted (from 192.168.7.50)"},
@@ -30,6 +29,9 @@ func (d *Demo) startJournals() {
 		// Emit history chronologically, from startup a few hours ago to recent events.
 		now = now.Add(time.Duration(rand.IntN(25)+5) * time.Minute)
 		e.Time = now
+		audit.Add(e)
+	}
+	for _, e := range demoFirewallAudit(time.Now()) {
 		audit.Add(e)
 	}
 	audit.Add(journal.Entry{Time: time.Now().Add(-3 * time.Minute), Actor: "watchdog", Action: "Switch to fallback", Target: "fi", Result: "warn",
@@ -41,7 +43,7 @@ func (d *Demo) startJournals() {
 		{Level: "WARN", Source: "sing-box", Message: "outbound/wireguard[fi]: peer 203.0.113.10:51820: handshake did not complete after 5 seconds, retrying"},
 		{Level: "INFO", Source: "keenproxy", Message: "configuration applied and saved"},
 		{Level: "ERROR", Source: "sing-box", Message: "inbound/redirect[redirect-in]: process connection from 192.168.7.35:51244: dial tcp 142.250.74.46:443: i/o timeout"},
-		{Level: "WARN", Source: "keenproxy", Message: "interception rules disappeared (NDM likely rebuilt firewall) — restored"},
+		{Level: "ERROR", Source: "keenproxy", Message: "rule restoration failed trigger=netfilter_hook outcome=verify_failed error=synthetic"},
 	} {
 		e.Time = time.Now().Add(-time.Duration(60-i*9) * time.Minute)
 		sys.Add(e)
