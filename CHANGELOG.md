@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/ordo-systems/keen-proxy/compare/v0.7.0...v0.8.0) (2026-11-10)
+
+
+### Features
+
+* recover firewall rules from optional NDM hooks ([#23](https://github.com/ordo-systems/keen-proxy/issues/23)) ([08a9a43](https://github.com/ordo-systems/keen-proxy/commit/08a9a43f6af89447fc7394f31b18b0618824ee2a))
+
 ## [0.7.0](https://github.com/ordo-systems/keen-proxy/compare/v0.6.0...v0.7.0) (2026-11-08)
 
 
