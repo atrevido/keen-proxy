@@ -47,11 +47,11 @@ A route can point to a connection with an ordered fallback chain. The rule still
 
 Switching can close existing connections, so clients may need to reconnect. The probe reports reachability and response time for its test URL. It cannot establish that a particular website, UDP application, or DNS resolver works through the same connection.
 
-## How to trace one request
+## How to trace one request { #how-to-trace-one-request }
 
 | What you want to establish | What to inspect |
 | --- | --- |
-| Which DNS path the router used | Check DNS diagnostics and the system journal for the resolver path and any direct fallback. Blocking TCP/UDP port 853, if enabled, does not catch application DoH over HTTPS on port 443. |
+| Which DNS path the router used | Compare the configured path in **Diagnostics** with direct-fallback events in **Logs → Audit**. Observe traffic on the router's external interface to verify the actual resolver path. Blocking TCP/UDP port 853, if enabled, does not catch application DoH over HTTPS on port 443. |
 | Which rule and exit matched | Reproduce the request from the affected device and inspect **Logs → Routing** for the client, destination, rule, and outbound. A route decision can be logged even if the remote request fails. |
 | Whether the connection works end to end | Run an HTTPS or transfer check and reproduce the failing application request. For DNS privacy, test from the actual device and observe the router's external traffic under both normal operation and tunnel failure. |
 
