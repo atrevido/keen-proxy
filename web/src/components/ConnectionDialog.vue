@@ -13,12 +13,15 @@ const emit = defineEmits<{ (e: 'update:show', v: boolean): void }>()
 const message = useMessage()
 const { t } = useI18n()
 
-const tab = ref<'link' | 'wireguard' | 'singbox'>('link')
+const tab = ref<'link' | 'wireguard' | 'singbox' | 'amneziawg'>('link')
 const name = ref('')
 const id = ref('')
 const idTouched = ref(false)
 const link = ref('')
 const wgText = ref('')
+const awgText = ref('')
+const checkingAWG = ref(false)
+let awgReadSequence = 0
 const sbText = ref('')
 const preview = ref<LinkPreview | null>(null)
 const previewError = ref('')
@@ -28,6 +31,7 @@ const fallback = ref<string | null>(null)
 const isEdit = computed(() => !!props.edit)
 
 watch(() => props.show, (open) => {
+  awgReadSequence++
   if (!open) return
   error.value = ''
   revealed.value = false
@@ -39,11 +43,12 @@ watch(() => props.show, (open) => {
   idTouched.value = !!c
   fallback.value = c?.fallback ?? null
   link.value = c?.link ?? c?.trusttunnel?.link ?? ''
+  awgText.value = c?.amneziawg?.profile ?? ''
   wgText.value = c?.wireguard ? wireGuardToConf(c.wireguard) : ''
   sbText.value = c?.outbound || c?.endpoint
     ? JSON.stringify({ [c.outbound ? 'outbound' : 'endpoint']: c.outbound ?? c.endpoint }, null, 2)
     : ''
-  tab.value = c?.type === 'wireguard' ? 'wireguard' : c?.type === 'singbox' ? 'singbox' : 'link'
+  tab.value = c?.type === 'wireguard' ? 'wireguard' : c?.type === 'singbox' ? 'singbox' : c?.type === 'amneziawg' ? 'amneziawg' : 'link'
   if (link.value) checkLink()
 })
 
@@ -76,6 +81,10 @@ function build(): Connection {
     if (l.startsWith('tt://')) return { ...base, type: 'trusttunnel', trusttunnel: { ...props.edit?.trusttunnel, link: l } }
     return { ...base, type: 'link', link: l }
   }
+  if (tab.value === 'amneziawg') {
+    if (!awgText.value) throw new Error(t('awg.select'))
+    return { ...base, type: 'amneziawg', amneziawg: { ...props.edit?.amneziawg, profile: awgText.value } }
+  }
   if (tab.value === 'wireguard') {
     const wg: WireGuard = parseWireGuardConf(wgText.value)
     return { ...base, type: 'wireguard', wireguard: wg }
@@ -86,6 +95,37 @@ function build(): Connection {
   // Infer endpoint versus outbound for an unwrapped raw profile.
   const endpointTypes = ['wireguard', 'tailscale', 'openvpn', 'openconnect']
   return endpointTypes.includes(obj.type) ? { ...base, type: 'singbox', endpoint: obj } : { ...base, type: 'singbox', outbound: obj }
+}
+
+async function readAWGFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  const seq = ++awgReadSequence
+  try {
+    if (file.size > 128 * 1024) throw new Error(t('ui.largeFile'))
+    const result = await api.previewAmneziaWG(await file.text())
+    if (seq === awgReadSequence) {
+      awgText.value = result.profile
+      error.value = ''
+    }
+  } catch (e) {
+    if (seq === awgReadSequence) error.value = (e as Error).message
+  }
+}
+
+async function checkAWG() {
+  checkingAWG.value = true
+  error.value = ''
+  try {
+    await api.previewAmneziaWG(awgText.value, true)
+    if (props.show) message.success(t('awg.probeOK'))
+  } catch (e) {
+    if (props.show) error.value = (e as Error).message
+  } finally {
+    checkingAWG.value = false
+  }
 }
 
 // Validate local identity constraints before replacing or appending the draft profile.
@@ -182,6 +222,11 @@ function renameTarget(from: string, to: string) {
             placeholder="[Interface]&#10;PrivateKey = …&#10;Address = 10.13.13.2/32&#10;&#10;[Peer]&#10;PublicKey = …&#10;Endpoint = 203.0.113.10:51820&#10;AllowedIPs = 0.0.0.0/0"
           />
           <div class="hint">{{ t('dialog.wgHint') }}</div>
+        </NTabPane>
+        <NTabPane name="amneziawg" tab="AmneziaWG (.conf)">
+          <label>{{ t('awg.select') }} <input type="file" accept=".conf" @change="readAWGFile" /></label>
+          <p class="hint">{{ t('awg.tcpOnly') }}</p>
+          <NButton :disabled="!awgText || checkingAWG" @click="checkAWG">{{ t('awg.probe') }}</NButton>
         </NTabPane>
         <NTabPane name="singbox" tab="sing-box JSON">
           <NInput

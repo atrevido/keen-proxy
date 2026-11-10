@@ -18,6 +18,7 @@ type Process struct {
 	Name     string
 	Path     string
 	Args     []string
+	Env      []string // nil inherits the daemon environment
 	Log      *slog.Logger
 	MinDelay time.Duration // Delay before the first restart.
 	MaxDelay time.Duration
@@ -67,6 +68,7 @@ func (p *Process) Run(ctx context.Context) {
 // once waits for exit or cancellation, escalating SIGTERM to kill after five seconds.
 func (p *Process) once(ctx context.Context) error {
 	cmd := exec.Command(p.Path, p.Args...)
+	cmd.Env = p.Env
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

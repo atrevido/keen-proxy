@@ -34,6 +34,15 @@ func Masker(cfg *model.Config, extra ...string) func(string) string {
 			if cn.TrustTunnel != nil {
 				secrets = append(secrets, cn.TrustTunnel.Link)
 			}
+			if cn.AmneziaWG != nil {
+				for _, line := range strings.Split(cn.AmneziaWG.Profile, "\n") {
+					key, value, _ := strings.Cut(line, "=")
+					switch strings.ToLower(strings.TrimSpace(key)) {
+					case "privatekey", "presharedkey", "headerprotectionkey":
+						secrets = append(secrets, strings.TrimSpace(value))
+					}
+				}
+			}
 			for _, m := range []map[string]any{cn.Outbound, cn.Endpoint} {
 				collect(m, &secrets)
 			}

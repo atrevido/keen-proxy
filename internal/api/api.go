@@ -118,6 +118,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/config/previous", s.auth(s.previousConfig))
 	mux.Handle("PUT /api/config", s.auth(s.putConfig))
 	mux.Handle("POST /api/config/validate", s.auth(s.validateConfig))
+	mux.Handle("POST /api/connections/amneziawg/preview", s.auth(s.previewAmneziaWG))
 	mux.Handle("GET /api/devices", s.auth(s.devices))
 	mux.Handle("POST /api/links/parse", s.auth(s.parseLink))
 	mux.Handle("GET /api/stats", s.auth(s.stats))
@@ -248,7 +249,7 @@ func (s *Server) status(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
-	cfg := s.D.Config()
+	cfg := s.editableConfig()
 	if cfg == nil {
 		writeError(w, http.StatusServiceUnavailable, "daemon is still starting")
 		return
@@ -298,7 +299,7 @@ func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, s.D.Config())
+	writeJSON(w, http.StatusOK, s.editableConfig())
 }
 
 func (s *Server) devices(w http.ResponseWriter, r *http.Request) {

@@ -80,6 +80,7 @@ const link = ref(''),
 let fileSequence = 0
 let alive = true
 const protocols = [
+  { id: 'amneziawg', name: 'AmneziaWG', hint: '3.1 / TCP', icon: Network },
   { id: 'wireguard', name: 'WireGuard', hint: '.conf', icon: Network },
   { id: 'vless', name: 'VLESS', hint: 'TLS / REALITY', icon: Shield },
   { id: 'shadowsocks', name: 'Shadowsocks', hint: 'AEAD', icon: LockKeyhole },
@@ -88,7 +89,9 @@ const protocols = [
   { id: 'socks', name: 'SOCKS', hint: '5 / 4a', icon: Server },
 ]
 const methods = computed(() =>
-  protocol.value === 'raw'
+  protocol.value === 'amneziawg'
+    ? [{ value: 'file', label: t('ui.byFile') }]
+    : protocol.value === 'raw'
     ? [
         { value: 'file', label: t('ui.byFile') },
         { value: 'json', label: 'JSON' },
@@ -105,6 +108,13 @@ const methods = computed(() =>
         ],
 )
 function selectProtocol(value: string) {
+  if (value !== protocol.value && (value === 'amneziawg' || protocol.value === 'amneziawg')) {
+    fileSequence++
+    fileText.value = ''
+    filename.value = ''
+    candidates.value = []
+    chosen.value = null
+  }
   protocol.value = value
   fields.protocol = value
   if (!methods.value.some((m) => m.value === method.value))
@@ -185,10 +195,13 @@ async function readFile(file?: File) {
     return
   }
   try {
-    const text = await file.text(),
-      parsed = importConnections(text, file.name)
+    const text = await file.text()
+    const awg = protocol.value === 'amneziawg' ? await api.previewAmneziaWG(text) : null
+    const parsed: Connection[] = awg
+      ? [{ id: '', name: '', type: 'amneziawg', amneziawg: { profile: awg.profile } }]
+      : importConnections(text, file.name)
     if (seq !== fileSequence) return
-    fileText.value = text
+    fileText.value = awg?.profile ?? text
     filename.value = file.name
     candidates.value = parsed
     chosen.value = parsed.length === 1 ? 0 : null
@@ -308,6 +321,20 @@ async function build(): Promise<Connection> {
   await api.validateConfig(cfg)
   return candidate
 }
+async function probeAmneziaWG() {
+  if (!fileText.value) return
+  busy.value = true
+  error.value = ''
+  try {
+    await api.previewAmneziaWG(fileText.value, true)
+    if (alive) message.success(t('awg.probeOK'))
+  } catch (e) {
+    if (alive) error.value = (e as Error).message
+  } finally {
+    busy.value = false
+  }
+}
+
 async function validate() {
   busy.value = true
   error.value = ''
@@ -456,6 +483,10 @@ async function save() {
             hidden
             @change="readFile(($event.target as HTMLInputElement).files?.[0])"
           />
+        </div>
+        <div v-if="protocol === 'amneziawg'" style="margin: 12px 0">
+          <p>{{ t('awg.tcpOnly') }}</p>
+          <NButton :disabled="!fileText || busy" @click="probeAmneziaWG">{{ t('awg.probe') }}</NButton>
         </div>
         <NSelect
           v-if="method === 'file' && candidates.length > 1"

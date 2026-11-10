@@ -52,6 +52,7 @@ func (s *Server) yamlExport(w http.ResponseWriter, r *http.Request) {
 			cn.Outbound = nil
 			cn.Endpoint = nil
 			cn.TrustTunnel = nil
+			cn.AmneziaWG = nil
 		}
 		raw, err = cp.Marshal()
 		if err != nil {

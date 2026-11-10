@@ -2,6 +2,7 @@ import { redesignEn } from './redesign'
 import type { Messages } from './ru'
 
 const en: Messages = {
+  awg: { select: 'Select an AmneziaWG profile', tcpOnly: 'AmneziaWG 3.1 supports TCP traffic in this release. First activation occurs at the next planned service start.', probe: 'Test HTTPS through AmneziaWG', probeOK: 'HTTPS through AmneziaWG succeeded', pending: 'The AmneziaWG configuration is saved for the next service start.' },
   languageName: 'English',
   browserDemo: {
     notice: 'Demo · synthetic data · changes reset on reload · no network checks.',

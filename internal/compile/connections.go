@@ -7,6 +7,7 @@ import (
 	"net/netip"
 	"strconv"
 
+	"github.com/ordo-systems/keen-proxy/internal/amneziawg"
 	"github.com/ordo-systems/keen-proxy/internal/links"
 	"github.com/ordo-systems/keen-proxy/internal/model"
 	"github.com/ordo-systems/keen-proxy/internal/trusttunnel"
@@ -21,7 +22,16 @@ type TrustTunnelClient struct {
 }
 
 // connOut collects protocol objects and runtime dependencies for all connections.
+// AmneziaWGClient identifies one local TCP proxy and its private profile.
+type AmneziaWGClient struct {
+	ID        string
+	SocksPort uint16
+	Profile   string
+	ClientID  string
+}
+
 type connOut struct {
+	amneziaWG   []AmneziaWGClient
 	outbounds   []obj
 	endpoints   []obj
 	trustTunnel []TrustTunnelClient
@@ -31,6 +41,10 @@ type connOut struct {
 
 // connections assigns stable tags and collects server addresses for interception bypass.
 func connections(c *model.Config) (connOut, error) {
+	return connectionsWithAWGPassword(c, "")
+}
+
+func connectionsWithAWGPassword(c *model.Config, password string) (connOut, error) {
 	out := connOut{hosts: map[string]string{}}
 	var current string
 	addServer := func(host string) {
@@ -79,6 +93,20 @@ func connections(c *model.Config) (connOut, error) {
 					}
 				}
 			}
+		case model.ConnAmneziaWG:
+			awg := cn.AmneziaWG
+			profile, err := amneziawg.Parse(awg.Profile)
+			if err != nil {
+				return out, fmt.Errorf("connection %q: %w", cn.ID, err)
+			}
+			out.amneziaWG = append(out.amneziaWG, AmneziaWGClient{ID: cn.ID, SocksPort: awg.SocksPort, Profile: profile.Config, ClientID: profile.ClientID})
+			socks := obj{"type": "socks", "tag": cn.ID, "server": "127.0.0.1", "server_port": awg.SocksPort, "version": "5", "network": "tcp"}
+			if password != "" {
+				socks["username"], socks["password"] = "keenproxy", password
+			}
+			out.outbounds = append(out.outbounds, socks)
+			// Only LAN traffic is intercepted. The sidecar's own UDP does not require a bypass.
+			out.hosts[cn.ID], _, _ = net.SplitHostPort(profile.Endpoint)
 		case model.ConnTrustTunnel:
 			tt := cn.TrustTunnel
 			ep, err := trusttunnel.ParseLink(tt.Link)

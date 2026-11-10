@@ -3,6 +3,7 @@ module github.com/ordo-systems/keen-proxy
 go 1.27.3
 
 require (
+	github.com/amnezia-vpn/amneziawg-go/v3 v3.1.20260828
 	github.com/maxmind/mmdbwriter v1.2.0
 	github.com/miekg/dns v1.1.73
 	github.com/oschwald/maxminddb-golang/v2 v2.9.0
@@ -182,6 +183,7 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.79.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
+	gvisor.dev/gvisor v0.0.0-20231202080848-1f7806d17489 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
 	zombiezen.com/go/capnproto2 v2.18.2+incompatible // indirect
 )

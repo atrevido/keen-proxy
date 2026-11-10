@@ -6,6 +6,7 @@ package daemon
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -42,6 +43,7 @@ type Options struct {
 	ConfigPath    string
 	ARPPath       string        // /proc/net/arp
 	RuleSetDir    string        // local sing-box client address rule-sets
+	AWGBinary     string        // optional local override for the packaged client
 	WatchInterval time.Duration // watchdog interval for firewall and neighbor checks
 	Firewall      *netfilter.Firewall
 	Log           *slog.Logger
@@ -75,6 +77,9 @@ type Daemon struct {
 	planOn      bool
 	neighbors   map[string]netip.Addr
 	deviceNames map[string]cachedDeviceName
+	pendingAWG  *model.Config
+	awgPassword string
+	awg         map[string]*awgProcess
 	tt          []compile.TrustTunnelClient
 	ttProcs     map[string]*supervise.Process
 	ttStop      context.CancelFunc
@@ -104,6 +109,9 @@ type Daemon struct {
 // New creates a daemon with default paths and in-memory journals when omitted.
 // It does not start listeners or install interception rules.
 func New(opt Options) *Daemon {
+	if opt.AWGBinary == "" {
+		opt.AWGBinary = awgBinary
+	}
 	if opt.DeviceNames == nil {
 		opt.DeviceNames = devices.NewNameLookup()
 	}
@@ -120,7 +128,7 @@ func New(opt Options) *Daemon {
 		opt.Journals = journal.NewSet("")
 	}
 	d := &Daemon{
-		domains: domaincache.New(time.Now), domainSlots: make(chan struct{}, 4), opt: opt, log: opt.Log, stats: stats.NewTracker(), journals: opt.Journals,
+		awgPassword: rand.Text(), domains: domaincache.New(time.Now), domainSlots: make(chan struct{}, 4), opt: opt, log: opt.Log, stats: stats.NewTracker(), journals: opt.Journals,
 		active: map[string]string{}, health: map[string]*health{}, allDown: map[string]bool{},
 	}
 	d.filters = filterlist.New(filepath.Join(filepath.Dir(opt.RuleSetDir), "filters"), nil)
@@ -147,7 +155,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	d.adoptLegacyGeo(cfg)
 	d.reloadGeoLocked(cfg)
 	d.neighbors = d.readNeighbors(cfg)
-	err = d.applyLocked(ctx, cfg)
+	cfg, err = d.startConfigLocked(ctx, cfg)
 	d.mu.Unlock()
 	defer d.shutdown()
 	if err != nil {
@@ -194,13 +202,20 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 		return err
 	}
 	// Compile first so protocol errors do not disturb the running configuration.
-	if _, err := compile.Compile(compile.Input{Config: cfg, RuleSetDir: d.opt.RuleSetDir}); err != nil {
+	out, err := compile.Compile(compile.Input{Config: cfg, RuleSetDir: d.opt.RuleSetDir})
+	if err != nil {
 		d.audit(by, "Configuration rejected", "config", "error", err.Error()+from)
 		return err
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	prev := d.cfg
+	if prev == nil && hasAWG(cfg) {
+		return errors.New("daemon is still starting")
+	}
+	if prev != nil && (hasAWG(prev) || hasAWG(cfg) || d.pendingAWG != nil) {
+		return d.applyAWGLocked(cfg, out)
+	}
 	changes := configChanges(prev, cfg)
 	if err := d.applyLocked(ctx, cfg); err != nil {
 		d.log.Error("new configuration failed to apply, restoring previous configuration", "err", err)
@@ -254,6 +269,13 @@ func (d *Daemon) applyLocked(ctx context.Context, cfg *model.Config) error {
 	out, err := d.compileLocked()
 	if err != nil {
 		return err
+	}
+
+	prepared, awgErr := d.prepareAWG(out.AmneziaWG)
+	if awgErr != nil {
+		d.log.Error("AmneziaWG sidecar configuration failed", "err", awgErr)
+	} else {
+		d.replaceAWG(out.AmneziaWG, prepared)
 	}
 
 	// Start TrustTunnel clients first; sing-box SOCKS outbounds depend on them.
@@ -328,6 +350,7 @@ func (d *Daemon) shutdown() {
 	}
 	d.eng.Close()
 	d.stopTrustTunnel()
+	d.replaceAWG(nil, nil)
 	d.geo.set.Close()
 	d.geo.cats.Close()
 	d.geo.set, d.geo.cats = nil, nil
@@ -401,7 +424,7 @@ func (d *Daemon) watch(ctx context.Context) {
 // compileLocked compiles configuration and writes local rule-sets while d.mu
 // is held. sing-box loads the files at startup and watches subsequent changes.
 func (d *Daemon) compileLocked() (compile.Output, error) {
-	out, err := compile.Compile(compile.Input{Config: d.cfg, Neighbors: d.neighbors, RuleSetDir: d.opt.RuleSetDir})
+	out, err := compile.Compile(compile.Input{Config: d.cfg, Neighbors: d.neighbors, RuleSetDir: d.opt.RuleSetDir, AWGPassword: d.awgPassword})
 	if err != nil {
 		return out, err
 	}
@@ -528,6 +551,7 @@ func (d *Daemon) Config() *model.Config {
 
 // Status summarizes daemon, engine, interception, and connection health for the API.
 type Status struct {
+	AWGPending    bool              `json:"amneziawg_pending,omitempty"`
 	Started       time.Time         `json:"started"`
 	Mode          string            `json:"mode"`
 	Sources       int               `json:"sources"`
@@ -560,7 +584,7 @@ type TrustTunnelInfo struct {
 func (d *Daemon) Status(ctx context.Context) Status {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	st := Status{Started: d.started, Restored: d.restored, OnlineDevices: len(d.neighbors)}
+	st := Status{AWGPending: d.pendingAWG != nil, Started: d.started, Restored: d.restored, OnlineDevices: len(d.neighbors)}
 	if d.cfg == nil {
 		return st
 	}

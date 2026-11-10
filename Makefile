@@ -11,7 +11,7 @@ endif
 NODE_BIN ?= $(shell ls -d $(HOME)/.nvm/versions/node/v22.*/bin 2>/dev/null | tail -1)
 NPM := PATH="$(NODE_BIN):$$PATH" npm
 
-.PHONY: test vet web build ui-demo build-router build-router-lite clean integration test-install check-language docs docs-preview
+.PHONY: build-awg-arm64 test vet web build ui-demo build-router build-router-lite clean integration test-install check-language docs docs-preview
 
 check-language:
 	python3 -B -m unittest discover -s test/language -v
@@ -73,6 +73,13 @@ docs: $(DOCS_VENV)/bin/mkdocs
 # Serve the built site at http://localhost:$(DOCS_PORT)/ (Russian at /ru/, demo at /demo/).
 docs-preview: docs
 	python3 -m http.server $(DOCS_PORT) --bind 127.0.0.1 --directory site
+
+# Build the optional ARM64 sidecar for Entware or a RouterOS image.
+build-awg-arm64:
+	mkdir -p dist
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "$(LDFLAGS)" -o dist/keenproxy-awg-linux-arm64 ./cmd/keenproxy-awg
+	install -m 0644 LICENSES/amneziawg-go.txt dist/amneziawg-go-LICENSE.txt
+	install -m 0644 LICENSES/gvisor.txt dist/gvisor-LICENSE.txt
 
 # Exercise real interception inside disposable Docker network namespaces.
 integration:

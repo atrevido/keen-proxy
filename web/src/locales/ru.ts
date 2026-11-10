@@ -1,6 +1,7 @@
 import { redesignRu } from './redesign'
 // Defines the message schema; TypeScript requires en.ts to provide every key.
 const ru = {
+  awg: { select: 'Выберите профиль AmneziaWG', tcpOnly: 'В этой версии AmneziaWG 3.1 передаёт TCP. Первое включение произойдёт при следующем плановом запуске службы.', probe: 'Проверить HTTPS через AmneziaWG', probeOK: 'HTTPS через AmneziaWG работает', pending: 'Конфигурация AmneziaWG сохранена для следующего запуска службы.' },
   languageName: 'Русский',
   browserDemo: {
     notice: 'Демо · синтетические данные · изменения сбрасываются при перезагрузке · сетевые проверки не выполняются.',
