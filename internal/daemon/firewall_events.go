@@ -19,7 +19,7 @@ func (d *Daemon) NotifyFirewallChange() {
 func (d *Daemon) runWatchdog(ctx context.Context) {
 	tick := time.NewTicker(d.opt.WatchInterval)
 	defer tick.Stop()
-	for ctx.Err() == nil {
+	for {
 		select {
 		case <-ctx.Done():
 			return

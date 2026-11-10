@@ -1,12 +1,12 @@
 # Начало работы
 
-## Экспериментальная поддержка OpenWrt
+## Экспериментальная поддержка OpenWrt { #experimental-openwrt-support }
 
 KeenProxy можно попробовать на роутерах с OpenWrt, **не менее 128 МиБ оперативной памяти** и достаточным местом для бинарника и его данных. В релизах доступны обычные сборки и lite для Linux на ARM32 (ARMv5 и новее, soft float, суффикс `armv5`), ARM64 (`arm64`), MIPS little-endian (`mipsle`, soft float) и MIPS big-endian (`mipsbe`, soft float).
 
 Для тестирования на OpenWrt бинарник и конфигурацию устанавливают вручную. Инструкции по автоматической установке и обновлению ниже относятся к Keenetic и Netcraze с Entware. Для перехвата трафика нужны совместимые `iptables`, `iptables-restore` и поддержка в ядре. Проверьте перехват на тестовом клиенте с вашей прошивкой, особенно если она использует firewall4. [Документация OpenWrt по Netfilter](https://openwrt.org/docs/guide-user/firewall/netfilter_iptables/netfilter_management)
 
-Необязательный хук netfilter для NDM относится к совместимым прошивкам Keenetic/Netcraze. На OpenWrt без NDM он выключен и не создаёт файлов хука или событий NDM; обычный сторож продолжает проверять правила каждые 30 секунд по умолчанию. Интеграция с hotplug или firewall4 OpenWrt не устанавливается. Подробнее о [восстановлении правил](network-flow.md#как-восстанавливаются-правила-после-изменений-прошивки).
+Необязательный хук netfilter для NDM относится к совместимым прошивкам Keenetic/Netcraze. На OpenWrt без NDM он выключен и не создаёт файлов хука или событий NDM; обычный сторож продолжает проверять правила каждые 30 секунд по умолчанию. Интеграция с hotplug или firewall4 OpenWrt не устанавливается. Подробнее о [восстановлении правил](network-flow.md#how-firewall-rules-recover-after-a-firmware-change).
 
 ## Подготовка роутера
 

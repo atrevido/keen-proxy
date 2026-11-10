@@ -36,7 +36,7 @@ type Demo struct {
 func NewDemo(cfg *model.Config) *Demo {
 	d := &Demo{domainCache: domaincache.New(time.Now), cfg: cfg, started: time.Now()}
 	demoResolve(d.domainCache, compile.DomainNames(cfg))
-	d.startJournals()
+	d.startJournals(demoFirewallJSON)
 	return d
 }
 

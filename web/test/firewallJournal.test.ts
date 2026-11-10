@@ -79,3 +79,20 @@ test('missing error text and empty reason stay omitted, while exit code zero is 
   assert.ok(view.details.some(([key, value]) => key === 'journal.firewallExitCode' && value === '0'))
   assert.ok(!view.details.some(([key]) => key === 'journal.firewallBeforeError' || key === 'journal.firewallReason'))
 })
+
+test('unknown outcomes use the recorded action and retain the available evidence', () => {
+  for (const outcome of ['future_outcome', 'constructor']) {
+    const entry = {
+      id: 2, time: '2026-01-01T00:00:00Z', actor: 'watchdog', target: 'firewall',
+      action: 'Interception verification deferred', firewall: { ...event(), outcome },
+    } as unknown as JournalEntry
+    const view = firewallJournalEntry(entry, (key, values) => {
+      assert.equal(typeof key, 'string')
+      return t(key, values)
+    })!
+    assert.equal(view.title, entry.action)
+    assert.equal(view.source, 'Netfilter hook')
+    assert.match(view.summary, /KEENPROXY_TCP/)
+    assert.ok(view.details.some(([, value]) => value === entry.firewall?.before?.error))
+  }
+})

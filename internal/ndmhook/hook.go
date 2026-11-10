@@ -115,11 +115,11 @@ func start(p paths, onChange func(), log *slog.Logger) (*Hook, error) {
 	keepLock = true
 	h.eventInfo, _ = os.Lstat(p.event())
 	go h.receive(onChange, log)
-	if err := installHook(p.hook(), h.script); err != nil {
+	h.hookInfo, err = installHook(p.hook(), h.script)
+	if err != nil {
 		h.Close()
 		return nil, err
 	}
-	h.hookInfo, _ = os.Lstat(p.hook())
 	return h, nil
 }
 
@@ -214,26 +214,34 @@ printf 'keenproxy-netfilter-event-v1\n' 1<> "$event" 2>/dev/null || :
 `)
 }
 
-func installHook(path string, body []byte) error {
+// installHook captures the new inode before publishing it at the shared path.
+func installHook(path string, body []byte) (os.FileInfo, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		return err
+		return nil, err
 	}
 	f, err := os.CreateTemp(filepath.Dir(path), ".keenproxy-hook-*")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer os.Remove(f.Name())
 	defer f.Close()
-	if _, err = f.Write(body); err != nil {
-		return err
+	if _, err := f.Write(body); err != nil {
+		return nil, err
 	}
-	if err = f.Chmod(0755); err != nil {
-		return err
+	if err := f.Chmod(0755); err != nil {
+		return nil, err
 	}
-	if err = f.Close(); err != nil {
-		return err
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
 	}
-	return os.Rename(f.Name(), path)
+	if err := f.Close(); err != nil {
+		return nil, err
+	}
+	if err := os.Rename(f.Name(), path); err != nil {
+		return nil, err
+	}
+	return info, nil
 }
 
 func (h *Hook) receive(onChange func(), log *slog.Logger) {

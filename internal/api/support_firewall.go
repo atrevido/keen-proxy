@@ -33,7 +33,7 @@ func supportFirewallDuration(ms *int64) *int64 {
 	return ms
 }
 
-func supportFirewallCheck(check *netfilter.CheckFailure) *netfilter.CheckFailure {
+func supportFirewallCheck(check *journal.FirewallCheck) *journal.FirewallCheck {
 	if check == nil {
 		return nil
 	}
@@ -44,7 +44,7 @@ func supportFirewallCheck(check *netfilter.CheckFailure) *netfilter.CheckFailure
 			if exitCode < 0 || exitCode > 255 {
 				exitCode = -1
 			}
-			return &netfilter.CheckFailure{
+			return &journal.FirewallCheck{
 				Table: jump.Table, Chain: jump.From, Target: jump.To, ExitCode: exitCode,
 				Reason: known(check.Reason, "execution_failed", "command_failed", "check_failed", "timeout", "canceled"),
 				Error:  failureClass(check.Error),

@@ -73,6 +73,7 @@ type Daemon struct {
 	routeOn     bool
 	plan        netfilter.Plan
 	planOn      bool
+	planPending bool // installation failed after the plan and its dependencies were prepared
 	neighbors   map[string]netip.Addr
 	deviceNames map[string]cachedDeviceName
 	tt          []compile.TrustTunnelClient
@@ -239,6 +240,8 @@ func (d *Daemon) Apply(ctx context.Context, cfg *model.Config) error {
 // applyLocked reconciles runtime state with cfg while d.mu is held.
 func (d *Daemon) applyLocked(ctx context.Context, cfg *model.Config) error {
 	prev := d.cfg
+	// A new attempt may change the old plan's dependencies before it reaches iptables.
+	d.planPending = false
 	d.resetDomainGeneration()
 	if prev != nil && !reflect.DeepEqual(prev.GeoIP, cfg.GeoIP) {
 		d.reloadGeoLocked(cfg)
@@ -296,11 +299,11 @@ func (d *Daemon) applyLocked(ctx context.Context, cfg *model.Config) error {
 		d.removeFirewall()
 	}
 	d.plan = out.Plan
-	if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
+	if err := d.installFirewall(ctx); err != nil {
 		d.removeFirewall()
+		d.planPending = true
 		return fmt.Errorf("interception rules: %w", err)
 	}
-	d.planOn = true
 	return nil
 }
 
@@ -311,7 +314,7 @@ func (d *Daemon) shutdown() {
 	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if d.planOn {
+	if d.planOn || d.planPending {
 		d.removeFirewall()
 	}
 	if d.routeOn {
@@ -358,8 +361,7 @@ func (d *Daemon) startDNS() error {
 func (d *Daemon) watch(ctx context.Context) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	// Neighbor refresh also installs rules, so it must respect stopped interception.
-	if !d.planOn || ctx.Err() != nil {
+	if ctx.Err() != nil || (!d.planOn && !d.planPending) {
 		return
 	}
 	if n := d.readNeighbors(d.cfg); !maps.Equal(n, d.neighbors) {
@@ -379,10 +381,12 @@ func (d *Daemon) watch(ctx context.Context) {
 			d.reselectLocked()
 		}
 		d.plan = out.Plan
-		if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
-			d.log.Error("rule update", "err", err)
+		if !d.planPending {
+			if err := d.installFirewall(ctx); err != nil && ctx.Err() == nil {
+				d.log.Error("rule update", "err", err)
+			}
+			return
 		}
-		return
 	}
 	d.checkFirewall(ctx, "watchdog")
 }
@@ -493,7 +497,7 @@ func (d *Daemon) removeFirewall() {
 	if err := d.opt.Firewall.Remove(ctx, d.plan); err != nil && !errors.Is(err, context.Canceled) {
 		d.log.Warn("remove rules", "err", err)
 	}
-	d.planOn = false
+	d.planOn, d.planPending = false, false
 }
 
 // NoTokenFrom returns trusted dashboard networks from the atomic configuration

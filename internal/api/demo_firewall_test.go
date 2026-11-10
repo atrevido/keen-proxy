@@ -61,3 +61,24 @@ func TestDemoFirewallAudit(t *testing.T) {
 		}
 	}
 }
+
+func TestDemoJournalsSurviveMalformedFirewallFixture(t *testing.T) {
+	_, fake := newServer()
+	d := &Demo{cfg: fake.cfg}
+	d.startJournals([]byte("{"))
+
+	audit := d.Journal(journal.Audit).Find(journal.Query{}, nil).Entries
+	if len(audit) == 0 {
+		t.Fatal("other demo audit entries were not seeded")
+	}
+	for _, e := range audit {
+		if e.Target == "firewall" {
+			t.Fatalf("malformed fixture produced a firewall entry: %+v", e)
+		}
+	}
+
+	warnings := d.Journal(journal.System).Find(journal.Query{Text: "invalid embedded firewall demo"}, nil).Entries
+	if len(warnings) != 1 || warnings[0].Level != "WARN" {
+		t.Fatalf("expected one fixture warning: %+v", warnings)
+	}
+}

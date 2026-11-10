@@ -14,7 +14,7 @@ import (
 
 // startJournals seeds synthetic history and adds one route per second
 // so the journal UI remains active without a router.
-func (d *Demo) startJournals() {
+func (d *Demo) startJournals(firewallFixture []byte) {
 	d.journals = journal.NewSet("")
 	now := time.Now().Add(-4 * time.Hour)
 	audit := d.journals[journal.Audit]
@@ -31,7 +31,8 @@ func (d *Demo) startJournals() {
 		e.Time = now
 		audit.Add(e)
 	}
-	for _, e := range demoFirewallAudit(time.Now()) {
+	firewallEntries, firewallErr := demoFirewallAudit(time.Now(), firewallFixture)
+	for _, e := range firewallEntries {
 		audit.Add(e)
 	}
 	audit.Add(journal.Entry{Time: time.Now().Add(-3 * time.Minute), Actor: "watchdog", Action: "Switch to fallback", Target: "fi", Result: "warn",
@@ -47,6 +48,9 @@ func (d *Demo) startJournals() {
 	} {
 		e.Time = time.Now().Add(-time.Duration(60-i*9) * time.Minute)
 		sys.Add(e)
+	}
+	if firewallErr != nil {
+		sys.Add(journal.Entry{Level: "WARN", Source: "keenproxy", Message: firewallErr.Error()})
 	}
 	for i := 0; i < 300; i++ {
 		d.addDemoRoute(time.Now().Add(-time.Duration(300-i) * 3 * time.Second))

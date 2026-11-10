@@ -15,13 +15,13 @@ import (
 var demoFirewallJSON []byte
 
 // demoFirewallAudit timestamps fresh copies of the shared recovery examples.
-func demoFirewallAudit(now time.Time) []journal.Entry {
+func demoFirewallAudit(now time.Time, fixture []byte) ([]journal.Entry, error) {
 	var entries []journal.Entry
-	if err := json.Unmarshal(demoFirewallJSON, &entries); err != nil {
-		panic(fmt.Errorf("invalid embedded firewall demo: %w", err))
+	if err := json.Unmarshal(fixture, &entries); err != nil {
+		return nil, fmt.Errorf("invalid embedded firewall demo: %w", err)
 	}
 	for i := range entries {
 		entries[i].Time = now.Add(-time.Duration(len(entries)-i) * time.Minute)
 	}
-	return entries
+	return entries, nil
 }

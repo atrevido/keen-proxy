@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Route, audit, and system journals combine SSE updates with server-filtered pages.
-import { computed, h, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, h, onUnmounted, reactive, ref, watch, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -85,12 +85,23 @@ const resultLabels = computed<Record<string, [string, string]>>(() => ({
   error: [t('journal.rError'), 'bad'],
 }))
 const actorLabel = (a?: string) => actorLabels.value[a ?? ''] ?? a
-const firewallView = (e: JournalEntry) => firewallJournalEntry(e, t)
 const resultLabel = (r?: string) => resultLabels.value[r ?? '']?.[0] ?? r
 const levelClass: Record<string, string> = {
   INFO: 'dim',
   WARN: 'warn',
   ERROR: 'bad',
+}
+
+// Share the presentation across cells, expansion, and copy. Computed views
+// update with the locale and the weak keys release rows when they leave the table.
+const firewallViews = new WeakMap<JournalEntry, ComputedRef<ReturnType<typeof firewallJournalEntry>>>()
+function firewallView(entry: JournalEntry) {
+  let view = firewallViews.get(entry)
+  if (!view) {
+    view = computed(() => firewallJournalEntry(entry, t))
+    firewallViews.set(entry, view)
+  }
+  return view.value
 }
 
 // Resolve device names from configured clients and discovered addresses.
@@ -239,15 +250,16 @@ function filterColumn(key: string, label: (v: string) => string) {
 
 function line(e: JournalEntry) {
   const ts = dateTime(e.time)
-  const view = firewallView(e)
   switch (kind.value) {
     case 'routes':
       return `${ts}  ${deviceLabel(e.client)} (${e.client}) → ${e.host}${e.ip && e.ip !== e.host ? ` (${e.ip})` : ''}  ${outLabel(e.outbound)}  ${e.rule}`
-    case 'audit':
+    case 'audit': {
+      const view = firewallView(e)
       if (view) {
         return `${ts}  ${view.source}  ${view.title}  ${view.summary}\n${e.details ?? view.details.map(([key, value]) => `${key}: ${value}`).join('\n')}`
       }
       return `${ts}  ${actorLabel(e.actor)}  ${e.action} [${e.target}]  ${resultLabel(e.result)}  ${e.details ?? ''}`
+    }
     default:
       return `${ts}  ${e.level}  ${e.source}  ${e.message}${(e.count ?? 0) > 1 ? ` (×${e.count})` : ''}`
   }
@@ -466,9 +478,10 @@ const columns = computed<DataTableColumns<JournalEntry>>(() => {
           title: t('journal.action'),
           key: 'action',
           render: (e) => {
-            const summary = firewallView(e)?.summary || e.details
+            const view = firewallView(e)
+            const summary = view?.summary || e.details
             return h('div', [
-              h('div', firewallView(e)?.title ?? e.action),
+              h('div', view?.title ?? e.action),
               summary ? h('div', { class: 'sub' }, summary) : null,
             ])
           },

@@ -6,30 +6,34 @@ import (
 	"time"
 
 	"github.com/ordo-systems/keen-proxy/internal/journal"
+	"github.com/ordo-systems/keen-proxy/internal/netfilter"
 )
 
-// checkFirewall runs under d.mu and counts only repairs verified by a new
-// entry-jump check. Inspection errors still trigger the existing repair path.
+const firewallVerifyRetryDelay = 250 * time.Millisecond
+
+// installFirewall installs the current plan and makes shutdown responsible for its cleanup.
+func (d *Daemon) installFirewall(ctx context.Context) error {
+	if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
+		return err
+	}
+	d.planOn, d.planPending = true, false
+	return nil
+}
+
+// checkFirewall runs under d.mu. An installed or pending plan can be repaired;
+// a pending plan must be applied even if residual entry jumps pass inspection.
 func (d *Daemon) checkFirewall(ctx context.Context, trigger string) {
-	if !d.planOn || ctx.Err() != nil {
+	if ctx.Err() != nil || (!d.planOn && !d.planPending) {
 		return
 	}
 	started := time.Now()
 	before := d.opt.Firewall.Check(ctx, d.plan)
-	if before == nil || ctx.Err() != nil {
+	if ctx.Err() != nil || (before == nil && !d.planPending) {
 		return
 	}
-	event := &journal.FirewallEvent{Trigger: trigger, Before: before, Outcome: "apply_failed"}
-	if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
-		event.ApplyError = err.Error()
-	} else {
-		event.After = d.opt.Firewall.Check(ctx, d.plan)
-		event.Outcome = "verify_failed"
-		if event.After == nil {
-			event.Outcome = "restored"
-		}
-	}
-	// Shutdown can interrupt either repair or verification; it is not a failure.
+
+	event := &journal.FirewallEvent{Trigger: trigger, Before: journalFirewallCheck(before)}
+	d.repairFirewall(ctx, event)
 	if ctx.Err() != nil {
 		return
 	}
@@ -41,8 +45,49 @@ func (d *Daemon) checkFirewall(ctx context.Context, trigger string) {
 	d.recordFirewallRecovery(event)
 }
 
+// repairFirewall gives a firmware rebuild one bounded retry if rules disappear
+// between installation and verification. The caller records the final outcome.
+func (d *Daemon) repairFirewall(ctx context.Context, event *journal.FirewallEvent) {
+	d.applyAndVerifyFirewall(ctx, event)
+	if event.Outcome != "verify_failed" || ctx.Err() != nil {
+		return
+	}
+	timer := time.NewTimer(firewallVerifyRetryDelay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+	case <-timer.C:
+		if ctx.Err() == nil {
+			d.applyAndVerifyFirewall(ctx, event)
+		}
+	}
+}
+
+func (d *Daemon) applyAndVerifyFirewall(ctx context.Context, event *journal.FirewallEvent) {
+	if err := d.installFirewall(ctx); err != nil {
+		event.Outcome, event.ApplyError = "apply_failed", err.Error()
+		return
+	}
+	event.After = journalFirewallCheck(d.opt.Firewall.Check(ctx, d.plan))
+	event.Outcome = "restored"
+	if event.After != nil {
+		event.Outcome = "verify_failed"
+	}
+}
+
+func journalFirewallCheck(failure *netfilter.CheckFailure) *journal.FirewallCheck {
+	if failure == nil {
+		return nil
+	}
+	check := journal.FirewallCheck(*failure)
+	return &check
+}
+
 func (d *Daemon) recordFirewallRecovery(event *journal.FirewallEvent) {
-	details := fmt.Sprintf("trigger: %s; check and recovery: %d ms; before: %s; outcome: %s; verified restorations since start: %d", event.Trigger, *event.DurationMS, event.Before, event.Outcome, d.restored)
+	details := fmt.Sprintf("trigger: %s; check and recovery: %d ms; outcome: %s; verified restorations since start: %d", event.Trigger, *event.DurationMS, event.Outcome, d.restored)
+	if event.Before != nil {
+		details += "; before: " + event.Before.String()
+	}
 	if event.ApplyError != "" {
 		details += "; apply: " + event.ApplyError
 	}
@@ -55,7 +100,7 @@ func (d *Daemon) recordFirewallRecovery(event *journal.FirewallEvent) {
 	} else {
 		d.log.Error("rule restoration failed", "trigger", event.Trigger, "details", details)
 	}
-	d.journals[journal.Audit].Add(journal.Entry{
+	d.auditEntry(journal.Entry{
 		Actor: "watchdog", Action: action, Target: "firewall", Result: result,
 		Details: details, Firewall: event,
 	})

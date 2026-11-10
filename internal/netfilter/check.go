@@ -3,7 +3,6 @@ package netfilter
 import (
 	"context"
 	"errors"
-	"fmt"
 )
 
 // CheckFailure identifies the first entry jump whose command failed.
@@ -16,11 +15,6 @@ type CheckFailure struct {
 	ExitCode int    `json:"exit_code"`
 	Reason   string `json:"reason"`
 	Error    string `json:"error,omitempty"`
-}
-
-// String formats the failed probe for local system and audit journals.
-func (f *CheckFailure) String() string {
-	return fmt.Sprintf("%s/%s -> %s (reason=%s, exit=%d): %s", f.Table, f.Chain, f.Target, f.Reason, f.ExitCode, f.Error)
 }
 
 // Check inspects required entry jumps and retains the first command failure.

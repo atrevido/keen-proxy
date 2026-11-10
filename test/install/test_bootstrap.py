@@ -134,6 +134,56 @@ class BootstrapTest(BootstrapFixture):
             self.assertTrue(client.exists())
         self.assertEqual(self.requests.read_bytes(), before)
 
+    def test_uninstall_removes_owned_netfilter_hook_left_by_dead_process(self):
+        self.release('v1.2.3')
+        self.assertEqual(self.install().returncode, 0)
+        hook = self.netfilter_hook()
+        (self.prefix / 'running').unlink()
+
+        result = self.bootstrap('--uninstall')
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(hook.exists())
+
+    def test_uninstall_removes_owned_hook_after_an_earlier_uninstall(self):
+        hook = self.netfilter_hook()
+
+        result = self.bootstrap('--uninstall')
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(hook.exists())
+
+    def test_uninstall_keeps_foreign_netfilter_hooks(self):
+        hook = self.netfilter_hook()
+        foreign = '#!/bin/sh\n# operator netfilter hook\n'
+        hook.write_text(foreign)
+        self.assertEqual(self.bootstrap('--uninstall').returncode, 0)
+        self.assertEqual(hook.read_text(), foreign)
+
+        hook.unlink()
+        target = self.root / 'operator-hook'
+        target.write_text('#!/bin/sh\n# keenproxy-netfilter-hook-v1\n')
+        hook.symlink_to(target)
+        self.assertEqual(self.bootstrap('--uninstall').returncode, 0)
+        self.assertTrue(hook.is_symlink())
+        self.assertTrue(target.exists())
+
+    def test_uninstall_keeps_owned_hook_while_unmanaged_process_runs(self):
+        hook = self.netfilter_hook()
+        self.command('pidof', 'exit 0')
+
+        result = self.bootstrap('--uninstall')
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unmanaged process', result.stderr)
+        self.assertTrue(hook.exists())
+
+    def netfilter_hook(self):
+        hook = self.prefix / 'etc/ndm/netfilter.d/99-keenproxy.sh'
+        hook.parent.mkdir(parents=True)
+        self.executable(hook, '# keenproxy-netfilter-hook-v1\nexit 0')
+        return hook
+
     def test_uninstall_refuses_an_unmanaged_binary(self):
         self.executable(self.binary, 'echo old')
         result = self.bootstrap('--uninstall')
@@ -145,9 +195,11 @@ class BootstrapTest(BootstrapFixture):
     def test_uninstall_preserves_installation_when_stop_fails(self):
         binary = self.release('v1.2.3', stop='exit 1')
         self.assertEqual(self.install().returncode, 0)
+        hook = self.netfilter_hook()
         result = self.bootstrap('--uninstall')
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('did not stop', result.stderr)
+        self.assertTrue(hook.exists())
         self.assertEqual(self.binary.read_bytes(), binary.read_bytes())
         self.assertTrue(self.service.exists())
         self.assertTrue((self.prefix / 'running').exists())
@@ -168,6 +220,26 @@ exec /bin/rm "$@"
         self.assertEqual(self.binary.read_bytes(), binary.read_bytes())
         self.assertEqual(self.service.read_bytes(), service)
         self.assert_release('v1.2.3')
+        self.assertTrue((self.prefix / 'running').exists())
+
+    def test_uninstall_restores_hook_on_failed_removal(self):
+        self.release('v1.2.3')
+        self.assertEqual(self.install().returncode, 0)
+        hook = self.netfilter_hook()
+        before = hook.read_bytes()
+        self.command('rm', """
+/bin/rm "$@" || exit
+for path in "$@"; do
+    [ "$path" != "$KEENPROXY_PREFIX/etc/ndm/netfilter.d/99-keenproxy.sh" ] || exit 1
+done
+""")
+
+        result = self.bootstrap('--uninstall')
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('restoring the previous installation', result.stderr)
+        self.assertTrue(self.service.exists())
+        self.assertEqual(hook.read_bytes(), before)
         self.assertTrue((self.prefix / 'running').exists())
 
     def test_bootstrap_installs_starts_and_preserves_configuration_on_update(self):
