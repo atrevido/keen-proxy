@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"math/rand/v2"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -14,26 +15,33 @@ import (
 
 // startJournals seeds synthetic history and adds one route per second
 // so the journal UI remains active without a router.
-func (d *Demo) startJournals() {
+func (d *Demo) startJournals(firewallFixture []byte) {
 	d.journals = journal.NewSet("")
-	now := time.Now().Add(-4 * time.Hour)
+	recent := time.Now()
+	now := recent.Add(-4 * time.Hour)
 	audit := d.journals[journal.Audit]
-	for _, e := range []journal.Entry{
+	history := []journal.Entry{
 		{Actor: "system", Action: "Start keenProxy", Target: "core", Result: "ok", Details: "interception tproxy, sources 3, DNS 0.0.0.0:5354"},
 		{Actor: "system", Action: "Country database updated", Target: "geoip", Result: "ok", Details: now.Format("2006-01") + "-01"},
 		{Actor: "watchdog", Action: "Device addresses updated", Target: "clients", Result: "info", Details: "added: 192.168.7.35 (f0:18:98:44:55:66); online: 6"},
-		{Actor: "watchdog", Action: "Interception rules restored", Target: "firewall", Result: "warn", Details: "firewall rules were missing — NDM likely rebuilt it; restorations since start: 1"},
 		{Actor: "user", Action: "Panel login", Target: "auth", Result: "ok", Details: "token login, 192.168.7.50"},
 		{Actor: "user", Action: "Configuration rejected", Target: "config", Result: "error", Details: "invalid configuration: groups[5] \"Steam\": unknown target \"nl2\" (from 192.168.7.50)"},
 		{Actor: "user", Action: "Apply configuration", Target: "config", Result: "ok", Details: "groups: 5 → 6; core not restarted (from 192.168.7.50)"},
-	} {
+	}
+	for i := range history {
 		// Emit history chronologically, from startup a few hours ago to recent events.
 		now = now.Add(time.Duration(rand.IntN(25)+5) * time.Minute)
-		e.Time = now
+		history[i].Time = now
+	}
+	firewallEntries, firewallErr := demoFirewallAudit(recent, firewallFixture)
+	history = append(history, firewallEntries...)
+	history = append(history, journal.Entry{Time: recent.Add(-3 * time.Minute), Actor: "watchdog", Action: "Switch to fallback", Target: "fi", Result: "warn",
+		Details: "«Finland WG» unavailable for 1 min 4 s (dial tcp 203.0.113.10:51820: i/o timeout) — traffic via «Netherlands Reality»"})
+	// Journal pagination uses insertion IDs, so seed all audit sources in time order.
+	slices.SortStableFunc(history, func(a, b journal.Entry) int { return a.Time.Compare(b.Time) })
+	for _, e := range history {
 		audit.Add(e)
 	}
-	audit.Add(journal.Entry{Time: time.Now().Add(-3 * time.Minute), Actor: "watchdog", Action: "Switch to fallback", Target: "fi", Result: "warn",
-		Details: "«Finland WG» unavailable for 1 min 4 s (dial tcp 203.0.113.10:51820: i/o timeout) — traffic via «Netherlands Reality»"})
 	sys := d.journals[journal.System]
 	for i, e := range []journal.Entry{
 		{Level: "INFO", Source: "keenproxy", Message: "keenProxy started mode=tproxy sources=3 dns=0.0.0.0:5354"},
@@ -41,10 +49,13 @@ func (d *Demo) startJournals() {
 		{Level: "WARN", Source: "sing-box", Message: "outbound/wireguard[fi]: peer 203.0.113.10:51820: handshake did not complete after 5 seconds, retrying"},
 		{Level: "INFO", Source: "keenproxy", Message: "configuration applied and saved"},
 		{Level: "ERROR", Source: "sing-box", Message: "inbound/redirect[redirect-in]: process connection from 192.168.7.35:51244: dial tcp 142.250.74.46:443: i/o timeout"},
-		{Level: "WARN", Source: "keenproxy", Message: "interception rules disappeared (NDM likely rebuilt firewall) — restored"},
+		{Level: "ERROR", Source: "keenproxy", Message: "rule restoration failed trigger=netfilter_hook outcome=verify_failed error=synthetic"},
 	} {
 		e.Time = time.Now().Add(-time.Duration(60-i*9) * time.Minute)
 		sys.Add(e)
+	}
+	if firewallErr != nil {
+		sys.Add(journal.Entry{Level: "WARN", Source: "keenproxy", Message: firewallErr.Error()})
 	}
 	for i := 0; i < 300; i++ {
 		d.addDemoRoute(time.Now().Add(-time.Duration(300-i) * 3 * time.Second))

@@ -1,0 +1,107 @@
+package api
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/ordo-systems/keen-proxy/internal/journal"
+)
+
+func TestDemoFirewallAudit(t *testing.T) {
+	s, fake := newServer()
+	s.D = NewDemo(fake.cfg)
+	w := do(t, s.Handler(), "GET", "/api/journal/audit?target=firewall", "", s.Token, lan)
+	if w.Code != 200 {
+		t.Fatalf("audit status: %d", w.Code)
+	}
+	var page struct {
+		Entries []journal.Entry `json:"entries"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Entries) != 4 {
+		t.Fatalf("demo recovery entries: %+v", page.Entries)
+	}
+	seen := map[string]bool{}
+	times := map[time.Time]bool{}
+	for _, e := range page.Entries {
+		if times[e.Time] {
+			t.Fatalf("demo history collapsed to one timestamp: %+v", page.Entries)
+		}
+		times[e.Time] = true
+		if age := time.Since(e.Time); age <= 0 || age >= 5*time.Minute {
+			t.Fatalf("demo event outside recent history: %+v", e)
+		}
+		if e.Firewall == nil {
+			if !strings.Contains(e.Details, "trigger: not recorded;") {
+				t.Fatalf("legacy demo must explicitly identify missing source metadata: %s", e.Details)
+			}
+			seen["legacy"] = true
+			continue
+		}
+		f := e.Firewall
+		if f.DurationMS == nil || *f.DurationMS < 0 || f.Before == nil {
+			t.Fatalf("missing evidence: %+v", f)
+		}
+		seen[f.Trigger+":"+f.Outcome] = true
+		if f.Outcome == "restored" {
+			if e.Action != "Interception rules restored" || e.Result != "warn" {
+				t.Fatalf("incorrect recovered event: %+v", e)
+			}
+		} else if e.Action != "Interception rules not restored" || e.Result != "error" || f.After == nil {
+			t.Fatalf("incorrect failure event: %+v", e)
+		}
+	}
+	for _, key := range []string{"legacy", "netfilter_hook:restored", "watchdog:restored", "netfilter_hook:verify_failed"} {
+		if !seen[key] {
+			t.Fatalf("missing demo case: %s", key)
+		}
+	}
+}
+
+func TestDemoJournalsSurviveMalformedFirewallFixture(t *testing.T) {
+	_, fake := newServer()
+	d := &Demo{cfg: fake.cfg}
+	d.startJournals([]byte("{"))
+
+	audit := d.Journal(journal.Audit).Find(journal.Query{}, nil).Entries
+	if len(audit) == 0 {
+		t.Fatal("other demo audit entries were not seeded")
+	}
+	for _, e := range audit {
+		if e.Target == "firewall" {
+			t.Fatalf("malformed fixture produced a firewall entry: %+v", e)
+		}
+	}
+
+	warnings := d.Journal(journal.System).Find(journal.Query{Text: "invalid embedded firewall demo"}, nil).Entries
+	if len(warnings) != 1 || warnings[0].Level != "WARN" {
+		t.Fatalf("expected one fixture warning: %+v", warnings)
+	}
+}
+
+func TestDemoAuditTimelineFollowsJournalOrder(t *testing.T) {
+	s, fake := newServer()
+	s.D = NewDemo(fake.cfg)
+	w := do(t, s.Handler(), "GET", "/api/journal/audit", "", s.Token, lan)
+	if w.Code != 200 {
+		t.Fatalf("audit status: %d", w.Code)
+	}
+	var page struct {
+		Entries []journal.Entry `json:"entries"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Entries) != 11 {
+		t.Fatalf("incomplete demo timeline: %+v", page.Entries)
+	}
+	for i := 1; i < len(page.Entries); i++ {
+		if page.Entries[i].Time.After(page.Entries[i-1].Time) {
+			t.Fatalf("newest-first journal moved forward in time at %d: %v then %v", i, page.Entries[i-1].Time, page.Entries[i].Time)
+		}
+	}
+}

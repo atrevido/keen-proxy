@@ -185,3 +185,27 @@ test('preset updates report removed entries and retain their position', () => {
   emptyId.connections![0]!.id = ''
   assert.throws(() => demo.validate(emptyId), /non-empty/i)
 })
+
+test('audit demo presents both recovery triggers, failed verification and a true legacy record', () => {
+  const now = Date.parse('2026-01-01T12:00:00Z')
+  const demo = createDemo(() => now)
+  const all = demo.journal('audit').entries
+  const rows = all.filter(e => e.target === 'firewall')
+  assert.equal(rows.length, 4)
+  assert.equal(new Set(all.map(e => e.id)).size, all.length)
+  assert.ok(rows.every(e => Date.parse(e.time) < now && Date.parse(e.time) > now - 5 * 60000))
+  assert.ok(rows.every((e, i) => i === 0 || Date.parse(e.time) < Date.parse(rows[i - 1]!.time)))
+  assert.equal(rows.filter(e => e.firewall == null).length, 1)
+  assert.ok(rows.some(e => e.firewall?.trigger === 'netfilter_hook' && e.firewall.outcome === 'restored'))
+  assert.ok(rows.some(e => e.firewall?.trigger === 'watchdog' && e.firewall.outcome === 'restored'))
+  assert.ok(rows.some(e => e.firewall?.outcome === 'verify_failed' && e.firewall.after?.target === 'KEENPROXY_QUIC'))
+  for (const e of rows) {
+    const restored = !e.firewall || e.firewall.outcome === 'restored'
+    assert.equal(e.action, restored ? 'Interception rules restored' : 'Interception rules not restored')
+    assert.equal(e.result, restored ? 'warn' : 'error')
+    assert.ok(e.details!.includes(`trigger: ${e.firewall?.trigger || 'not recorded'}`))
+  }
+  const first = demo.journal('audit', { limit: 2 }).entries
+  const rest = demo.journal('audit', { before: first.at(-1)!.id }).entries
+  assert.deepEqual([...first, ...rest].map(e => e.id), all.map(e => e.id))
+})

@@ -45,7 +45,12 @@ func (d *Daemon) Mask() func(string) string { return journal.Masker(d.Config()) 
 
 // audit records an operation result with the initiating actor and target.
 func (d *Daemon) audit(who, action, target, result, details string) {
-	d.journals[journal.Audit].Add(journal.Entry{Actor: who, Action: action, Target: target, Result: result, Details: details})
+	d.auditEntry(journal.Entry{Actor: who, Action: action, Target: target, Result: result, Details: details})
+}
+
+// auditEntry records an audit event with optional structured evidence.
+func (d *Daemon) auditEntry(entry journal.Entry) {
+	d.journals[journal.Audit].Add(entry)
 }
 
 // onRoute journals each sing-box connection using the atomic configuration

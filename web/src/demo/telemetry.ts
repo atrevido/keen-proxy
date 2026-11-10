@@ -1,3 +1,4 @@
+import { firewallAudit } from './firewall.ts'
 import type { Config, JournalEntry, JournalKind, JournalPage, StatPoint, StatsSnapshot } from '../types'
 
 export const DEMO_TICK_MS = 3000
@@ -92,7 +93,7 @@ export function createTelemetry(now: () => number) {
   const time = new Date(started).toISOString()
   const records: Record<JournalKind, JournalEntry[]> = {
     routes: [],
-    audit: [{ id: 1, time, actor: 'system', action: 'Demo session started', target: 'demo', result: 'info' }],
+    audit: [{ id: 1, time: new Date(started - 5 * 60000).toISOString(), actor: 'system', action: 'Demo session started', target: 'demo', result: 'info' }, ...firewallAudit(started)],
     system: [{ id: 1, time, level: 'INFO', source: 'demo', message: 'Browser demo: no router or network operations' }],
   }
 

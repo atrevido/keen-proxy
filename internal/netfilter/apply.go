@@ -89,10 +89,5 @@ func (f *Firewall) Remove(ctx context.Context, p Plan) error {
 // Healthy checks that all required jumps exist; owned chains without their
 // entry jumps do not count as healthy.
 func (f *Firewall) Healthy(ctx context.Context, p Plan) bool {
-	for _, j := range p.Jumps() {
-		if f.Run.Run(ctx, "", f.IPTables, "-w", "-t", j.Table, "-C", j.From, "-j", j.To) != nil {
-			return false
-		}
-	}
-	return true
+	return f.Check(ctx, p) == nil
 }

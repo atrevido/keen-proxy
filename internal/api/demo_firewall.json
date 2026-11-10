@@ -1,0 +1,77 @@
+[
+  {
+    "actor": "watchdog",
+    "target": "firewall",
+    "action": "Interception rules restored",
+    "result": "warn",
+    "details": "Synthetic diagnostic record; trigger: not recorded; before: nat/PREROUTING -> KEENPROXY_TCP; iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory; outcome: restored"
+  },
+  {
+    "actor": "watchdog",
+    "target": "firewall",
+    "action": "Interception rules not restored",
+    "result": "error",
+    "details": "Synthetic diagnostic record; trigger: netfilter_hook; before: nat/PREROUTING -> KEENPROXY_TCP; iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory; outcome: verify_failed",
+    "firewall": {
+      "trigger": "netfilter_hook",
+      "outcome": "verify_failed",
+      "duration_ms": 84,
+      "before": {
+        "table": "nat",
+        "chain": "PREROUTING",
+        "target": "KEENPROXY_TCP",
+        "exit_code": 2,
+        "reason": "command_failed",
+        "error": "iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory"
+      },
+      "after": {
+        "table": "filter",
+        "chain": "FORWARD",
+        "target": "KEENPROXY_QUIC",
+        "exit_code": 2,
+        "reason": "command_failed",
+        "error": "iptables: synthetic verification failure"
+      }
+    }
+  },
+  {
+    "actor": "watchdog",
+    "target": "firewall",
+    "action": "Interception rules restored",
+    "result": "warn",
+    "details": "Synthetic diagnostic record; trigger: watchdog; before: nat/PREROUTING -> KEENPROXY_TCP; iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory; outcome: restored",
+    "firewall": {
+      "trigger": "watchdog",
+      "outcome": "restored",
+      "duration_ms": 47,
+      "before": {
+        "table": "nat",
+        "chain": "PREROUTING",
+        "target": "KEENPROXY_TCP",
+        "exit_code": 2,
+        "reason": "command_failed",
+        "error": "iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory"
+      }
+    }
+  },
+  {
+    "actor": "watchdog",
+    "target": "firewall",
+    "action": "Interception rules restored",
+    "result": "warn",
+    "details": "Synthetic diagnostic record; trigger: netfilter_hook; before: nat/PREROUTING -> KEENPROXY_TCP; iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory; outcome: restored",
+    "firewall": {
+      "trigger": "netfilter_hook",
+      "outcome": "restored",
+      "duration_ms": 56,
+      "before": {
+        "table": "nat",
+        "chain": "PREROUTING",
+        "target": "KEENPROXY_TCP",
+        "exit_code": 2,
+        "reason": "command_failed",
+        "error": "iptables: Couldn't load target 'KEENPROXY_TCP': No such file or directory"
+      }
+    }
+  }
+]

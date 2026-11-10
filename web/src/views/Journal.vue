@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Route, audit, and system journals combine SSE updates with server-filtered pages.
-import { computed, h, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, h, onUnmounted, reactive, ref, watch, type ComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
@@ -32,6 +32,7 @@ import {
 } from '@lucide/vue'
 import { api } from '../api'
 import { clientIP, groupRoutes, type RouteGroup } from '../journal'
+import { firewallJournalEntry } from '../firewallJournal'
 import { store, targetLabel } from '../store'
 import type { JournalEntry, JournalKind } from '../types'
 
@@ -89,6 +90,18 @@ const levelClass: Record<string, string> = {
   INFO: 'dim',
   WARN: 'warn',
   ERROR: 'bad',
+}
+
+// Share the presentation across cells and expansion. Computed views
+// update with the locale and the weak keys release rows when they leave the table.
+const firewallViews = new WeakMap<JournalEntry, ComputedRef<ReturnType<typeof firewallJournalEntry>>>()
+function firewallView(entry: JournalEntry) {
+  let view = firewallViews.get(entry)
+  if (!view) {
+    view = computed(() => firewallJournalEntry(entry, t))
+    firewallViews.set(entry, view)
+  }
+  return view.value
 }
 
 // Resolve device names from configured clients and discovered addresses.
@@ -445,29 +458,41 @@ const columns = computed<DataTableColumns<JournalEntry>>(() => {
         {
           type: 'expand',
           renderExpand: (e) =>
-            details([
+            h('div', [details([
               [t('journal.time'), dateTime(e.time)],
               [t('journal.who'), actorLabel(e.actor)],
               [t('journal.object'), e.target],
-              [t('journal.details'), e.details],
-            ]),
+              ...(firewallView(e)?.details ?? [[t('journal.details'), e.details]] as [string, string | undefined][]),
+            ]), e.firewall && e.details ? h('details', { class: 'raw-evidence' }, [
+              h('summary', t('journal.firewallRaw')),
+              h('pre', e.details),
+            ]) : null]),
         },
         timeCol(),
         {
           title: t('journal.action'),
           key: 'action',
-          render: (e) =>
-            h('div', [
-              h('div', e.action),
-              e.details ? h('div', { class: 'sub' }, e.details) : null,
-            ]),
+          render: (e) => {
+            const view = firewallView(e)
+            const summary = view?.summary || e.details
+            return h('div', [
+              h('div', view?.title ?? e.action),
+              summary ? h('div', { class: 'sub' }, summary) : null,
+            ])
+          },
         },
         {
           title: t('journal.who'),
           key: 'actor',
-          width: 140,
+          width: 170,
           ...filterColumn('actor', (v) => actorLabel(v) ?? v),
-          render: (e) => actorLabel(e.actor),
+          render: (e) => {
+            const source = firewallView(e)?.source
+            return h('div', [
+              h('div', actorLabel(e.actor)),
+              source ? h('div', { class: 'sub' }, source) : null,
+            ])
+          },
         },
         {
           title: t('journal.object'),
@@ -750,6 +775,9 @@ const emptyText = computed(() =>
   margin-left: 8px;
   padding: 0 6px;
 }
+.raw-evidence { margin-top: 16px; }
+.raw-evidence summary { cursor: pointer; color: var(--muted); }
+.raw-evidence pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 :deep(.details) {
   display: grid;
   grid-template-columns: max-content 1fr;

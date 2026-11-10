@@ -174,10 +174,25 @@ finish() {
     exit "$result"
 }
 
+# The v1 marker is also used by the daemon to recognize stale owned hooks.
+owned_netfilter_hook() {
+    [ -f "$1" ] && [ ! -L "$1" ] && {
+        IFS= read -r hook_shebang && [ "$hook_shebang" = '#!/bin/sh' ] &&
+        IFS= read -r hook_marker && [ "$hook_marker" = '# keenproxy-netfilter-hook-v1' ]
+    } < "$1"
+}
+
 uninstall_release() {
     lock_service
+    hook=etc/ndm/netfilter.d/99-keenproxy.sh
     if [ ! -e "$service" ] && [ ! -L "$service" ] &&
         [ ! -e "$prefix/bin/keenproxy" ] && [ ! -L "$prefix/bin/keenproxy" ]; then
+        if owned_netfilter_hook "$prefix/$hook"; then
+            if pidof keenproxy >/dev/null 2>&1; then
+                fail 'unmanaged process is running; no files removed'
+            fi
+            rm -f "$prefix/$hook" || fail "could not remove $hook"
+        fi
         echo 'KeenProxy: no managed installation found'
         return
     fi
@@ -190,6 +205,12 @@ uninstall_release() {
         service_action stop || fail 'service did not stop cleanly; no files removed'
     elif pidof keenproxy >/dev/null 2>&1; then
         fail 'unmanaged process is running; no files removed'
+    fi
+    # Clean shutdown normally removed the hook. Include any owned leftover in
+    # the transaction so uninstall rollback also restores it.
+    if owned_netfilter_hook "$prefix/$hook"; then
+        backup_file "$hook"
+        payload="$payload $hook"
     fi
     replacing=1
     for path in $payload; do rm -f "$prefix/$path" || fail "could not remove $path"; done

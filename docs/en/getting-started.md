@@ -6,6 +6,8 @@ You can try KeenProxy on OpenWrt routers with **at least 128 MiB of RAM** and en
 
 OpenWrt testing uses a manually installed binary and configuration. The automated installation and update instructions below apply to Keenetic and Netcraze with Entware. The current interception runtime requires compatible `iptables`, `iptables-restore`, and kernel support. Verify interception with a test client on your firmware, especially on systems using firewall4. [OpenWrt netfilter documentation](https://openwrt.org/docs/guide-user/firewall/netfilter_iptables/netfilter_management)
 
+The optional NDM netfilter hook is specific to compatible Keenetic/Netcraze firmware. On OpenWrt without NDM it stays disabled and creates no NDM hook or event files; the regular watchdog continues checking every 30 seconds by default. No OpenWrt hotplug or firewall4 integration is installed. See [firewall recovery](network-flow.md#how-firewall-rules-recover-after-a-firmware-change).
+
 ## Prepare the router
 
 ### Hardware and firmware

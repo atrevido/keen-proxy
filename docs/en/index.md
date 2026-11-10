@@ -111,6 +111,8 @@ Select which networks and clients follow the rules, then apply the draft.
 
 </div>
 
+KeenProxy also watches its interception rules. On compatible Keenetic/Netcraze firmware, a netfilter hook requests a check after firewall changes; a periodic watchdog remains active everywhere, including experimental OpenWrt installations. [How rule recovery works](network-flow.md#how-firewall-rules-recover-after-a-firmware-change).
+
 </section>
 
 <section class="kp-section" markdown>

@@ -240,6 +240,9 @@ for i in $(seq 1 25); do
 done
 echo "$SYS" | grep -q '"source":"sing-box"' || { echo "$SYS"; tail -20 /tmp/keenproxy.log; fail "sing-box journal is not collected"; }
 ok "audit records watchdog repairs and sing-box errors reach the system journal"
+api_get 'journal/audit?actor=watchdog' | python3 -c 'import json,sys; events=[e for e in json.load(sys.stdin)["entries"] if e.get("action")=="Interception rules restored"]; assert any(e.get("firewall",{}).get("outcome")=="restored" and e["firewall"].get("trigger")=="watchdog" and e["firewall"].get("duration_ms",-1)>=0 and e["firewall"]["before"]["table"]=="nat" and e["firewall"]["before"]["chain"]=="PREROUTING" and e["firewall"]["before"]["target"]=="KEENPROXY_TCP" and e["firewall"]["before"]["exit_code"]==1 and "after" not in e["firewall"] for e in events)' || fail "verified watchdog repair evidence is missing"
+ok "watchdog records the missing jump and verifies recovery"
+
 
 # --- Fail over from the offline primary, then recover after the up hysteresis
 api() { curl -s -m 5 -H "Authorization: Bearer $TOKEN" "http://127.0.0.1:8086$1"; }
@@ -289,4 +292,72 @@ if iptables-save | grep -q KEENPROXY; then
 	fail "interception rules remain after shutdown"
 fi
 ok "SIGTERM removed all KEENPROXY rules"
+# --- Optional NDM callback: emulate only the firmware socket and callback launch.
+# Polling above ran on a non-NDM instance. Here an hour-long interval proves
+# that the real generated shell hook, rather than polling, repairs traffic.
+mkdir -p /opt/bin /opt/etc/keenproxy /opt/etc/ndm /var/run
+cp "$KEENPROXY" /opt/bin/keenproxy
+cp /tmp/config.yaml /opt/etc/keenproxy/config.yaml
+# The same /opt layout can be used without NDM (for example OpenWrt/Entware).
+# It must create no hook state and still repair through the periodic watchdog.
+/opt/bin/keenproxy -config /opt/etc/keenproxy/config.yaml -rule-sets /tmp/portable/rule-sets -watch 1s \
+    -iptables /usr/sbin/iptables -iptables-restore /usr/sbin/iptables-restore >/tmp/keenproxy-portable.log 2>&1 &
+KPID=$!
+waitfor "/api/status" '"firewall":true' 10 || { cat /tmp/keenproxy-portable.log; fail "non-NDM managed instance did not start"; }
+[ ! -e /opt/etc/ndm/netfilter.d/99-keenproxy.sh ] || fail "hook installed without NDM"
+[ ! -e /var/run/keenproxy/netfilter ] || fail "event state created without NDM"
+iptables -t nat -D PREROUTING -j KEENPROXY_TCP
+waitfor '/api/journal/audit?actor=watchdog' '"trigger":"watchdog"' 5 || fail "non-NDM managed polling did not repair"
+iptables -t nat -C PREROUTING -j KEENPROXY_TCP || fail "non-NDM managed repair left missing jump"
+ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.3/ || fail "HTTP after non-NDM managed polling"
+kill -TERM "$KPID"
+wait "$KPID"
+ok "managed Linux without NDM creates no hook and retains polling recovery"
+python3 -u - <<'PY' >/tmp/ndm-fixture.log 2>&1 &
+import socket,time
+s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM)
+s.bind('/var/run/ndm.core.socket')
+s.listen()
+time.sleep(120)
+PY
+NDMPID=$!
+for i in $(seq 1 20); do
+    [ -S /var/run/ndm.core.socket ] && break
+    sleep 0.1
+done
+/opt/bin/keenproxy -config /opt/etc/keenproxy/config.yaml -rule-sets /tmp/event-rule-sets -watch 1h \
+    -iptables /usr/sbin/iptables -iptables-restore /usr/sbin/iptables-restore >/tmp/keenproxy-event.log 2>&1 &
+KPID=$!
+for i in $(seq 1 50); do
+    iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null && break
+    kill -0 "$KPID" 2>/dev/null || { cat /tmp/keenproxy-event.log; fail "event instance exited"; }
+    sleep 0.2
+done
+HOOK=/opt/etc/ndm/netfilter.d/99-keenproxy.sh
+[ -x "$HOOK" ] || { cat /tmp/keenproxy-event.log; fail "NDM hook not installed"; }
+iptables -t nat -D PREROUTING -j KEENPROXY_TCP
+iptables -t nat -F KEENPROXY_TCP
+iptables -t nat -X KEENPROXY_TCP
+type=ip6tables table=nat sh "$HOOK"
+type=iptables table=raw sh "$HOOK"
+if iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null; then
+    fail "irrelevant callback repaired IPv4 NAT"
+fi
+type=iptables table=nat sh "$HOOK"
+for i in $(seq 1 30); do
+    iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null && break
+    sleep 0.1
+done
+iptables -t nat -C PREROUTING -j KEENPROXY_TCP 2>/dev/null || { cat /tmp/keenproxy-event.log; fail "NDM callback did not restore missing chain"; }
+ip netns exec client curl -s -m 5 -o /dev/null http://198.51.100.3/ || fail "HTTP after NDM event recovery"
+api_get 'journal/audit?actor=watchdog' | python3 -c 'import json,sys; events=json.load(sys.stdin)["entries"]; assert any(e.get("firewall",{}).get("trigger")=="netfilter_hook" and e["firewall"]["outcome"]=="restored" and e["firewall"].get("duration_ms",-1)>=0 for e in events)' || fail "event recovery source or verification is missing"
+if grep -Eq 'checking firewall after netfilter event|interception rules restored and verified|interception rule check failed' /tmp/keenproxy-event.log; then fail "successful event recovery duplicated into system log"; fi
+ok "NDM callback restores a deleted chain and HTTP before the one-hour poll"
+kill -TERM "$KPID"
+wait "$KPID"
+[ ! -e "$HOOK" ] || fail "owned NDM hook remains after stop"
+[ ! -e /var/run/keenproxy/netfilter/changed ] || fail "event marker remains after stop"
+kill "$NDMPID"
+ok "NDM lifecycle cleanup is safe"
+
 echo "PASS"
