@@ -1,5 +1,5 @@
 # KeenProxy project context
-- KeenProxy provides selective routing on Keenetic and Netcraze routers with Entware. It combines Go, embedded sing-box, and a Vue panel. Router builds target Linux ARM64 and MIPS little-endian soft float.
+- KeenProxy provides selective routing on Keenetic and Netcraze routers with Entware. It combines Go, embedded sing-box, and a Vue panel. Router builds target Linux ARMv5 soft float, ARM64, and little- and big-endian MIPS soft float; OpenWrt support is experimental.
 - Start with README.md and AGENTS.md. Use the versioned docs and source as authority for current behavior. Check the working tree before editing.
 - Configuration, traffic interception, DNS, and failover: `mem:backend/core`. API, Vue, and demo contracts: `mem:frontend/core`. Router constraints and test boundaries: `mem:platform/core`.
 - Preset merging, DNS routes, filters, and YAML: `mem:features/presets_dns_filters`. Panel behavior and interaction rules: `mem:features/ui-redesign` and `mem:product/design-direction`.
