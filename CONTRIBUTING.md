@@ -6,7 +6,7 @@ KeenProxy welcomes contributors from around the world. Useful contributions incl
 
 Describe the expected behavior, actual behavior, commit/build tags, router architecture, firmware, and relevant kernel capabilities. Include a minimal synthetic configuration and the exact command or UI action that triggers the issue. Keep one issue or change focused on one problem.
 
-For failures on the router, use **Diagnostics → Diagnostics archive → Download ZIP** and review the archive before attaching it. Include the approximate incident time and time zone so maintainers can find the relevant records. See the [archive guide](docs/en/troubleshooting.md#diagnostics-archive).
+For failures on the router, use **Diagnostics → Diagnostics archive → Download ZIP** and review the archive before attaching it. Include the approximate incident time and time zone so maintainers can find the relevant records. See the [archive guide](docs/en/troubleshooting.md#download-the-diagnostic-zip).
 
 Never attach real private keys, passwords, tokens, connection URLs, complete production YAML, unreviewed support exports, or browsing histories. A hostname or process being reachable does not prove that a tunnel transfers application data successfully.
 

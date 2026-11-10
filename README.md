@@ -26,7 +26,7 @@ Experimental OpenWrt builds target ARM32, ARM64, little-endian MIPS, and big-end
 - Community domain presets with preview and managed updates that preserve manual additions and exclusions.
 - YAML configuration, a shared draft/Apply workflow, import/export, and a previous-configuration backup.
 - Dark/light themes, responsive navigation, connection wizards, file import, and bulk group route changes.
-- Routing, audit, and system journals; connection statistics; and separate HTTP, verified HTTPS, and bounded transfer diagnostics. The panel can export all three retained journals and a sanitized configuration and status summary as a [diagnostic ZIP](docs/en/troubleshooting.md#diagnostics-archive).
+- Routing, audit, and system journals; connection statistics; and separate HTTP, verified HTTPS, and bounded transfer diagnostics. The panel can export a [diagnostic ZIP](docs/en/troubleshooting.md#download-the-diagnostic-zip).
 - Release notifications, manual installation and rollback, and optional scheduled updates from the web panel. [Update guide](docs/en/getting-started.md#update-from-the-panel)
 
 ## How routing works

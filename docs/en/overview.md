@@ -10,8 +10,7 @@ KeenProxy is an experimental routing application for Keenetic and Netcraze route
 - **Prepare a router:** read [Getting started](getting-started.md) before installing anything.
 - **Learn the workflow:** follow the [illustrated user guide](user-guide.md).
 - **Understand policy:** read [Routing and DNS](routing.md).
-- **Collect evidence:** use [Diagnostics and journal export](troubleshooting.md#diagnostics-archive) when reporting a router issue.
-
+- **Collect evidence:** use [Diagnostics and journal export](troubleshooting.md#download-the-diagnostic-zip) when reporting a router issue.
 - **Manage releases:** see [updates and rollback from the panel](getting-started.md#update-from-the-panel).
 
 ## The core idea

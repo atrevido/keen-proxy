@@ -16,10 +16,10 @@ Run HTTPS and transfer checks separately. Inspect certificate/time errors, profi
 
 Check whether the group is enabled and applied. Review its DNS route, resolver availability, expiration and error details. Manual preview observations are separate from applying the configuration. Demo `.invalid` names intentionally return synthetic errors.
 
-## Download the diagnostic ZIP { #diagnostics-archive }
+## Download the diagnostic ZIP
 
 1. Reproduce the problem and note the approximate time and time zone. Open **Diagnostics** in the web panel on your router.
-2. Find **Diagnostics archive** below the page header and choose **Download ZIP**. Open the downloaded `keenproxy-diagnostics.zip` and review its contents before sharing.
+2. Find **Diagnostics archive** near the top of the page, below **Build details** when shown. Choose **Download ZIP**. Open the downloaded `keenproxy-diagnostics.zip` and review its contents before sharing.
 
 | File | What it contains |
 | --- | --- |
@@ -38,4 +38,4 @@ For one journal as plain text on the router, open **Logs**, select **Routing**, 
 
 ## What should a bug report include?
 
-Include the expected and actual behavior, the running release and build details, router model and firmware, steps to reproduce, and the approximate time of the incident. Use a minimal synthetic configuration or attach a reviewed [diagnostic ZIP](#diagnostics-archive). Read [CONTRIBUTING](https://github.com/ordo-systems/keen-proxy/blob/main/CONTRIBUTING.md) and [SECURITY](https://github.com/ordo-systems/keen-proxy/blob/main/SECURITY.md).
+Include the expected and actual behavior, the running release and build details, router model and firmware, steps to reproduce, and the approximate time of the incident. Use a minimal synthetic configuration or attach a reviewed [diagnostic ZIP](#download-the-diagnostic-zip). Read [CONTRIBUTING](https://github.com/ordo-systems/keen-proxy/blob/main/CONTRIBUTING.md) and [SECURITY](https://github.com/ordo-systems/keen-proxy/blob/main/SECURITY.md).

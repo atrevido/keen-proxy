@@ -84,7 +84,7 @@ Automatic installation is off by default. The panel still checks for releases. E
 
 ## First configuration
 
-Follow the [user guide](user-guide.md): inspect a connection, add a domain group, choose a network/client policy, Apply, then verify using Diagnostics and Journal. Start with a small set of domains and one test device.
+Follow the [user guide](user-guide.md): inspect a connection, add a domain group, choose a network/client policy, Apply, then verify using **Diagnostics** and **Logs**. Start with a small set of domains and one test device.
 
 ## Updates and recovery
 

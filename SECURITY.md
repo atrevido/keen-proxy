@@ -11,7 +11,7 @@ A useful private report includes the affected commit, build tags, router archite
 ## Protect configuration and access
 
 - Treat configuration GET/export and raw connection profiles as sensitive even after authentication.
-- Prefer the [diagnostic ZIP](docs/en/troubleshooting.md#diagnostics-archive) for support. It excludes credentials and raw log text, and replaces private identifiers with aliases. Review the remaining timestamps and network details before sharing. Individual journal exports can still contain readable domains, addresses, and message details.
+- Prefer the [diagnostic ZIP](docs/en/troubleshooting.md#download-the-diagnostic-zip) for support. Follow the guide's privacy checklist before sharing any export.
 - Keep the management API on a trusted private network. Trusted-network access without a token is an explicit administrator policy, not an authentication mechanism for untrusted clients.
 - Preserve SSH access and a recovery path before changing interception or DNS settings.
 - Diagnose individual HTTP, HTTPS, data-transfer, and DNS paths separately. A green health badge is not a general security or connectivity guarantee.
