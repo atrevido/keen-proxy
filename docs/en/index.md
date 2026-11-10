@@ -131,7 +131,7 @@ Select which networks and clients follow the rules, then apply the draft.
 
 <figure markdown>
 [![Diagnostics for a selected connection](../assets/screenshots/en-diagnostics.png)](user-guide.md#7-verify-the-result)
-<figcaption>Diagnostics</figcaption>
+<figcaption markdown>Diagnostics. [How to download the ZIP on your router](troubleshooting.md#download-the-diagnostic-zip).</figcaption>
 </figure>
 
 </div>

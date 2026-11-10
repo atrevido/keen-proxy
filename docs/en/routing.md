@@ -64,7 +64,7 @@ Category databases are a second kind of IP database. Instead of countries, they 
 
 Use **Check an address** to see which country each database reports. A disabled database can be downloaded and checked on its own without affecting routing. A check covers database contents only; it does not show which routing rule won for a real connection.
 
-## Fallback chains
+## Fallback chains { #fallback-chains }
 
 A connection can point to another connection or Direct as its immediate fallback. The interface displays the resulting chain. Edit the selected profile's immediate fallback; downstream inherited edges belong to their own profiles. Avoid cycles. Choosing Direct as a fallback intentionally allows a direct path when the primary connection fails.
 
@@ -75,5 +75,13 @@ Periodic health checks measure HTTP requests, not ICMP ping. They are separate f
 DNS settings choose upstream resolvers and whether requests travel directly or through a connection. Bootstrap addresses help resolve encrypted resolver hostnames. Failure policy controls whether a failed selected path may use direct DNS. Filter lists and exceptions change DNS answers, not every possible form of application traffic.
 
 Use your router's actual network test procedure to evaluate UDP/TCP interception and encrypted-DNS handling. Applications can use their own resolvers. The UI and demo do not establish universal DNS-leak protection.
+
+## DNS filters { #dns-filters }
+
+1. Open **Rules → Filters** and add a catalog list or a custom HTTPS source in domains, hosts, or DNS adblock format. Start with one HaGeZi level if using HaGeZi.
+2. Check which sources are enabled. Use **Update daily** for sources that should refresh automatically. Choose **Apply**, then **Download / update lists** to fetch the enabled lists now. Check the download status and rule count on each source.
+3. If a list breaks a site, add its domain to **List exceptions** and Apply. Exceptions cover the domain and its subdomains. Explicit block groups still take priority.
+
+DNS filters can block lookups for ads, trackers, and other listed domains. They work when clients use the intercepted DNS path. Ads served from the same hostname as the content and requests that use an independent resolver can still get through.
 
 See the [user guide](user-guide.md) for screenshots and [Troubleshooting](troubleshooting.md) for interpreting evidence.

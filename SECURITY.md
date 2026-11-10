@@ -4,14 +4,14 @@ KeenProxy changes router DNS, firewall, and traffic routing. It is experimental,
 
 ## Reporting a vulnerability
 
-Do not include exploitable details or secrets in a public issue. When a public GitHub repository is available, use its private vulnerability reporting feature if enabled. If no private reporting channel is published, open a minimal issue asking the maintainer for a private channel without disclosing the vulnerability or credentials. No unverified contact address is implied by this document.
+Do not include exploitable details or secrets in a public issue. Use GitHub private vulnerability reporting if enabled for the repository. If no private reporting channel is published, open a minimal issue asking the maintainer for a private channel without disclosing the vulnerability or credentials. No unverified contact address is implied by this document.
 
 A useful private report includes the affected commit, build tags, router architecture/firmware, minimal synthetic reproduction, impact, and any suggested fix. Share only the data necessary to reproduce the issue.
 
 ## Protect configuration and access
 
 - Treat configuration GET/export and raw connection profiles as sensitive even after authentication.
-- Review logs and support exports before sharing them; automated masking cannot guarantee removal of every secret or identifier.
+- Prefer the [diagnostic ZIP](docs/en/troubleshooting.md#download-the-diagnostic-zip) for support. Follow the guide's privacy checklist before sharing any export.
 - Keep the management API on a trusted private network. Trusted-network access without a token is an explicit administrator policy, not an authentication mechanism for untrusted clients.
 - Preserve SSH access and a recovery path before changing interception or DNS settings.
 - Diagnose individual HTTP, HTTPS, data-transfer, and DNS paths separately. A green health badge is not a general security or connectivity guarantee.
