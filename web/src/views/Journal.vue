@@ -92,7 +92,7 @@ const levelClass: Record<string, string> = {
   ERROR: 'bad',
 }
 
-// Share the presentation across cells, expansion, and copy. Computed views
+// Share the presentation across cells and expansion. Computed views
 // update with the locale and the weak keys release rows when they leave the table.
 const firewallViews = new WeakMap<JournalEntry, ComputedRef<ReturnType<typeof firewallJournalEntry>>>()
 function firewallView(entry: JournalEntry) {
@@ -253,13 +253,8 @@ function line(e: JournalEntry) {
   switch (kind.value) {
     case 'routes':
       return `${ts}  ${deviceLabel(e.client)} (${e.client}) → ${e.host}${e.ip && e.ip !== e.host ? ` (${e.ip})` : ''}  ${outLabel(e.outbound)}  ${e.rule}`
-    case 'audit': {
-      const view = firewallView(e)
-      if (view) {
-        return `${ts}  ${view.source}  ${view.title}  ${view.summary}\n${e.details ?? view.details.map(([key, value]) => `${key}: ${value}`).join('\n')}`
-      }
+    case 'audit':
       return `${ts}  ${actorLabel(e.actor)}  ${e.action} [${e.target}]  ${resultLabel(e.result)}  ${e.details ?? ''}`
-    }
     default:
       return `${ts}  ${e.level}  ${e.source}  ${e.message}${(e.count ?? 0) > 1 ? ` (×${e.count})` : ''}`
   }

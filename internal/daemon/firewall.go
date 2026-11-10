@@ -12,8 +12,10 @@ import (
 const firewallVerifyRetryDelay = 250 * time.Millisecond
 
 // installFirewall installs the current plan and makes shutdown responsible for its cleanup.
+// A failed update stays pending even when the previous entry jumps remain installed.
 func (d *Daemon) installFirewall(ctx context.Context) error {
 	if err := d.opt.Firewall.Apply(ctx, d.plan); err != nil {
+		d.planPending = true
 		return err
 	}
 	d.planOn, d.planPending = true, false
@@ -64,6 +66,8 @@ func (d *Daemon) repairFirewall(ctx context.Context, event *journal.FirewallEven
 }
 
 func (d *Daemon) applyAndVerifyFirewall(ctx context.Context, event *journal.FirewallEvent) {
+	// Evidence describes the final attempt, which may fail before verification.
+	event.After = nil
 	if err := d.installFirewall(ctx); err != nil {
 		event.Outcome, event.ApplyError = "apply_failed", err.Error()
 		return

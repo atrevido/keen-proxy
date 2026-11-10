@@ -82,3 +82,26 @@ func TestDemoJournalsSurviveMalformedFirewallFixture(t *testing.T) {
 		t.Fatalf("expected one fixture warning: %+v", warnings)
 	}
 }
+
+func TestDemoAuditTimelineFollowsJournalOrder(t *testing.T) {
+	s, fake := newServer()
+	s.D = NewDemo(fake.cfg)
+	w := do(t, s.Handler(), "GET", "/api/journal/audit", "", s.Token, lan)
+	if w.Code != 200 {
+		t.Fatalf("audit status: %d", w.Code)
+	}
+	var page struct {
+		Entries []journal.Entry `json:"entries"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Entries) != 11 {
+		t.Fatalf("incomplete demo timeline: %+v", page.Entries)
+	}
+	for i := 1; i < len(page.Entries); i++ {
+		if page.Entries[i].Time.After(page.Entries[i-1].Time) {
+			t.Fatalf("newest-first journal moved forward in time at %d: %v then %v", i, page.Entries[i-1].Time, page.Entries[i].Time)
+		}
+	}
+}

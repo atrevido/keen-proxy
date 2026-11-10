@@ -27,6 +27,7 @@ type watchdogRunner struct {
 	dropNextCheck   bool
 	applyCalls      int
 	applyErr        error
+	applyErrAt      int
 	applyDelay      time.Duration
 }
 
@@ -34,7 +35,10 @@ func (r *watchdogRunner) Run(_ context.Context, _ string, name string, args ...s
 	if name == "iptables-restore" {
 		r.applyCalls++
 		time.Sleep(r.applyDelay)
-		return r.applyErr
+		if r.applyErrAt == 0 || r.applyCalls == r.applyErrAt {
+			return r.applyErr
+		}
+		return nil
 	}
 	if args[3] == "-D" {
 		if args[len(args)-1] == netfilter.ChainTCP {
@@ -314,5 +318,57 @@ func TestFirewallRecoveryRetriesWhenRulesDisappearDuringVerification(t *testing.
 	entries := d.Journal(journal.Audit).Find(journal.Query{}, nil).Entries
 	if runner.applyCalls != 2 || len(entries) != 1 || entries[0].Action != "Interception rules restored" || logs.Len() != 0 {
 		t.Fatalf("transient rebuild reported failure: applies=%d audit=%+v logs=%s", runner.applyCalls, entries, logs.String())
+	}
+}
+
+func TestFirewallRetryApplyFailureHasNoStaleVerification(t *testing.T) {
+	d, runner := eventDaemon(t, time.Hour)
+	runner.dropAfterInsert = true
+	runner.applyErrAt = 2
+	runner.applyErr = errors.New("synthetic retry contention")
+	d.checkFirewallEvent(context.Background())
+
+	entries := d.Journal(journal.Audit).Find(journal.Query{}, nil).Entries
+	if len(entries) != 1 || entries[0].Firewall == nil {
+		t.Fatalf("missing recovery evidence: %+v", entries)
+	}
+	event := entries[0].Firewall
+	if event.Outcome != "apply_failed" || event.ApplyError != runner.applyErr.Error() || event.After != nil || d.restored != 0 {
+		t.Fatalf("retry mixed evidence from different attempts: %+v", event)
+	}
+}
+
+func TestWatchdogRetriesFailedNeighborUpdate(t *testing.T) {
+	ctx := context.Background()
+	d, runner := eventDaemon(t, time.Hour)
+	d.opt.RuleSetDir = t.TempDir()
+	d.opt.ConfigPath = filepath.Join(t.TempDir(), "config.yaml")
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := &model.Config{}
+	cfg.Defaults()
+	cfg.DNS.Listen = "127.0.0.1:0"
+	cfg.Intercept.TCPPort = uint16(listener.Addr().(*net.TCPAddr).Port)
+	listener.Close()
+	d.planOn = false
+	if err := d.Apply(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(d.shutdown)
+
+	// Address discovery changes the plan, but old entry jumps remain healthy.
+	d.neighbors = map[string]netip.Addr{"00:11:22:33:44:55": netip.MustParseAddr("192.0.2.10")}
+	runner.applyErr = errors.New("synthetic update contention")
+	d.watch(ctx)
+	if runner.applyCalls != 2 || runner.missing {
+		t.Fatalf("failed update must leave old entry jumps present: %+v", runner)
+	}
+	runner.applyErr = nil
+	d.watch(ctx)
+	entries := d.Journal(journal.Audit).Find(journal.Query{Filters: map[string]string{"target": "firewall"}}, nil).Entries
+	if runner.applyCalls != 3 || len(entries) != 1 || entries[0].Firewall == nil || entries[0].Firewall.Outcome != "restored" {
+		t.Fatalf("unchanged neighbors prevented retry: applies=%d events=%+v", runner.applyCalls, entries)
 	}
 }
