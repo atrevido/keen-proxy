@@ -133,7 +133,7 @@ KeenProxy также следит за своими правилами пере�
 
 <figure markdown>
 [![Диагностика выбранного соединения](../assets/screenshots/ru-diagnostics.png)](user-guide.md)
-<figcaption>Диагностика</figcaption>
+<figcaption markdown>Диагностика. [Как скачать ZIP на роутере](troubleshooting.md#download-the-diagnostic-zip).</figcaption>
 </figure>
 
 </div>

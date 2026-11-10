@@ -64,6 +64,8 @@ curl -fsSL https://raw.githubusercontent.com/ordo-systems/keen-proxy/main/tools/
 
 The installer reads `version.txt` from `main`, detects the CPU, and verifies the release files against `SHA256SUMS`. It installs missing Entware `iptables` tools, creates a starter configuration if needed, and registers and starts `S99keenproxy` through the Entware init mechanism. TrustTunnel is installed by default as an optional client launched by KeenProxy when configured. With the starter configuration, open the router's LAN address on port `8086`. Read the token on the router from `/opt/etc/keenproxy/token`.
 
+On a clean install, the bootstrap creates `/opt/etc/keenproxy/config.yaml` with `schema_version: 1` and KeenProxy fills in defaults when it loads the file. The daemon generates the login token on first startup if the token file is missing. If you upgraded an existing installation with a custom `api.token_file`, read the token from that path.
+
 Run the same command to update. Your configuration and token are preserved. The installer stages and validates the candidate before stopping the managed service. If the new service fails its startup check, it attempts to restore the previous files and restart the previous service. A manually started instance must be stopped before the installer can take over.
 
 To choose a release, replace `vX.Y.Z` with a published tag. The optional `--lite` flag selects the smaller build. `--without-trusttunnel` skips installation of the external client.
@@ -84,7 +86,7 @@ Automatic installation is off by default. The panel still checks for releases. E
 
 ## First configuration
 
-Follow the [user guide](user-guide.md): inspect a connection, add a domain group, choose a network/client policy, Apply, then verify using Diagnostics and Journal. Start with a small set of domains and one test device.
+Follow the [user guide](user-guide.md): inspect a connection, add a domain group, choose a network/client policy, Apply, then verify using **Diagnostics** and **Logs**. Start with a small set of domains and one test device.
 
 ## Updates and recovery
 
