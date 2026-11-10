@@ -23,7 +23,7 @@ Use the Git tag as the release identity and derive build versions from it; any t
 - The version job issues a short-lived token restricted to this repository. The built-in `GITHUB_TOKEN` keeps read permissions by default. The separate asset job requests Contents write to attach files to the release. The app needs access to the Release Please branch and release tags under the repository rules. Keep required reviews and CI in place for `main`.
 - After merging a change to release authentication, verify a fresh Release run on `main`. Rerunning an older run uses its original workflow revision. For asset recovery with a supplied tag, the workflow skips the App token step.
 - `version.txt` and `.release-please-manifest.json` start at the development baseline `0.1.0`; this does not assert that `v0.1.0` has been published. The initial commit is the bootstrap boundary. The first releasable changes determine the next version; if the first public release must be `0.1.0`, use a reviewed commit with a `Release-As: 0.1.0` footer before merging its release PR.
-- Release PRs update `version.txt`, the manifest, `CHANGELOG.md`, and the private frontend package/lockfile version fields together. `BUILD_INFO.txt` records the tag, source commit, toolchains, and protocol build tags; the application does not currently expose a runtime version command.
+- Release PRs update `version.txt`, the manifest, `CHANGELOG.md`, and the private frontend package/lockfile version fields together. `BUILD_INFO.txt` records the tag, source commit, toolchains, and protocol build tags; the running release and build appear in the panel footer, **Diagnostics → Build details**, and the diagnostic ZIP's `status.json`.
 - The main-branch `tools/bootstrap.sh` reads `version.txt` unless the user supplies `--version`. It needs the selected release's checksum file, binary, offline installer, and init script before touching a running service. Validate these assets on the published release before advertising the installation command.
 - If asset publication fails after release creation, manually run the Release workflow from `main` with its existing tag in the `tag` input. Existing assets must be byte-identical before missing ones are uploaded. A different rebuild fails rather than replacing files; investigate toolchain/dependency differences and publish a new version when needed. Running without a tag retries Release Please.
 - Configure branch protection or a ruleset separately to require review and passing CI. Workflow files alone do not enforce merge requirements.
@@ -52,7 +52,7 @@ CGO_ENABLED=0 make vet
 cd web && npm ci && npm test && npm run build
 ```
 
-Run `make integration` for the full network test suite. Test ARM64/MIPS builds and the relevant protocol registry on the intended hardware; a host build alone is insufficient. Auxiliary tools have separate Go modules. Document checks that could not be run.
+Run `make integration` for the full network test suite. Test the relevant ARM32, ARM64, or MIPS build and the relevant protocol registry on the intended hardware; a host build alone is insufficient. Auxiliary tools have separate Go modules. Document checks that could not be run.
 
 Build from the reviewed source with dependencies locked, record commit/build tags/toolchains, and generate checksums for the exact published files. Exercise the installer, authentication, configuration backup/recovery, and expected startup mechanism on a disposable or recoverable target.
 

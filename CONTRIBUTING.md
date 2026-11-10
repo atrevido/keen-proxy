@@ -1,10 +1,12 @@
 # Contributing to KeenProxy
 
-KeenProxy is being prepared for an international contributor community. Useful contributions include router compatibility reports, reproducible routing tests, protocol integration, accessibility, translations, and clearer documentation.
+KeenProxy welcomes contributors from around the world. Useful contributions include router compatibility reports, reproducible routing tests, protocol integration, accessibility, translations, and clearer documentation.
 
 ## Start with a reproducible case
 
 Describe the expected behavior, actual behavior, commit/build tags, router architecture, firmware, and relevant kernel capabilities. Include a minimal synthetic configuration and the exact command or UI action that triggers the issue. Keep one issue or change focused on one problem.
+
+For failures on the router, use **Diagnostics → Diagnostics archive → Download ZIP** and review the archive before attaching it. Include the approximate incident time and time zone so maintainers can find the relevant records. See the [archive guide](docs/en/troubleshooting.md#diagnostics-archive).
 
 Never attach real private keys, passwords, tokens, connection URLs, complete production YAML, unreviewed support exports, or browsing histories. A hostname or process being reachable does not prove that a tunnel transfers application data successfully.
 

@@ -131,7 +131,7 @@ WireGuard, ссылки подключения sing-box, outbound-объекты
 
 <figure markdown>
 [![Диагностика выбранного соединения](../assets/screenshots/ru-diagnostics.png)](user-guide.md)
-<figcaption>Диагностика</figcaption>
+<figcaption markdown>Диагностика. [Как скачать ZIP на роутере](troubleshooting.md#diagnostics-archive).</figcaption>
 </figure>
 
 </div>
