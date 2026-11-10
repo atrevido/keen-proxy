@@ -20,21 +20,24 @@ const marker = "#!/bin/sh\n# keenproxy-netfilter-hook-v1"
 const eventValue = "keenproxy-netfilter-event-v1\n"
 
 // paths separates host capability detection from the production installation.
-type paths struct{ Core, HookDir, StateDir, Binary string }
+type paths struct{ Core, HookDir, StateDir, Binary, Config string }
 
-var managed = paths{Core: "/var/run/ndm.core.socket", HookDir: "/opt/etc/ndm/netfilter.d", StateDir: "/var/run/keenproxy/netfilter", Binary: "/opt/bin/keenproxy"}
+func managedPaths() paths {
+	return paths{Core: "/var/run/ndm.core.socket", HookDir: "/opt/etc/ndm/netfilter.d", StateDir: "/var/run/keenproxy/netfilter", Binary: "/opt/bin/keenproxy", Config: "/opt/etc/keenproxy/config.yaml"}
+}
 
 func (p paths) event() string { return filepath.Join(p.StateDir, "changed") }
 func (p paths) hook() string  { return filepath.Join(p.HookDir, "99-keenproxy.sh") }
 
 // Start enables callbacks only on a managed Linux instance with NDM present.
 // Unsupported platforms return nil; setup errors leave polling as the fallback.
+// The caller owns its lifetime and must Close it after daemon shutdown, including error exits.
 func Start(config string, onChange func(), log *slog.Logger) (*Hook, error) {
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
-	return startForLaunch(managed, launch{runtime.GOOS, os.Geteuid(), config, exe}, onChange, log)
+	return startForLaunch(managedPaths(), launch{runtime.GOOS, os.Geteuid(), config, exe}, onChange, log)
 }
 
 // launch records the process facts used by the optional-platform policy.
@@ -45,7 +48,7 @@ type launch struct {
 }
 
 func startForLaunch(p paths, host launch, onChange func(), log *slog.Logger) (*Hook, error) {
-	if host.OS != "linux" || host.UID != 0 || host.Config != "/opt/etc/keenproxy/config.yaml" {
+	if host.OS != "linux" || host.UID != 0 || !sameConfig(host.Config, p.Config) {
 		return nil, nil
 	}
 	expected, err := filepath.EvalSymlinks(p.Binary)
@@ -56,6 +59,16 @@ func startForLaunch(p paths, host launch, onChange func(), log *slog.Logger) (*H
 		return nil, nil
 	}
 	return start(p, onChange, log)
+}
+
+// sameConfig accepts path aliases only when they identify the managed config file.
+func sameConfig(actual, expected string) bool {
+	a, err := os.Stat(actual)
+	if err != nil {
+		return false
+	}
+	b, err := os.Stat(expected)
+	return err == nil && os.SameFile(a, b)
 }
 
 // Hook holds exclusive ownership until its watcher and owned files are removed.

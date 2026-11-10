@@ -90,8 +90,8 @@ func systemEvent(message string) string {
 	for _, prefix := range []string{
 		"keenProxy started", "stopping keenProxy", "configuration applied and saved",
 		"new configuration failed to apply", "rollback also failed", "sing-box core restarted",
-		"interception rules disappeared", "interception rule check failed", "interception rules restored", "rule restoration", "rule update", "remove rules",
-		"netfilter event hook enabled", "netfilter event hook unavailable", "netfilter event watcher error", "checking firewall after netfilter event",
+		"interception rules disappeared", "rule restoration", "rule update", "remove rules",
+		"netfilter event hook enabled", "netfilter event hook unavailable", "netfilter event watcher error",
 		"TrustTunnel started", "TrustTunnel configuration", "trusttunnel_client not found",
 		"ARP unavailable", "IP database loaded", "IP database download failed",
 		"upstream DNS did not respond", "system resolver did not respond",

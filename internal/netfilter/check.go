@@ -37,7 +37,7 @@ func (f *Firewall) Check(ctx context.Context, p Plan) *CheckFailure {
 func failedCheck(ctx context.Context, j Jump, err error) *CheckFailure {
 	failure := &CheckFailure{Table: j.Table, Chain: j.From, Target: j.To, ExitCode: -1, Reason: "execution_failed", Error: err.Error()}
 	var exit interface{ ExitCode() int }
-	if errors.As(err, &exit) {
+	if errors.As(err, &exit) && exit.ExitCode() >= 0 {
 		failure.ExitCode = exit.ExitCode()
 		failure.Reason = "command_failed"
 		if failure.ExitCode == 1 {

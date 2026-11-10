@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +36,9 @@ func TestDemoFirewallAudit(t *testing.T) {
 			t.Fatalf("demo event outside recent history: %+v", e)
 		}
 		if e.Firewall == nil {
+			if !strings.Contains(e.Details, "trigger: not recorded;") {
+				t.Fatalf("legacy demo must explicitly identify missing source metadata: %s", e.Details)
+			}
 			seen["legacy"] = true
 			continue
 		}

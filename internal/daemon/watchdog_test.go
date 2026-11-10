@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -67,6 +69,7 @@ func TestWatchdogVerifiesAndRecordsRecovery(t *testing.T) {
 			d.cfg = &model.Config{}
 			d.cfg.Defaults()
 			d.plan = netfilter.Plan{Mode: model.InterceptTProxy}
+			d.planOn = true
 			d.watch(context.Background())
 			if d.restored != tc.wantCount {
 				t.Fatalf("restorations = %d, want %d", d.restored, tc.wantCount)
@@ -136,6 +139,84 @@ func TestWatchdogVerifiesAndRecordsRecovery(t *testing.T) {
 			}
 			if tc.wantCount == 0 && entries[0].Action != "Interception rules not restored" {
 				t.Fatalf("unexpected failure action: %+v", entries[0])
+			}
+		})
+	}
+}
+
+type interruptedFirewallRunner struct {
+	cancel                    context.CancelFunc
+	cancelAt, calls, restores int
+}
+
+func (r *interruptedFirewallRunner) Run(ctx context.Context, _ string, name string, _ ...string) error {
+	r.calls++
+	if name == "iptables-restore" {
+		r.restores++
+	}
+	if r.calls == r.cancelAt {
+		r.cancel()
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if r.calls == 1 {
+		return errors.New("synthetic missing jump")
+	}
+	return nil
+}
+
+func TestFirewallRecoveryIgnoresShutdown(t *testing.T) {
+	for _, trigger := range []string{"watchdog", "netfilter_hook"} {
+		for _, phase := range []string{"before check", "during check", "during apply", "during verification"} {
+			t.Run(trigger+"/"+phase, func(t *testing.T) {
+				d, _ := eventDaemon(t, time.Hour)
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				runner := &interruptedFirewallRunner{cancel: cancel}
+				wantRestores := 0
+				switch phase {
+				case "before check":
+					cancel()
+				case "during check":
+					runner.cancelAt = 1
+				case "during apply":
+					runner.cancelAt, wantRestores = 2, 1
+				case "during verification":
+					runner.cancelAt, wantRestores = 3+len(d.plan.Jumps()), 1
+				}
+				d.opt.Firewall.Run = runner
+				var logs bytes.Buffer
+				d.log = slog.New(slog.NewTextHandler(&logs, nil))
+				if trigger == "watchdog" {
+					d.watch(ctx)
+				} else {
+					d.checkFirewallEvent(ctx)
+				}
+				entries := d.Journal(journal.Audit).Find(journal.Query{}, nil).Entries
+				if d.restored != 0 || len(entries) != 0 || logs.Len() != 0 {
+					t.Fatalf("shutdown recorded recovery: count=%d entries=%+v logs=%s", d.restored, entries, logs.String())
+				}
+				if runner.restores != wantRestores || (phase == "before check" && runner.calls != 0) {
+					t.Fatalf("commands after shutdown: calls=%d restores=%d, want restores=%d", runner.calls, runner.restores, wantRestores)
+				}
+			})
+		}
+	}
+}
+
+func TestWatchdogLeavesStoppedInterceptionAlone(t *testing.T) {
+	for _, changedNeighbors := range []bool{false, true} {
+		t.Run(fmt.Sprint(changedNeighbors), func(t *testing.T) {
+			d, runner := eventDaemon(t, time.Hour)
+			d.opt.RuleSetDir = t.TempDir()
+			d.planOn = false
+			if changedNeighbors {
+				d.neighbors = map[string]netip.Addr{"00:11:22:33:44:55": netip.MustParseAddr("192.0.2.10")}
+			}
+			d.watch(context.Background())
+			if d.restored != 0 || !runner.missing || len(d.Journal(journal.Audit).Find(journal.Query{}, nil).Entries) != 0 {
+				t.Fatal("watchdog modified intentionally stopped interception")
 			}
 		})
 	}

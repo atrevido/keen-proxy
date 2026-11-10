@@ -11,9 +11,12 @@ import (
 // checkFirewall runs under d.mu and counts only repairs verified by a new
 // entry-jump check. Inspection errors still trigger the existing repair path.
 func (d *Daemon) checkFirewall(ctx context.Context, trigger string) {
+	if !d.planOn || ctx.Err() != nil {
+		return
+	}
 	started := time.Now()
 	before := d.opt.Firewall.Check(ctx, d.plan)
-	if before == nil {
+	if before == nil || ctx.Err() != nil {
 		return
 	}
 	event := &journal.FirewallEvent{Trigger: trigger, Before: before, Outcome: "apply_failed"}
@@ -24,8 +27,14 @@ func (d *Daemon) checkFirewall(ctx context.Context, trigger string) {
 		event.Outcome = "verify_failed"
 		if event.After == nil {
 			event.Outcome = "restored"
-			d.restored++
 		}
+	}
+	// Shutdown can interrupt either repair or verification; it is not a failure.
+	if ctx.Err() != nil {
+		return
+	}
+	if event.Outcome == "restored" {
+		d.restored++
 	}
 	duration := time.Since(started).Milliseconds()
 	event.DurationMS = &duration

@@ -34,8 +34,5 @@ func (d *Daemon) runWatchdog(ctx context.Context) {
 func (d *Daemon) checkFirewallEvent(ctx context.Context) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if !d.planOn || ctx.Err() != nil {
-		return
-	}
 	d.checkFirewall(ctx, "netfilter_hook")
 }

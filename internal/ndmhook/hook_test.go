@@ -27,7 +27,10 @@ func fixture(t *testing.T) paths {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p := paths{Core: filepath.Join(dir, "ndm.sock"), HookDir: filepath.Join(dir, "ndm", "netfilter.d"), StateDir: filepath.Join(dir, "run"), Binary: filepath.Join(dir, "absent-binary")}
+	p := paths{Core: filepath.Join(dir, "ndm.sock"), HookDir: filepath.Join(dir, "ndm", "netfilter.d"), StateDir: filepath.Join(dir, "run"), Binary: filepath.Join(dir, "absent-binary"), Config: filepath.Join(dir, "config.yaml")}
+	if err := os.WriteFile(p.Config, []byte("synthetic config"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Mkdir(filepath.Dir(p.HookDir), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +146,7 @@ func TestUnsupportedPlatformDoesNotCreateArtifacts(t *testing.T) {
 }
 
 // OpenWrt may use the managed /opt layout without providing an NDM dispatcher.
-// Exercise public startup as Linux/root so earlier launch gates cannot hide writes.
+// Exercise the startup policy as Linux/root so earlier launch gates cannot hide writes.
 func TestManagedLinuxWithoutNDMDoesNotCreateArtifacts(t *testing.T) {
 	if runtime.GOOS != "linux" || os.Geteuid() != 0 {
 		t.Skip("requires Linux/root to exercise the complete managed launch path")
@@ -152,32 +155,33 @@ func TestManagedLinuxWithoutNDMDoesNotCreateArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	previous := managed
-	t.Cleanup(func() { managed = previous })
 	for _, kind := range []string{"native OpenWrt", "OPKG directory without NDM", "stale regular socket path"} {
 		t.Run(kind, func(t *testing.T) {
 			root := t.TempDir()
-			managed = paths{
-				Core: filepath.Join(root, "ndm.core.socket"), Binary: exe,
+			p := paths{
+				Core: filepath.Join(root, "ndm.core.socket"), Binary: exe, Config: filepath.Join(root, "config.yaml"),
 				HookDir:  filepath.Join(root, "opt/etc/ndm/netfilter.d"),
 				StateDir: filepath.Join(root, "var/run/keenproxy/netfilter"),
 			}
+			if err := os.WriteFile(p.Config, nil, 0600); err != nil {
+				t.Fatal(err)
+			}
 			if kind != "native OpenWrt" {
-				if err := os.MkdirAll(filepath.Dir(managed.HookDir), 0755); err != nil {
+				if err := os.MkdirAll(filepath.Dir(p.HookDir), 0755); err != nil {
 					t.Fatal(err)
 				}
 			}
 			if kind == "stale regular socket path" {
-				if err := os.WriteFile(managed.Core, []byte("not an NDM socket"), 0600); err != nil {
+				if err := os.WriteFile(p.Core, []byte("not an NDM socket"), 0600); err != nil {
 					t.Fatal(err)
 				}
 			}
-			h, err := Start("/opt/etc/keenproxy/config.yaml", func() { t.Error("unexpected NDM notification") }, quietLog)
+			h, err := startForLaunch(p, launch{runtime.GOOS, os.Geteuid(), p.Config, exe}, func() { t.Error("unexpected NDM notification") }, quietLog)
 			if err != nil || h != nil {
 				t.Fatalf("non-NDM Linux enabled callbacks: hook=%v error=%v", h, err)
 			}
 			h.Close()
-			for _, path := range []string{managed.HookDir, managed.StateDir} {
+			for _, path := range []string{p.HookDir, p.StateDir} {
 				if _, err := os.Lstat(path); !os.IsNotExist(err) {
 					t.Fatalf("created hook artifacts on non-NDM Linux: %s (%v)", path, err)
 				}
@@ -329,12 +333,33 @@ func TestHookKeepsOwnershipMarkerValidDuringCallbacks(t *testing.T) {
 }
 
 func TestManagedLaunchPolicy(t *testing.T) {
-	for _, kind := range []string{"supported", "other OS", "unprivileged", "custom config", "other executable", "missing binary", "symlink executable"} {
+	for _, kind := range []string{"supported", "other OS", "unprivileged", "custom config", "other executable", "missing binary", "symlink executable", "clean config", "relative config", "symlink config", "missing config", "distinct config"} {
 		t.Run(kind, func(t *testing.T) {
 			p := fixture(t)
 			os.WriteFile(p.Binary, []byte("fixture executable"), 0700)
-			host := launch{OS: "linux", UID: 0, Config: "/opt/etc/keenproxy/config.yaml", Executable: p.Binary}
+			host := launch{OS: "linux", UID: 0, Config: p.Config, Executable: p.Binary}
 			switch kind {
+			case "clean config":
+				host.Config = filepath.Dir(p.Config) + "//./config.yaml"
+			case "relative config":
+				cwd, err := os.Getwd()
+				if err != nil {
+					t.Fatal(err)
+				}
+				host.Config, err = filepath.Rel(cwd, p.Config)
+				if err != nil {
+					t.Fatal(err)
+				}
+			case "symlink config":
+				host.Config = p.Config + "-alias"
+				if err := os.Symlink(p.Config, host.Config); err != nil {
+					t.Fatal(err)
+				}
+			case "missing config":
+				os.Remove(p.Config)
+			case "distinct config":
+				host.Config = p.Config + "-other"
+				os.WriteFile(host.Config, []byte("synthetic config"), 0600)
 			case "other OS":
 				host.OS = "darwin"
 			case "unprivileged":
@@ -355,7 +380,7 @@ func TestManagedLaunchPolicy(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			want := kind == "supported" || kind == "symlink executable"
+			want := kind == "supported" || kind == "symlink executable" || kind == "clean config" || kind == "relative config" || kind == "symlink config"
 			if (h != nil) != want {
 				t.Fatalf("managed policy %s: enabled=%v", kind, h != nil)
 			}
@@ -449,17 +474,14 @@ func TestHookInstallationFailureReleasesWatcher(t *testing.T) {
 	h.Close()
 }
 
-func TestHookPublicStartMatchesHost(t *testing.T) {
+func TestHookLaunchMatchesHost(t *testing.T) {
 	p := fixture(t)
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
 	}
 	p.Binary = exe
-	original := managed
-	managed = p
-	defer func() { managed = original }()
-	h, err := Start("/opt/etc/keenproxy/config.yaml", func() {}, quietLog)
+	h, err := startForLaunch(p, launch{runtime.GOOS, os.Geteuid(), p.Config, exe}, func() {}, quietLog)
 	if err != nil {
 		t.Fatal(err)
 	}

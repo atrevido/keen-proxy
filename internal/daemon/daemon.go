@@ -358,6 +358,10 @@ func (d *Daemon) startDNS() error {
 func (d *Daemon) watch(ctx context.Context) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	// Neighbor refresh also installs rules, so it must respect stopped interception.
+	if !d.planOn || ctx.Err() != nil {
+		return
+	}
 	if n := d.readNeighbors(d.cfg); !maps.Equal(n, d.neighbors) {
 		d.audit("watchdog", "Device addresses updated", "clients", "info", neighborsChange(d.neighbors, n))
 		d.neighbors = n

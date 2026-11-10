@@ -19,6 +19,7 @@ func TestCheckRetainsCommandFailure(t *testing.T) {
 	}{
 		{name: "missing rule", script: "echo 'rule unavailable' >&2; exit 1", reason: "check_failed", code: 1},
 		{name: "command failure", script: "echo 'resource failure' >&2; exit 4", reason: "command_failed", code: 4},
+		{name: "killed by signal", script: "kill -KILL $$", reason: "execution_failed", code: -1},
 		{name: "executable absent", missing: true, reason: "execution_failed", code: -1},
 		{name: "canceled", canceled: true, reason: "canceled", code: -1},
 		{name: "deadline", timedOut: true, reason: "timeout", code: -1},

@@ -465,18 +465,26 @@ const columns = computed<DataTableColumns<JournalEntry>>(() => {
         {
           title: t('journal.action'),
           key: 'action',
-          render: (e) =>
-            h('div', [
+          render: (e) => {
+            const summary = firewallView(e)?.summary || e.details
+            return h('div', [
               h('div', firewallView(e)?.title ?? e.action),
-              h('div', { class: 'sub' }, firewallView(e)?.summary ?? e.details),
-            ]),
+              summary ? h('div', { class: 'sub' }, summary) : null,
+            ])
+          },
         },
         {
-          title: t('journal.source'),
+          title: t('journal.who'),
           key: 'actor',
           width: 170,
           ...filterColumn('actor', (v) => actorLabel(v) ?? v),
-          render: (e) => firewallView(e)?.source ?? actorLabel(e.actor),
+          render: (e) => {
+            const source = firewallView(e)?.source
+            return h('div', [
+              h('div', actorLabel(e.actor)),
+              source ? h('div', { class: 'sub' }, source) : null,
+            ])
+          },
         },
         {
           title: t('journal.object'),

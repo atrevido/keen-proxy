@@ -59,7 +59,7 @@ test('partial historical records do not invent a rule or raw error', () => {
   assert.ok(partial.details.every(([, v]) => v !== undefined))
 })
 
-test('pre-diagnostics audit entries do not imply a timer trigger or show raw text inline', () => {
+test('pre-diagnostics audit entries retain legacy details without implying a timer trigger', () => {
   const old: JournalEntry = { id: 1, time: '2026-01-01T00:00:00Z', actor: 'watchdog', target: 'firewall', action: 'Interception rules restored', details: 'legacy raw error' }
   const view = firewallJournalEntry(old, t)!
   assert.equal(view.source, 'Not recorded')
